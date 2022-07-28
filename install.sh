@@ -1,7 +1,8 @@
 install_packages() {
   echo "## Installing Linux packages..."
   sudo apt-get update
-  sudo apt-get install -y build-essential wget git dcmtk jq inetutils-ping sshpass postgresql postgresql-contrib libpq-dev git-lfs python3-wheel python3.8-dev python3.8 python3.8-ven
+  sudo apt-get install -y software-properties-common
+  sudo apt upgrade
 }
 
 systemd_install () {
