@@ -63,6 +63,7 @@ create_folder () {
     echo "## $1 already exists."
   fi
 }
+
 create_folders () {
   create_folder $GRAVIS_BASE
   create_folder $CONFIG_PATH
@@ -101,6 +102,7 @@ systemd_install () {
   create_user
   create_folders
   install_packages
+  install_app_files
 }
 
 while getopts ":hy" opt; do
