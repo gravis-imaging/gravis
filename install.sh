@@ -1,12 +1,98 @@
+#!/bin/bash
+set -euo pipefail
+
+error() {
+  local parent_lineno="$1"
+  local code="${3:-1}"
+  echo "Error on or near line ${parent_lineno}"
+  exit "${code}"
+}
+trap 'error ${LINENO}' ERR
+
+OWNER=$USER
+if [ $OWNER = "root" ]
+then
+  OWNER=$(logname)
+  echo "Running as root, but setting $OWNER as owner."
+fi
+
+SECRET="${GRAVIS_SECRET:-unset}"
+if [ "$SECRET" = "unset" ]
+then
+  SECRET=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1 || true)
+fi
+
+DB_PWD="${GRAVIS_PASSWORD:-unset}"
+if [ "$DB_PWD" = "unset" ]
+then
+  DB_PWD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1 || true)
+fi
+
+GRAVIS_BASE=/opt/gravis
+DATA_PATH=$GRAVIS_BASE/data
+CONFIG_PATH=$GRAVIS_BASE/config
+DB_PATH=$GRAVIS_BASE/db
+GRAVIS_SRC=.
+
+if [ -f "$CONFIG_PATH"/db.env ]; then 
+  sudo chown $USER "$CONFIG_PATH"/db.env 
+  source "$CONFIG_PATH"/db.env # Don't accidentally generate a new database password
+  sudo chown $OWNER "$CONFIG_PATH"/db.env 
+  DB_PWD=$POSTGRES_PASSWORD
+fi
+
+echo "gravis installation folder: $GRAVIS_BASE"
+echo "Data folder: $DATA_PATH"
+echo "Config folder: $CONFIG_PATH"
+echo "Database folder: $DB_PATH"
+echo "gravis source directory: $(readlink -f $GRAVIS_SRC)"
+echo ""
+
+create_user () {
+  id -u gravis &>/dev/null || sudo useradd -ms /bin/bash gravis
+  OWNER=gravis
+}
+
+create_folder () {
+  if [[ ! -e $1 ]]; then
+    echo "## Creating $1"
+    sudo mkdir -p $1
+    sudo chown $OWNER:$OWNER $1
+    sudo chmod a+x $1
+  else
+    echo "## $1 already exists."
+  fi
+}
+create_folders () {
+  create_folder $GRAVIS_BASE
+  create_folder $CONFIG_PATH
+  if [ $INSTALL_TYPE != "systemd" ]; then
+    create_folder $DB_PATH
+  fi
+
+  if [[ ! -e $DATA_PATH ]]; then
+      echo "## Creating $DATA_PATH..."
+      sudo mkdir "$DATA_PATH"
+      sudo chown -R $OWNER:$OWNER $DATA_PATH
+      sudo chmod a+x $DATA_PATH
+  else
+    echo "## $DATA_PATH already exists."
+  fi
+}
+
+
 install_packages() {
   echo "## Installing Linux packages..."
   sudo apt-get update
-  sudo apt-get install -y software-properties-common python3-django
+  sudo apt-get install -y software-properties-common python3-django postgresql postgresql-contrib
   sudo apt upgrade
 }
 
 systemd_install () {
   echo "## Performing systemd-type gravis installation..."
+  create_user
+  create_folders
+  sudo cp "$GRAVIS_SRC"/installation/gravis-sudoer /etc/sudoers.d/gravis
   install_packages
 }
 
