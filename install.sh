@@ -92,7 +92,6 @@ systemd_install () {
   echo "## Performing systemd-type gravis installation..."
   create_user
   create_folders
-  sudo cp "$GRAVIS_SRC"/installation/gravis-sudoer /etc/sudoers.d/gravis
   install_packages
 }
 
