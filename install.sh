@@ -1,7 +1,7 @@
 install_packages() {
   echo "## Installing Linux packages..."
   sudo apt-get update
-  sudo apt-get install -y python3-wheel python3.8-dev python3.8 python3.8-venv python3-django
+  sudo apt-get install -y build-essential wget python3-wheel python3.8-dev python3.8 python3.8-venv python3-django
 }
 
 systemd_install () {
