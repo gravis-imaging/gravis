@@ -92,4 +92,3 @@ case "$INSTALL_TYPE" in
 esac
 
 echo "Installation complete"
-Footer
