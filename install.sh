@@ -80,6 +80,14 @@ create_folders () {
   fi
 }
 
+install_app_files() {
+  if [ ! -e "$GRAVIS_BASE"/app ]; then
+    echo "## Installing app files..."
+    sudo mkdir "$GRAVIS_BASE"/app
+    sudo cp -R "$GRAVIS_SRC" "$GRAVIS_BASE"/app
+    sudo chown -R $OWNER:$OWNER "$GRAVIS_BASE/app"
+  fi
+}
 
 install_packages() {
   echo "## Installing Linux packages..."
