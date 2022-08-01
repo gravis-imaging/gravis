@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
+sudo chown -R vagrant .
+
 install_packages() {
   echo "## Installing Linux packages..."
   sudo apt-get update
@@ -14,5 +16,7 @@ systemd_install () {
 }
 
 systemd_install
+
+sudo ln -s /usr/bin/python3 /usr/bin/python
 
 echo "Installation complete"

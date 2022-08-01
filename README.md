@@ -9,3 +9,4 @@
 * App is currently configured to just use SQLite as database
 * Run database migration in gravis/app: python manage.py migrate 
 * Run Django server in gravis/app with: python manage.py runserver
+* To create a new user use python manage.py createsuperuser
