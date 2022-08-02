@@ -22,7 +22,6 @@ echo "Config folder: $CONFIG_PATH"
 echo "Database folder: $DB_PATH"
 echo "gravis source directory: $(readlink -f $GRAVIS_SRC)"
 echo ""
-echo "argument 1: $1"
 
 create_user () {
   id -u gravis &>/dev/null || sudo useradd -ms /bin/bash gravis
