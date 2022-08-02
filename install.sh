@@ -83,11 +83,8 @@ install_dependencies() {
 
   echo "## Installing required Python packages..."
   sudo chown -R $OWNER:$OWNER "$GRAVIS_BASE/env"
-  echo "## Installing required Python packages 1..."
   sudo su $OWNER -c "$GRAVIS_BASE/env/bin/pip install --isolated wheel~=0.37.1"
-  echo "## Installing required Python packages 2..."
   sudo su $OWNER -c "$GRAVIS_BASE/env/bin/pip install --isolated -r \"$GRAVIS_BASE/app/requirements.txt\""
-  echo "## Installing required Python packages 3..."
 }
 
 systemd_install () {
@@ -96,7 +93,7 @@ systemd_install () {
   create_folders
   install_packages
   install_app_files
-  install_dependencies
+#   install_dependencies
   sudo chown -R gravis:gravis "$GRAVIS_BASE"
 }
 
