@@ -1,8 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-sudo chown -R vagrant .
-
 OWNER=$USER
 if [ $OWNER = "root" ]
 then
@@ -98,6 +96,8 @@ systemd_install () {
 }
 
 systemd_install
+
+sudo chown -R vagrant .
 
 python_l="/usr/bin/python"
 if [ -L ${python_l} ] ; then
