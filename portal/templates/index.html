@@ -19,6 +19,22 @@
 <div class="row mt-5">
     <div class="col">
         <div>
+            <form method="post">{% csrf_token %}
+            <button type="button" id="test-work-button" class="btn btn-primary" 
+            hx-post="/work_test/"
+            _="on htmx:afterOnLoad add [@disabled]"
+            >
+                Do work
+            </button>
+            <div id="work_result"></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col">
+        <div>
             <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@5/dark.css" />
             <button type="button" class="btn btn-primary" 

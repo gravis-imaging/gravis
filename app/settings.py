@@ -11,10 +11,18 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
 from pathlib import Path
+import environ
+
+env = environ.Env(
+    # set casting, default value
+    DEBUG=(bool, True),
+    DATA_FOLDER=(str, "/opt/gravis/data")
+)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+environ.Env.read_env(BASE_DIR / 'gravis.env')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
@@ -23,7 +31,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-r$afdbw+6xgz#af8-e2z=#@kjs2r#$th^m=60v1&almulq5fuh'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env('DEBUG')
+
+DATA_FOLDER = env('DATA_FOLDER')
+
+STATICFILES_DIRS = [
+    DATA_FOLDER,
+]
+
+MEDIA_URL = "/media/"
 
 ALLOWED_HOSTS = []
 
