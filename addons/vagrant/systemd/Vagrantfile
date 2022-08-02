@@ -6,7 +6,7 @@ $script = <<-SCRIPT
 echo "#### gravis installation in systemd mode"
 echo Cloning gravis and calling install script...
 cd ~
-git clone https://linako111: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@github.com/tblock79/gravis.git gravis
+git clone https://github.com/tblock79/gravis.git gravis
 cd gravis
 ./install.sh
 SCRIPT
