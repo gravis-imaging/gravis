@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_rq',
     'portal',
 ]
 
@@ -125,3 +126,23 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
+
+RQ_SHOW_ADMIN_LINK = True 
+RQ_QUEUES = {
+    'default': {
+        'HOST': 'localhost',
+        'PORT': 6379,
+        'DB': 0,
+        # 'PASSWORD': 'some-password',
+        'DEFAULT_TIMEOUT': 360,
+    },
+    # 'high': {
+    #     'URL': os.getenv('REDISTOGO_URL', 'redis://localhost:6379/0'), # If you're on Heroku
+    #     'DEFAULT_TIMEOUT': 500,
+    # },
+    # 'low': {
+    #     'HOST': 'localhost',
+    #     'PORT': 6379,
+    #     'DB': 0,
+    # }
+}

@@ -1,3 +1,5 @@
+import logging
+from django.http import HttpResponse
 from django.shortcuts import render
 
 from django.contrib.auth.decorators import login_required
@@ -9,18 +11,28 @@ from django.db import connections
 from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 
+import django_rq
+
+logger = logging.getLogger(__name__)
+
+def add(a,b):
+    return a+b
+
+@login_required
+def work_queue_test(request):
+    django_rq.enqueue(add, 2, 2)
+
+    return HttpResponse("ok")
+
 
 def login_request(request):
-    print("HELLO")   
+    logger.debug("HELLO")   
 
     if request.method == "POST":
-        print("POST")   
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             username = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
-            print(username)            
-            print(password)
             user = authenticate(username=username, password=password)
             if user is not None:
                 login(request, user)
