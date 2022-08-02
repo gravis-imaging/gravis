@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# sudo chown -R vagrant .
+sudo chown -R vagrant .
 
 OWNER=$USER
 if [ $OWNER = "root" ]
