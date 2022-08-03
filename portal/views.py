@@ -2,7 +2,7 @@ from http.client import HTTPResponse
 import logging
 from pathlib import Path
 from time import sleep
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.conf import settings
 
@@ -66,13 +66,21 @@ def image_job(job_id, a, b):
     job.complete = True
     job.save()
 
+
 @login_required
 def work_status(request, id):
     job: ImageJob = ImageJob.objects.get(id=id)
     if job.complete:
-        return HttpResponse(f'<img _="init put \'Done!\' into #test-work-button then remove [@disabled] from #test-work-button" src=/media/{job.folder_path}/output.png>',headers={'HX-Reswap':'innerHTML', 'HX-Retarget':'#work_result'})
+        return HttpResponse(f'''
+            <div class="card" style="width: 18rem;">
+            <div class="card-body">
+                <p class="card-text">Job result</p>
+            </div>
+            <img src="/media/{job.folder_path}/output.png" class="card-img-bottom">
+            </div>''', 
+            headers={'HX-Trigger':'jobComplete'})
     else:
-        return HttpResponse(f'<div hx-target="this" hx-get="/work_status/{id}" hx-trigger="load delay:1s" hx-swap="outerHTML">Processing...</div>')
+        return HttpResponse(f'<div hx-get="/work_status/{id}" hx-trigger="load delay:1s" hx-swap="outerHTML">Processing...</div>')
 
 @login_required
 def work_queue_test(request):
@@ -81,7 +89,7 @@ def work_queue_test(request):
     result = django_rq.enqueue(image_job, new_job.id, 2, 2)
     new_job.rq_id = result.id
     new_job.save()
-    return HttpResponse(f'<div hx-target="this" hx-get="/work_status/{new_job.id}" hx-trigger="load delay:1s" hx-swap="outerHTML">Job submitted.</div>')
+    return HttpResponseRedirect(f"/work_status/{new_job.id}/")
 
 
 def login_request(request):
