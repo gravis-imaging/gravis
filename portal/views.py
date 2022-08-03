@@ -1,5 +1,6 @@
 from http.client import HTTPResponse
 import logging
+import os
 from pathlib import Path
 from time import sleep
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
@@ -19,6 +20,7 @@ from PIL import Image
 
 from .models import *
 import django_rq
+import docker 
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +68,36 @@ def image_job(job_id, a, b):
     job.complete = True
     job.save()
 
+def do_docker_job(job_id):
+    print(":::Docker job begin:::")
+    docker_client = docker.from_env()
+
+    job: DockerJob = DockerJob.objects.get(id=job_id)
+
+    volumes = {
+        job.input_folder: {"bind": "/tmp/data", "mode": "rw"},
+        job.output_folder: {"bind": "/tmp/output", "mode": "rw"},
+    }
+    environment = dict(MERCURE_IN_DIR="/tmp/data", MERCURE_OUT_DIR="/tmp/output")
+
+    container = docker_client.containers.run(
+        job.docker_image,
+        volumes=volumes,
+        environment=environment,
+        user=f"{os.getuid()}:{os.getegid()}",
+        group_add=[os.getegid()],
+        detach=True,
+    )
+    print("Docker is running...")
+    docker_result = container.wait()
+    print(docker_result)
+    print("=== MODULE OUTPUT - BEGIN ========================================")
+    if container.logs() is not None:
+        logs = container.logs().decode("utf-8")
+        print(logs)
+    print("=== MODULE OUTPUT - END ==========================================")
+    job.complete = True
+    job.save()
 
 @login_required
 def work_status(request, id):
@@ -81,6 +113,17 @@ def work_status(request, id):
             headers={'HX-Trigger':'jobComplete'})
     else:
         return HttpResponse(f'<div hx-get="/work_status/{id}" hx-trigger="load delay:1s" hx-swap="outerHTML">Processing...</div>')
+
+
+@login_required
+def docker_job(request):
+    new_job = DockerJob(docker_image="mercureimaging/mercure-testmodule",input_folder="/home/vagrant/pineapple/in",output_folder="/home/vagrant/pineapple/out")
+    new_job.save()
+    result = django_rq.enqueue(do_docker_job, new_job.id)
+    new_job.rq_id = result.id
+    new_job.save()
+    return HttpResponse("OK")
+    # return HttpResponseRedirect(f"/work_status/{new_job.id}/")
 
 @login_required
 def work_queue_test(request):
