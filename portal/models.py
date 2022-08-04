@@ -10,6 +10,7 @@ class ImageJob(models.Model):
     results = models.CharField(max_length=100000)
     complete = models.BooleanField(default=False)
 
+
 class DockerJob(models.Model):
     docker_image = models.CharField(max_length=10000)
     input_folder = models.CharField(max_length=10000)

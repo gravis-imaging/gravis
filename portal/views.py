@@ -20,7 +20,7 @@ from PIL import Image
 
 from .models import *
 import django_rq
-import docker 
+import docker
 
 logger = logging.getLogger(__name__)
 from django.contrib.staticfiles import views as static_views
@@ -66,20 +66,22 @@ def julia(arg: complex, m: int = 256, n: int = 512):
         # np.log(np.abs(C)+.1).astype('uint16'))
         np.putmask(K, np.abs(C) > 2, 0)
         # K[np.abs(C) > 2] = np.abs(C)
-    return K*255
+    return K * 255
+
 
 def image_job(job_id, a, b):
     job: ImageJob = ImageJob.objects.get(id=job_id)
     julia_data = mandelbrot()
     sleep(5.0)
     image = Image.fromarray(julia_data)
-    
+
     (Path(settings.DATA_FOLDER) / job.folder_path).mkdir(exist_ok=True)
-    image.save(Path(settings.DATA_FOLDER) / job.folder_path / "output.png" )
-    
-    job.results = str(a+b)
+    image.save(Path(settings.DATA_FOLDER) / job.folder_path / "output.png")
+
+    job.results = str(a + b)
     job.complete = True
     job.save()
+
 
 def do_docker_job(job_id):
     print(":::Docker job begin:::")
@@ -112,31 +114,41 @@ def do_docker_job(job_id):
     job.complete = True
     job.save()
 
+
 @login_required
 def work_status(request, id):
     job: ImageJob = ImageJob.objects.get(id=id)
     if job.complete:
-        return HttpResponse(f'''
+        return HttpResponse(
+            f"""
             <div class="card" style="width: 18rem;">
             <div class="card-body">
                 <p class="card-text">Job result</p>
             </div>
             <img src="/media/{job.folder_path}/output.png" class="card-img-bottom">
-            </div>''', 
-            headers={'HX-Trigger':'jobComplete'})
+            </div>""",
+            headers={"HX-Trigger": "jobComplete"},
+        )
     else:
-        return HttpResponse(f'<div hx-get="/work_status/{id}" hx-trigger="load delay:1s" hx-swap="outerHTML">Processing...</div>')
+        return HttpResponse(
+            f'<div hx-get="/work_status/{id}" hx-trigger="load delay:1s" hx-swap="outerHTML">Processing...</div>'
+        )
 
 
 @login_required
 def docker_job(request):
-    new_job = DockerJob(docker_image="mercureimaging/mercure-testmodule",input_folder="/home/vagrant/pineapple/in",output_folder="/home/vagrant/pineapple/out")
+    new_job = DockerJob(
+        docker_image="mercureimaging/mercure-testmodule",
+        input_folder="/home/vagrant/pineapple/in",
+        output_folder="/home/vagrant/pineapple/out",
+    )
     new_job.save()
     result = django_rq.enqueue(do_docker_job, new_job.id)
     new_job.rq_id = result.id
     new_job.save()
     return HttpResponse("OK")
     # return HttpResponseRedirect(f"/work_status/{new_job.id}/")
+
 
 @login_required
 def work_queue_test(request):
@@ -149,23 +161,23 @@ def work_queue_test(request):
 
 
 def login_request(request):
-    logger.debug("HELLO")   
+    logger.debug("HELLO")
 
     if request.method == "POST":
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
-            username = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password')
+            username = form.cleaned_data.get("username")
+            password = form.cleaned_data.get("password")
             user = authenticate(username=username, password=password)
             if user is not None:
                 login(request, user)
                 return redirect("/")
             else:
-                messages.error(request,"Invalid username or password.")
+                messages.error(request, "Invalid username or password.")
         else:
-            messages.error(request,"Invalid username or password.")    
+            messages.error(request, "Invalid username or password.")
     form = AuthenticationForm()
-    return render(request, 'login.html', context={"form": form})
+    return render(request, "login.html", context={"form": form})
 
 
 def logout_request(request):
@@ -176,10 +188,9 @@ def logout_request(request):
 @login_required
 def index(request):
 
-    #with connections['yarralog'].cursor() as cursor:
+    # with connections['yarralog'].cursor() as cursor:
     #    cursor.execute("select * from scanners;")
     #    print(cursor.fetchall())
 
     context = {}
-    return render(request, 'index.html', context)
-
+    return render(request, "index.html", context)
