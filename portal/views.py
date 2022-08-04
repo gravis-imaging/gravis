@@ -35,7 +35,9 @@ def serve_file(request, path):
 
     # Use nginx's implementation of "x-sendfile" to tell nginx to serve the actual file.
     # see: https://www.nginx.com/resources/wiki/start/topics/examples/x-accel/
-    return HttpResponse(headers={"X-Accel-Redirect": "/secret/" + path})
+    return HttpResponse(
+        headers={"X-Accel-Redirect": "/secret/" + path, "Content-Type": ""}
+    )
 
 
 def mandelbrot(m: int = 512, n: int = 256):

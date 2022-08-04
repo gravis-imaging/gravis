@@ -44,6 +44,10 @@ MEDIA_URL = "/media/"
 ALLOWED_HOSTS = ["*"]
 
 
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:9090",
+    "http://localhost:8001",
+]
 # Application definition
 
 INSTALLED_APPS = [
