@@ -23,6 +23,19 @@ import django_rq
 import docker 
 
 logger = logging.getLogger(__name__)
+from django.contrib.staticfiles import views as static_views
+
+
+@login_required
+def serve_file(request, path):
+    """Serve a file that should only be available to logged-in users."""
+    if "localhost" in request.headers["Host"]:
+        # We're not running behind nginx so we are going to just serve the file ourselves.
+        return static_views.serve(request, path)
+
+    # Use nginx's implementation of "x-sendfile" to tell nginx to serve the actual file.
+    # see: https://www.nginx.com/resources/wiki/start/topics/examples/x-accel/
+    return HttpResponse(headers={"X-Accel-Redirect": "/secret/" + path})
 
 
 def mandelbrot(m: int = 512, n: int = 256):
