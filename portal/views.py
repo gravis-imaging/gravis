@@ -29,7 +29,7 @@ from django.contrib.staticfiles import views as static_views
 @login_required
 def serve_file(request, path):
     """Serve a file that should only be available to logged-in users."""
-    if "localhost" in request.headers["Host"]:
+    if "localhost" in request.headers["Host"] or "127.0.0.1" in request.headers["Host"]:
         # We're not running behind nginx so we are going to just serve the file ourselves.
         return static_views.serve(request, path)
 
