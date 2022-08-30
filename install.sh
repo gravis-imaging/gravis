@@ -67,9 +67,12 @@ install_app_files() {
 
 install_packages() {
   echo "## Installing Linux packages..."
-  sudo apt-get update
+  sudo apt-get --assume-yes update
+  echo "## Installing Linux packages... 111"
   sudo apt-get --assume-yes install -y software-properties-common sqlite3
-  sudo apt upgrade
+  echo "## Installing Linux packages.. 222."
+  sudo apt --assume-yes upgrade
+  echo "## Installing Linux packages... 333"
 }
 
 install_dependencies() {
@@ -91,7 +94,7 @@ systemd_install () {
   create_folders
   install_packages
   install_app_files
-#   install_dependencies
+  install_dependencies
   sudo chown -R gravis:gravis "$GRAVIS_BASE"
 }
 
