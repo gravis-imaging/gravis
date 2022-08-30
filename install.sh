@@ -76,7 +76,7 @@ install_dependencies() {
   echo "## Installing Python runtime environment..."
   if [ ! -e "$GRAVIS_BASE/venv" ]; then
     sudo mkdir "$GRAVIS_BASE/venv" && sudo chown $USER "$GRAVIS_BASE/venv"
-    python3 -m venv "$GRAVIS_BASE/venv"
+    python3.10 -m venv "$GRAVIS_BASE/venv"
   fi
 
   echo "## Installing required Python packages..."
