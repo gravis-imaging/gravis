@@ -68,7 +68,7 @@ install_app_files() {
 install_packages() {
   echo "## Installing Linux packages..."
   sudo apt-get --assume-yes update
-  sudo apt-get --assume-yes install -y software-properties-common sqlite3
+  sudo apt-get --assume-yes install -y software-properties-common sqlite3 python3.10-venv
   sudo apt --assume-yes upgrade
 }
 
