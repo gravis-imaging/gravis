@@ -68,11 +68,8 @@ install_app_files() {
 install_packages() {
   echo "## Installing Linux packages..."
   sudo apt-get --assume-yes update
-  echo "## Installing Linux packages... 111"
   sudo apt-get --assume-yes install -y software-properties-common sqlite3
-  echo "## Installing Linux packages.. 222."
   sudo apt --assume-yes upgrade
-  echo "## Installing Linux packages... 333"
 }
 
 install_dependencies() {
