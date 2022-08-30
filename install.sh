@@ -68,21 +68,21 @@ install_app_files() {
 install_packages() {
   echo "## Installing Linux packages..."
   sudo apt-get update
-  sudo apt-get install -y software-properties-common sqlite3
+  sudo apt-get --assume-yes install -y software-properties-common sqlite3
   sudo apt upgrade
 }
 
 install_dependencies() {
   echo "## Installing Python runtime environment..."
-  if [ ! -e "$GRAVIS_BASE/env" ]; then
-    sudo mkdir "$GRAVIS_BASE/env" && sudo chown $USER "$GRAVIS_BASE/env"
-    python3 -m venv "$GRAVIS_BASE/env"
+  if [ ! -e "$GRAVIS_BASE/venv" ]; then
+    sudo mkdir "$GRAVIS_BASE/venv" && sudo chown $USER "$GRAVIS_BASE/venv"
+    python3 -m venv "$GRAVIS_BASE/venv"
   fi
 
   echo "## Installing required Python packages..."
-  sudo chown -R $OWNER:$OWNER "$GRAVIS_BASE/env"
-  sudo su $OWNER -c "$GRAVIS_BASE/env/bin/pip install --isolated wheel~=0.37.1"
-  sudo su $OWNER -c "$GRAVIS_BASE/env/bin/pip install --isolated -r \"$GRAVIS_BASE/app/requirements.txt\""
+  sudo chown -R $OWNER:$OWNER "$GRAVIS_BASE/venv"
+  sudo su $OWNER -c "$GRAVIS_BASE/venv/bin/pip install --isolated wheel~=0.37.1"
+  sudo su $OWNER -c "$GRAVIS_BASE/venv/bin/pip install --isolated -r \"$GRAVIS_BASE/app/requirements.txt\""
 }
 
 systemd_install () {
