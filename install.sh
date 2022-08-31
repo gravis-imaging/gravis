@@ -87,7 +87,7 @@ install_dependencies() {
 
 systemd_install () {
   echo "## Performing systemd-type gravis installation..."
-  create_user
+#   create_user
   create_folders
   install_packages
   install_app_files
