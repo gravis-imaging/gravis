@@ -92,7 +92,7 @@ systemd_install () {
   install_packages
   install_app_files
   install_dependencies
-  sudo chown -R gravis:gravis "$GRAVIS_BASE"
+  sudo chown -R $OWNER:$OWNER "$GRAVIS_BASE"
 }
 
 systemd_install
