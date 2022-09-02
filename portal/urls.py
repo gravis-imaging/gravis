@@ -13,4 +13,4 @@ urlpatterns = [
     path("login/", views.login_request, name="login"),
     path("logout/", views.logout_request, name="logout"),
     path("media/<path:path>", views.serve_file),
-]
+]  + static(settings.STATIC_URL, document_root='static/')
