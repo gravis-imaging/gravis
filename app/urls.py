@@ -19,6 +19,7 @@ from django.urls import include, path
 urlpatterns = [
     path("", include("portal.urls")),
     path("admin/", admin.site.urls),
+    path("wado/", include("wado.urls")),
 ]
 
 urlpatterns += [path("django-rq/", include("django_rq.urls"))]

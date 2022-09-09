@@ -16,3 +16,18 @@ class DockerJob(models.Model):
     input_folder = models.CharField(max_length=10000)
     output_folder = models.CharField(max_length=10000)
     complete = models.BooleanField(default=False)
+
+
+class DICOMInstance(models.Model):
+    study_uid = models.CharField(max_length=100)
+    series_uid = models.CharField(max_length=100)
+    instance_uid = models.CharField(max_length=100)
+    file_location = models.CharField(max_length=10000)
+    json_metadata = models.JSONField(null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["study_uid", "series_uid", "instance_uid"], name="unique_uids"
+            )
+        ]
