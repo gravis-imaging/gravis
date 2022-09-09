@@ -6,8 +6,9 @@ async function cacheMetadata({
     StudyInstanceUID,
     SeriesInstanceUID,
     wadoRsRoot,
-    type,
   }){
+    const SOP_INSTANCE_UID = '00080018';
+    const SERIES_INSTANCE_UID = '0020000E';  
     const studySearchOptions = {
         studyInstanceUID: StudyInstanceUID,
         seriesInstanceUID: SeriesInstanceUID,
@@ -15,7 +16,31 @@ async function cacheMetadata({
 
     const client = new dicomweb.DICOMwebClient({ url: wadoRsRoot });
     const instances = await client.retrieveSeriesMetadata(studySearchOptions);
-    console.log(instances)
+    imageIds = []
+    for (var instanceMetaData of instances) {
+        const SeriesInstanceUID = instanceMetaData[SERIES_INSTANCE_UID].Value[0];
+        const SOPInstanceUID = instanceMetaData[SOP_INSTANCE_UID].Value[0];
+    
+        const prefix = 'wadouri:'
+    
+        const imageId =
+          prefix +
+          wadoRsRoot +
+          '/studies/' +
+          StudyInstanceUID +
+          '/series/' +
+          SeriesInstanceUID +
+          '/instances/' +
+          SOPInstanceUID +
+          '/frames/1';
+    
+        cornerstone.cornerstoneWADOImageLoader.wadors.metaDataManager.add(
+          imageId,
+          instanceMetaData
+        );
+        imageIds.push(imageId);
+    }
+    return imageIds;
 }
 
 function createTools( volumeId ) {
@@ -76,7 +101,7 @@ function createTools( volumeId ) {
     return toolGroup;
 }
 
-async function run() {
+async function run(study_uid, series_uid) {
     const { RenderingEngine, Types, Enums, volumeLoader, CONSTANTS, setVolumesForViewports} = window.cornerstone;
 
     
@@ -99,51 +124,13 @@ async function run() {
 
 
     // Get Cornerstone imageIds and fetch metadata into RAM
-    var imageIds = await cornerstone.helpers.createImageIdsAndCacheMetaData({
-        StudyInstanceUID:
-        '1.3.6.1.4.1.5962.99.1.1647423216.1757746261.1397511827184.6.0',
-        SeriesInstanceUID:
-        '1.3.6.1.4.1.5962.99.1.1647423216.1757746261.1397511827184.7.0',
+    var imageIds = await cacheMetadata({
+        StudyInstanceUID: study_uid,
+        // '1.3.6.1.4.1.5962.99.1.1647423216.1757746261.1397511827184.6.0',
+        SeriesInstanceUID: series_uid,
+        // '1.3.6.1.4.1.5962.99.1.1647423216.1757746261.1397511827184.7.0',
         wadoRsRoot: 'http://localhost:9090/wado',
-        type: 'VOLUME',
     });
-    // streaming-wadors requests the raw image data only, but our WADO implementation doesn't support that.
-    // Instead, use WADO-URI which expects entire DICOM files. 
-    for (var k=0; k < imageIds.length; k++){
-        imageIds[k] = "wadouri:" + imageIds[k].slice(17)
-    }
-    console.log(imageIds)
-
-    // var imageIds = []
-    // for (var k=0; k<=30; k = k+1) {
-    //     imageIds.push('wadouri:http://localhost:9090/media/pineapple/1429657203_SAGPD_' + k.toString().padStart(3, 0) + '.dcm')
-    // }
-    // for (var k=0; k<=22; k = k+1) {
-    //     imageIds.push('wadouri:http://localhost:9090/media/phantom-volume/IM' + k.toString().padStart(5, 0) + '')
-    // }
-
-    // let fakeProvider = {
-    //     get: function (type, imageID) {
-    //         console.log("Get", type, imageID);
-    //         return {
-    //             pixelRepresentation: 1,
-    //             bitsAllocated: 16,
-    //             bitsStored: 12,
-    //             imageOrientationPatient: [1, 0, 0, 0, 1, 0],
-    //             imagePositionPatient: [ 0,0, 3.*parseInt(imageID.slice(-7,-4))],
-    //             pixelSpacing: [0.364583333333,0.364583333333],
-    //             highBit: 11,
-    //             photometricInterpretation: "MONOCHROME2",
-    //             samplesPerPixel: 1,
-    //             columns: 384,
-    //             rows: 384
-    //         }
-    //     }
-    // }
-    // cornerstone.metaData.addProvider(
-    //     fakeProvider.get.bind(fakeProvider),
-    //     100
-    // );
 
     // Instantiate a rendering engine
     const renderingEngineId = 'myRenderingEngine';
@@ -198,6 +185,6 @@ async function run() {
     viewport.render();
 }
 
-window.onload = async function() {
-    await run()
-}
+// window.onload = async function() {
+//     await run()
+// }
