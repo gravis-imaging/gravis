@@ -2,9 +2,24 @@
 // import { Cornerstone } from './static/cornerstone/bundle.js';
 // console.log(Cornerstone)
 
-async function run() {
-    const { RenderingEngine, Types, Enums, tools: cornerstoneTools, volumeLoader, CONSTANTS, setVolumesForViewports} = window.cornerstone;
-    
+async function cacheMetadata({
+    StudyInstanceUID,
+    SeriesInstanceUID,
+    wadoRsRoot,
+    type,
+  }){
+    const studySearchOptions = {
+        studyInstanceUID: StudyInstanceUID,
+        seriesInstanceUID: SeriesInstanceUID,
+    };
+
+    const client = new dicomweb.DICOMwebClient({ url: wadoRsRoot });
+    const instances = await client.retrieveSeriesMetadata(studySearchOptions);
+    console.log(instances)
+}
+
+function createTools( volumeId ) {
+    const cornerstoneTools = window.cornerstone.tools;
     const {
         PanTool,
         WindowLevelTool,
@@ -13,26 +28,9 @@ async function run() {
         ToolGroupManager,
         Enums: csToolsEnums,
     } = cornerstoneTools;
-
-    
-    const { ViewportType } = Enums;
     const { MouseBindings } = csToolsEnums;
-    const { ORIENTATION } = CONSTANTS;
-
-    const content = document.getElementById('content');
-    const element = document.createElement('div');
-    element.id = 'cornerstone-element';
-    element.style.width = '500px';
-    element.style.height = '500px';
-
-    content.appendChild(element);
-
-    await cornerstone.helpers.initDemo();
 
     const toolGroupId = 'STACK_TOOL_GROUP_ID';
-    const volumeName = 'CT_VOLUME_ID'; // Id of the volume less loader prefix
-    const volumeLoaderScheme = 'cornerstoneStreamingImageVolume'; // Loader id which defines which volume loader to use
-    const volumeId = `${volumeLoaderScheme}:${volumeName}`; // VolumeId with loader id + volume id
 
     // Add tools to Cornerstone3D
     cornerstoneTools.addTool(PanTool);
@@ -75,6 +73,30 @@ async function run() {
     // As the Stack Scroll mouse wheel is a tool using the `mouseWheelCallback`
     // hook instead of mouse buttons, it does not need to assign any mouse button.
     toolGroup.setToolActive(StackScrollMouseWheelTool.toolName);
+    return toolGroup;
+}
+
+async function run() {
+    const { RenderingEngine, Types, Enums, volumeLoader, CONSTANTS, setVolumesForViewports} = window.cornerstone;
+
+    
+    const { ViewportType } = Enums;
+    const { ORIENTATION } = CONSTANTS;
+
+    const volumeName = 'CT_VOLUME_ID'; // Id of the volume less loader prefix
+    const volumeLoaderScheme = 'cornerstoneStreamingImageVolume'; // Loader id which defines which volume loader to use
+    const volumeId = `${volumeLoaderScheme}:${volumeName}`; // VolumeId with loader id + volume id
+
+    const content = document.getElementById('content');
+    const element = document.createElement('div');
+    element.id = 'cornerstone-element';
+    element.style.width = '500px';
+    element.style.height = '500px';
+
+    content.appendChild(element);
+
+    await cornerstone.helpers.initDemo();
+
 
     // Get Cornerstone imageIds and fetch metadata into RAM
     var imageIds = await cornerstone.helpers.createImageIdsAndCacheMetaData({
@@ -149,6 +171,8 @@ async function run() {
     };
 
     renderingEngine.enableElement(viewportInput);
+    
+    var toolGroup = createTools(volumeId)
     toolGroup.addViewport(viewportId, renderingEngineId);
     // Get the stack viewport that was created
     const viewport = (
@@ -172,10 +196,8 @@ async function run() {
     setVolumesForViewports(renderingEngine, [{ volumeId }], [viewportId]);
     // Render the image
     viewport.render();
+}
 
-    }
-
-    window.onload = async function() {
-    run()
-    }
-
+window.onload = async function() {
+    await run()
+}

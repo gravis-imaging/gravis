@@ -25,6 +25,10 @@ class DICOMInstance(models.Model):
     file_location = models.CharField(max_length=10000)
     json_metadata = models.JSONField(null=True)
 
+    patient_name = models.CharField(max_length=10000, null=True)
+    study_description = models.CharField(max_length=10000, null=True)
+    series_description = models.CharField(max_length=10000, null=True)
+
     class Meta:
         constraints = [
             models.UniqueConstraint(

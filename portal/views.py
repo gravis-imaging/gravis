@@ -196,3 +196,9 @@ def index(request):
 
     context = {}
     return render(request, "index.html", context)
+
+
+@login_required
+def viewer(request):
+    context = {}
+    return render(request, "viewer.html", context)

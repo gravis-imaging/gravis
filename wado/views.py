@@ -54,17 +54,18 @@ def test(request):
         ds = pydicom.dcmread(str(k), stop_before_pixels=True)
         # ds.TransferSyntaxUID = "1.2.840.10008.1.2"
 
-        k = DICOMInstance(
+        k = DICOMInstance.objects.update_or_create(
             study_uid=ds.StudyInstanceUID,
             series_uid=ds.SeriesInstanceUID,
             instance_uid=ds.SOPInstanceUID,
-            json_metadata=ds.to_json(),
-            file_location=str(k.relative_to(data_folder)),
+            defaults=dict(
+                json_metadata=ds.to_json(),
+                file_location=str(k.relative_to(data_folder)),
+                study_description=ds.get("StudyDescription"),
+                series_description=ds.get("SeriesDescription"),
+                patient_name=ds.get("PatientName"),
+            ),
         )
-        try:
-            k.save()
-        except:
-            pass
     return JsonResponse({"ok": True}, safe=False)
 
 
