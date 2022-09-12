@@ -189,13 +189,20 @@ def logout_request(request):
 
 @login_required
 def index(request):
-
-    # with connections['yarralog'].cursor() as cursor:
-    #    cursor.execute("select * from scanners;")
-    #    print(cursor.fetchall())
-
     context = {}
     return render(request, "index.html", context)
+
+
+@login_required
+def user(request):
+    context = {}
+    return render(request, "user.html", context)
+
+
+@login_required
+def config(request):
+    context = {}
+    return render(request, "config.html", context)
 
 
 @login_required
