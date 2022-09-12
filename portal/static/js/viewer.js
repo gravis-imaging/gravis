@@ -129,7 +129,7 @@ async function run(study_uid, series_uid) {
         // '1.3.6.1.4.1.5962.99.1.1647423216.1757746261.1397511827184.6.0',
         SeriesInstanceUID: series_uid,
         // '1.3.6.1.4.1.5962.99.1.1647423216.1757746261.1397511827184.7.0',
-        wadoRsRoot: 'http://localhost:9090/wado',
+        wadoRsRoot: '/wado',
     });
 
     // Instantiate a rendering engine

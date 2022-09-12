@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 from django.contrib.staticfiles import views as static_views
 
 import pydicom
+from django.views import static
 
 
 @login_required
@@ -34,10 +35,19 @@ def retrieve_instance(request, study, series, instance, frame=1):
     instance = DICOMInstance.objects.get(
         study_uid=study, series_uid=series, instance_uid=instance
     )
+
+    if "localhost" in request.headers["Host"] or "127.0.0.1" in request.headers["Host"]:
+        # We're not running behind nginx so we are going to just serve the file ourselves.
+        response = static.serve(
+            request,
+            instance.file_location,
+            document_root=settings.DATA_FOLDER,
+        )
+        return response
+
     return HttpResponse(
         headers={
             "X-Accel-Redirect": "/secret/" + instance.file_location,
-            "Content-Type": "application/octet-stream",
         }
     )
 
