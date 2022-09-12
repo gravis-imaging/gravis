@@ -7,7 +7,7 @@ from . import views
 
 
 urlpatterns = [
-    path("test", views.test),
+    path("populate-instances", views.test_populate_instances),
     # path("", views.query),
     path(
         "studies/<str:study>/series/<str:series>/instances/<str:instance>",

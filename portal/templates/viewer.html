@@ -48,12 +48,35 @@
     </div>
 </div>
 
-<select name="series" id="series" value="" onchange="pickSeries(event)">
+
+
+<form method="post"  hx-post="/wado/populate-instances"
+_="
+def swap(attr1, attr2)
+    add .{attr1}
+    remove .{attr2}
+end
+on htmx:afterRequest 
+    if detail.successful then 
+      call location.reload()
+    else put 'Error!' into me
+        swap('btn-danger','btn-primary')
+        call Swal.fire({title: 'Error', text:detail.xhr.responseText})"
+>{% csrf_token %}
+  <button class='btn btn-primary mb-3'>Populate</button>
+</form>
+
+<div class="w-25">
+<div class="form-outline">
+  <select class="form-control" style="background-color: rgb(48, 48, 48);" name="series" id="series" value="" onchange="pickSeries(event)">
     <option value="">Select...</option>
     {% for i in series %}
         <option value="{{i.0}}:::{{i.1}}">{{ i.2 }}</option>
     {% endfor %}
-</select>
+  </select>
+  <div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 0px;"></div><div class="form-notch-trailing"></div></div>
+</div></div>
+
 
 <div id="content"></div>
 <script defer src="/static/js/viewer.js"></script>
