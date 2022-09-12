@@ -1,0 +1,13 @@
+.menuitems-top {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;    
+}
+
+h2 {
+    font-size: 1.8rem;
+}
+
+.form-outline .form-control~.form-notch div {
+    border-top-color: #bdbdbd;
+    border-bottom-color: #bdbdbd;
+}
