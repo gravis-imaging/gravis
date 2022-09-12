@@ -43,7 +43,7 @@ async function cacheMetadata({
     return imageIds;
 }
 
-function createTools( volumeId ) {
+function createTools() {
     const cornerstoneTools = window.cornerstone.tools;
     const {
         PanTool,
@@ -55,8 +55,8 @@ function createTools( volumeId ) {
     } = cornerstoneTools;
     const { MouseBindings } = csToolsEnums;
 
-    const toolGroupId = 'STACK_TOOL_GROUP_ID';
-
+    const toolGroupId = `STACK_TOOL_GROUP_ID`;
+    
     // Add tools to Cornerstone3D
     cornerstoneTools.addTool(PanTool);
     cornerstoneTools.addTool(WindowLevelTool);
@@ -67,10 +67,16 @@ function createTools( volumeId ) {
     const toolGroup = ToolGroupManager.createToolGroup(toolGroupId);
 
     // Add tools to the tool group
-    toolGroup.addTool(WindowLevelTool.toolName, { volumeId } );
-    toolGroup.addTool(PanTool.toolName,  { volumeId } );
-    toolGroup.addTool(ZoomTool.toolName,  { volumeId } );
-    toolGroup.addTool(StackScrollMouseWheelTool.toolName, { volumeId });
+    toolGroup.addTool(WindowLevelTool.toolName );
+    toolGroup.addTool(PanTool.toolName );
+    toolGroup.addTool(ZoomTool.toolName );
+    toolGroup.addTool(StackScrollMouseWheelTool.toolName );
+
+    // toolGroup.addTool(WindowLevelTool.toolName, { volumeId } );
+    // toolGroup.addTool(PanTool.toolName,  { volumeId } );
+    // toolGroup.addTool(ZoomTool.toolName,  { volumeId } );
+    // toolGroup.addTool(StackScrollMouseWheelTool.toolName, { volumeId });
+
 
     // Set the initial state of the tools, here all tools are active and bound to
     // Different mouse inputs
@@ -101,16 +107,13 @@ function createTools( volumeId ) {
     return toolGroup;
 }
 
-async function run(study_uid, series_uid) {
+async function run() {
     const { RenderingEngine, Types, Enums, volumeLoader, CONSTANTS, setVolumesForViewports} = window.cornerstone;
 
     
     const { ViewportType } = Enums;
     const { ORIENTATION } = CONSTANTS;
 
-    const volumeName = 'CT_VOLUME_ID'; // Id of the volume less loader prefix
-    const volumeLoaderScheme = 'cornerstoneStreamingImageVolume'; // Loader id which defines which volume loader to use
-    const volumeId = `${volumeLoaderScheme}:${volumeName}`; // VolumeId with loader id + volume id
 
     const content = document.getElementById('content');
     const element = document.createElement('div');
@@ -120,24 +123,14 @@ async function run(study_uid, series_uid) {
 
     content.appendChild(element);
 
-    await cornerstone.helpers.initDemo();
-
-
-    // Get Cornerstone imageIds and fetch metadata into RAM
-    var imageIds = await cacheMetadata({
-        StudyInstanceUID: study_uid,
-        // '1.3.6.1.4.1.5962.99.1.1647423216.1757746261.1397511827184.6.0',
-        SeriesInstanceUID: series_uid,
-        // '1.3.6.1.4.1.5962.99.1.1647423216.1757746261.1397511827184.7.0',
-        wadoRsRoot: '/wado',
-    });
+    await cornerstone.helpers.initDemo(); 
 
     // Instantiate a rendering engine
-    const renderingEngineId = 'myRenderingEngine';
+    const renderingEngineId = 'gravisRenderEngine';
     const renderingEngine = new RenderingEngine(renderingEngineId);
 
     // Create a stack viewport
-    const viewportId = 'CT_STACK';
+    const viewportId = 'GRASP_VIEW';
     const viewportInput = {
         viewportId,
     //   type: Enums.ViewportType.STACK,
@@ -159,32 +152,53 @@ async function run(study_uid, series_uid) {
 
     renderingEngine.enableElement(viewportInput);
     
-    var toolGroup = createTools(volumeId)
+    var toolGroup = createTools()
     toolGroup.addViewport(viewportId, renderingEngineId);
     // Get the stack viewport that was created
     const viewport = (
         renderingEngine.getViewport(viewportId)
     );
 
-    const volume = await volumeLoader.createAndCacheVolume(volumeId, {
-        imageIds,
-    });
-    volume.load();
-    // const stack = imageIds;
-
-    // Set the stack on the viewport
-    viewport.setVolumes([
-        { volumeId },
-    ]);
     // await viewport.setStack(stack);
-
+    // setVolume()
     // Set the VOI of the stack
     // viewport.setProperties({ voiRange:{lower:0, upper:255} });
-    setVolumesForViewports(renderingEngine, [{ volumeId }], [viewportId]);
     // Render the image
     viewport.render();
 }
 
-// window.onload = async function() {
-//     await run()
-// }
+async function setVolume(study_uid, series_uid) {
+    const volumeName = series_uid; // Id of the volume less loader prefix
+    const volumeLoaderScheme = 'cornerstoneStreamingImageVolume'; // Loader id which defines which volume loader to use
+    const volumeId = `${volumeLoaderScheme}:${volumeName}`; // VolumeId with loader id + volume id
+
+    // Get Cornerstone imageIds and fetch metadata into RAM
+    var imageIds = await cacheMetadata({
+        StudyInstanceUID: study_uid,
+        SeriesInstanceUID: series_uid,
+        wadoRsRoot: '/wado',
+    });
+
+    const volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, {
+        imageIds,
+    });
+    volume.load();
+    // const stack = imageIds;
+    const renderingEngine = window.cornerstone.getRenderingEngine(
+        'gravisRenderEngine'
+      );
+  
+    const viewport = (
+        renderingEngine.getViewport('GRASP_VIEW')
+    );
+    // Set the stack on the viewport
+    viewport.setVolumes([
+        { volumeId },
+    ]);
+    // setVolumesForViewports(renderingEngine, [{ volumeId }], [viewportId]);
+
+    viewport.render();
+}
+window.onload = async function() {
+    await run()
+}
