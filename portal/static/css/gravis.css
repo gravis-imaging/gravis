@@ -7,6 +7,7 @@ h2 {
     font-size: 1.8rem;
 }
 
+/* Fix for bug in MDBootstrap dark mode, affecting input boxes */
 .form-outline .form-control~.form-notch div {
     border-top-color: #bdbdbd;
     border-bottom-color: #bdbdbd;
@@ -14,7 +15,7 @@ h2 {
 
 #casetable > thead > tr > th {
     color: #1266f1;
-    font-weight: 700;
+    font-weight: 900;
 }
 
 #casetable_length > label > select {
@@ -27,26 +28,18 @@ h2 {
     color: white;
 }
 
-#casetable_wrapper > div.dt-buttons.btn-group.flex-wrap > button {
-    background-color: #F00;
-}
-
 .browserbuttons button
 {
     background-color: transparent;
     box-shadow: none;
     color: #1266f1;
-    font-size: 1.8rem;
+    font-size: 1.6rem;
     padding-top: 0.1rem;
     padding-bottom: 0.1rem;
     padding-left: 0.6rem;
     padding-right: 0.6rem;
     transition: none;
-
-}
-
-.browserbuttons .btn-group, .browserbuttons .btn-group:hover {
-    box-shadow: none;
+    min-width: 3.0rem;
 }
 
 .browserbuttons button:hover
@@ -57,6 +50,14 @@ h2 {
     transition: none;
 }
 
+.browserbuttons .btn-group, .browserbuttons .btn-group:hover {
+    box-shadow: none;
+}
+
 .browsertoolbar {
     margin-bottom: 4px;
+}
+
+ .table>:not(caption)>*>* {
+    padding: 0.9rem 1.4rem !important;
 }
