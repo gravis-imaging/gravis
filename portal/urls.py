@@ -16,4 +16,5 @@ urlpatterns = [
     path("config/", views.config, name="config"),
     path("user/", views.user, name="user"),
     path("media/<path:path>", views.serve_file),
-] + static(settings.STATIC_URL, document_root="static/")
+    *static(settings.STATIC_URL, document_root="portal/static/"),
+]
