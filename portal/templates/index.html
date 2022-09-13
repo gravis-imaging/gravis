@@ -12,19 +12,43 @@
         <table id="casetable" class="table table-dark table-bordered" >
             <thead>
                 <tr>
-                    <th>Column 1</th>
-                    <th>Column 2</th>
+                    <th>Patient</th>
+                    <th>MRN</th>
+                    <th>ACC</th>
+                    <th>Type</th>
+                    <th>Received</th>
+                    <th>Status</th>
+                    <th>Reader</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td>Row 1 Data 1</td>
-                    <td>Row 1 Data 2</td>
+                    <td>Hans Wurst</td>
+                    <td>3423545</td>
+                    <td>8299123</td>
+                    <td>GRASP MRA</td>
+                    <td>9-13-23 12:00:00</td>
+                    <td><span class="badge badge-light">QUEUED</span></td>
+                    <td></td>
                 </tr>
                 <tr>
-                    <td>Row 2 Data 1</td>
-                    <td>Row 2 Data 2</td>
+                    <td>Steven Quincy Urkel</td>
+                    <td>6634523</td>
+                    <td>5234235</td>
+                    <td>GRASP Onco</td>
+                    <td>9-14-23 14:03:40</td>
+                    <td><span class="badge bg-warning text-dark">PROCESSING</span></i></td>
+                    <td></td>
                 </tr>
+                <tr>
+                    <td>Steven Quincy Urkel</td>
+                    <td>6634523</td>
+                    <td>5234235</td>
+                    <td>GRASP Onco</td>
+                    <td>9-14-23 14:03:40</td>
+                    <td><span class="badge bg-primary">VIEWING</span></td>
+                    <td>blockt02&nbsp;&nbsp;<i class="fa-solid fa-lock text-primary"></i></td>
+                </tr>               
             </tbody>
         </table>
         </div>
@@ -53,21 +77,50 @@
                     action: function ( e, dt, node, config ) {
                         alert("Coming soon!");                    
                     }
-                },
+                },                
                 {
                     text: '<i class="fas fa-lock-open"></i>',
                     titleAttr: 'Unlock case',
                     action: function ( e, dt, node, config ) {
                         alert("Coming soon!");                    
                     }
-                },                
+                },             
+                {
+                    text: '<i class="fa-solid fa-tags"></i>',
+                    titleAttr: 'Case information',
+                    action: function ( e, dt, node, config ) {
+                        alert("Coming soon!");                    
+                    }
+                },   
                 {
                     text: '<i class="fas fa-trash"></i>',
-                    titleAttr: 'Cancel study',
+                    titleAttr: 'Remove case',
                     action: function ( e, dt, node, config ) {
                         alert("Coming soon!");                    
                     }
                 },                
+                {
+                    extend: 'spacer',
+                    style: 'empty'
+                },                             
+                {
+                    extend: 'spacer',
+                    style: 'empty'
+                },                             
+                {
+                    text: '<i class="fa-solid fa-upload"></i>',
+                    titleAttr: 'Upload case',
+                    action: function ( e, dt, node, config ) {
+                        alert("Coming soon!");                    
+                    }
+                },   
+                {
+                    text: '<i class="fa-solid fa-floppy-disk"></i>',
+                    titleAttr: 'Download case',
+                    action: function ( e, dt, node, config ) {
+                        alert("Coming soon!");                    
+                    }
+                },   
             ],
             "initComplete": () => {$("#tablewrapper").show();}   
         });

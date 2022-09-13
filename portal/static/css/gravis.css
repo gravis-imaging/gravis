@@ -4,7 +4,7 @@
 }
 
 h2 {
-    font-size: 1.8rem;
+    font-size: 1.7rem;
 }
 
 /* Fix for bug in MDBootstrap dark mode, affecting input boxes */
@@ -14,8 +14,9 @@ h2 {
 }
 
 #casetable > thead > tr > th {
-    color: #1266f1;
+    color: #FFF;
     font-weight: 900;
+    background-color: #424242;
 }
 
 #casetable_length > label > select {
@@ -33,11 +34,11 @@ h2 {
     background-color: transparent;
     box-shadow: none;
     color: #1266f1;
-    font-size: 1.6rem;
+    font-size: 1.5rem;
     padding-top: 0.1rem;
     padding-bottom: 0.1rem;
-    padding-left: 0.6rem;
-    padding-right: 0.6rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
     transition: none;
     min-width: 3.0rem;
 }
@@ -58,6 +59,6 @@ h2 {
     margin-bottom: 4px;
 }
 
- .table>:not(caption)>*>* {
-    padding: 0.9rem 1.4rem !important;
+#casetable.table>:not(caption) > * > * {
+    padding: 0.7rem 1.4rem !important;
 }
