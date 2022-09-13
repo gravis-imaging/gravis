@@ -20,18 +20,40 @@
                     <li class="nav-item menuitems-top">
                         <a class="nav-link {% if request.resolver_match.url_name == "index" %}active{% endif %}" aria-current="page" href="/"><i class="fas fa-th-list"></i>&nbsp;&nbsp;Browser</a>
                     </li>
-                    <li class="nav-item menuitems-top">
-                        <a class="nav-link {% if request.resolver_match.url_name == "viewer" %}active{% endif %}" href="/viewer"><i class="fas fa-glasses"></i>&nbsp;&nbsp;Reading</a>
+                    <li class="nav-item dropdown">
+                        <a
+                          class="nav-link dropdown-toggle {% if request.resolver_match.url_name == "viewer" %}active{% endif %}"
+                          href="/viewer"
+                          id="navbarDropdownMenuLink"
+                          role="button"
+                          data-mdb-toggle="dropdown"
+                          aria-expanded="false"
+                        >
+                        <i class="fas fa-glasses"></i>&nbsp;&nbsp;Viewing
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                          <li>
+                            <a class="dropdown-item" href="/viewer/Patient_ABC">Patient ABC</a>
+                          </li>
+                          <li>
+                            <a class="dropdown-item" href="/viewer/Patient_DEF">Patient DEF</a>
+                          </li>
+                          <li>
+                            <a class="dropdown-item" href="/viewer/Patient_XYZ">Patient XYZ</a>
+                          </li>
+                        </ul>
                     </li>
+                    {% if user.is_staff %}
                     <li class="nav-item menuitems-top">
                         <a class="nav-link {% if request.resolver_match.url_name == "config" %}active{% endif %}" href="/config"><i class="fas fa-wrench"></i>&nbsp;&nbsp;Configuration</a>
                     </li>
+                    {% endif %}
                 </ul>
                 <ul class="navbar-nav">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="/user" id="navbarDropdownMenuLink" role="button"
                             data-mdb-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-user"></i>&nbsp;&nbsp;{{request.user.username}}
+                            <i class="fas {% if user.is_staff %}fa-user-shield{% else %}fa-user{% endif %}"></i>&nbsp;&nbsp;{{request.user.username}}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
                             <li>

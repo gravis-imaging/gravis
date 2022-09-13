@@ -206,13 +206,14 @@ def config(request):
 
 
 @login_required
-def viewer(request):
+def viewer(request, case=""):
     instances = DICOMInstance.objects.all()
 
     context = {
         "series": set(
             [(k.study_uid, k.series_uid, k.series_description) for k in instances]
-        )
+        ),
+        "case": case
     }
     # logging.info(context["series"])
     return render(request, "viewer.html", context)
