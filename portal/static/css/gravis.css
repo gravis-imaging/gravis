@@ -11,3 +11,25 @@ h2 {
     border-top-color: #bdbdbd;
     border-bottom-color: #bdbdbd;
 }
+
+.select-wrapper {
+    display: grid;
+    grid-template-areas: "select";
+}
+
+.select-wrapper::after {
+    content: "";
+    justify-self: end;
+    margin: 1em 1em 1em 1em;
+    width: 0.8em;
+    height: 0.8em;
+    background-color: white;
+    clip-path: polygon(100% 0%, 0 0%, 50% 100%);
+}
+select,.select-wrapper::after {
+    grid-area: select;
+}
+
+select {
+    background-color: rgb(48, 48, 48);
+}

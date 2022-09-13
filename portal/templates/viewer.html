@@ -68,14 +68,17 @@ on htmx:afterRequest
 
 <div class="w-25">
 <div class="form-outline">
-  <select class="form-control" style="background-color: rgb(48, 48, 48);" name="series" id="series" value="" onchange="pickSeries(event)">
-    <option value="">Select...</option>
-    {% for i in series %}
-        <option value="{{i.0}}:::{{i.1}}">{{ i.2 }}</option>
-    {% endfor %}
-  </select>
-  <div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 0px;"></div><div class="form-notch-trailing"></div></div>
-</div></div>
+  <div class="select-wrapper">
+    <select autocomplete="off" class="form-control" name="series" id="series" value="" onchange="pickSeries(event)">
+      <option value="" selected disabled hidden>Select series...</option>
+      {% for i in series %}
+          <option value="{{i.0}}:::{{i.1}}">{{ i.2 }}</option>
+      {% endfor %}
+    </select>
+    <div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 0px;"></div><div class="form-notch-trailing"></div></div>
+  </div>
+</div>
+</div>
 
 
 <div id="content"></div>
