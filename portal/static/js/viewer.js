@@ -1,46 +1,53 @@
 // import * as cornerstone_test from './static/cornerstone/bundle.js';
 // import { Cornerstone } from './static/cornerstone/bundle.js';
 // console.log(Cornerstone)
+const SOP_INSTANCE_UID = '00080018';
+const STUDY_TIME = '00080030'
+const SERIES_TIME = '00080031'
+const SERIES_INSTANCE_UID = '0020000E'; 
+const STUDY_INSTANCE_UID = '0020000D';
 
-async function cacheMetadata({
-    StudyInstanceUID,
-    SeriesInstanceUID,
+
+function getImageId(instanceMetaData, wadoRsRoot) {
+    const StudyInstanceUID = instanceMetaData[STUDY_INSTANCE_UID].Value[0];
+    const SeriesInstanceUID = instanceMetaData[SERIES_INSTANCE_UID].Value[0];
+    const SOPInstanceUID = instanceMetaData[SOP_INSTANCE_UID].Value[0];
+
+    const prefix = 'wadouri:'
+
+    return prefix +
+      wadoRsRoot +
+      '/studies/' +
+      StudyInstanceUID +
+      '/series/' +
+      SeriesInstanceUID +
+      '/instances/' +
+      SOPInstanceUID +
+      '/frames/1';
+}
+
+async function cacheMetadata(
+    studySearchOptions,
     wadoRsRoot,
-  }){
-    const SOP_INSTANCE_UID = '00080018';
-    const SERIES_INSTANCE_UID = '0020000E';  
-    const studySearchOptions = {
-        studyInstanceUID: StudyInstanceUID,
-        seriesInstanceUID: SeriesInstanceUID,
-    };
-
+  ){
+    
     const client = new dicomweb.DICOMwebClient({ url: wadoRsRoot });
-    const instances = await client.retrieveSeriesMetadata(studySearchOptions);
+    var metadata;
+    if (studySearchOptions.seriesInstanceUID ) {
+        metadata = await client.retrieveSeriesMetadata(studySearchOptions);
+    } else {
+        metadata = await client.retrieveStudyMetadata(studySearchOptions);
+    }
     imageIds = []
-    for (var instanceMetaData of instances) {
-        const SeriesInstanceUID = instanceMetaData[SERIES_INSTANCE_UID].Value[0];
-        const SOPInstanceUID = instanceMetaData[SOP_INSTANCE_UID].Value[0];
-    
-        const prefix = 'wadouri:'
-    
-        const imageId =
-          prefix +
-          wadoRsRoot +
-          '/studies/' +
-          StudyInstanceUID +
-          '/series/' +
-          SeriesInstanceUID +
-          '/instances/' +
-          SOPInstanceUID +
-          '/frames/1';
-    
+    for (var instanceMetaData of metadata) {
+        imageId = getImageId(instanceMetaData, wadoRsRoot);
         cornerstone.cornerstoneWADOImageLoader.wadors.metaDataManager.add(
           imageId,
           instanceMetaData
         );
         imageIds.push(imageId);
     }
-    return imageIds;
+    return { imageIds, metadata };
 }
 
 function createTools() {
@@ -137,6 +144,7 @@ async function run() {
         type: ViewportType.ORTHOGRAPHIC,
         element,
         defaultOptions: {
+            // orientation: ORIENTATION.SAGITTAL,
             orientation: {
             // Random oblique orientation
             viewUp: [
@@ -158,47 +166,90 @@ async function run() {
     const viewport = (
         renderingEngine.getViewport(viewportId)
     );
-
-    // await viewport.setStack(stack);
-    // setVolume()
-    // Set the VOI of the stack
-    // viewport.setProperties({ voiRange:{lower:0, upper:255} });
-    // Render the image
     viewport.render();
 }
 
-async function setVolume(study_uid, series_uid) {
-    const volumeName = series_uid; // Id of the volume less loader prefix
+async function setVolumeByImageIds(imageIds, volumeName, keepCamera=true) {
+    // const volumeName = series_uid; // Id of the volume less loader prefix
     const volumeLoaderScheme = 'cornerstoneStreamingImageVolume'; // Loader id which defines which volume loader to use
     const volumeId = `${volumeLoaderScheme}:${volumeName}`; // VolumeId with loader id + volume id
+    const renderingEngine = window.cornerstone.getRenderingEngine(
+        'gravisRenderEngine'
+    );
+    const viewport = (
+        renderingEngine.getViewport('GRASP_VIEW')
+    );
 
-    // Get Cornerstone imageIds and fetch metadata into RAM
-    var imageIds = await cacheMetadata({
-        StudyInstanceUID: study_uid,
-        SeriesInstanceUID: series_uid,
-        wadoRsRoot: '/wado',
-    });
-
+    let cam = viewport.getCamera()
     const volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, {
         imageIds,
     });
     volume.load();
-    // const stack = imageIds;
-    const renderingEngine = window.cornerstone.getRenderingEngine(
-        'gravisRenderEngine'
-      );
-  
-    const viewport = (
-        renderingEngine.getViewport('GRASP_VIEW')
-    );
-    // Set the stack on the viewport
-    viewport.setVolumes([
+    
+    await viewport.setVolumes([
         { volumeId },
+        
     ]);
-    // setVolumesForViewports(renderingEngine, [{ volumeId }], [viewportId]);
-
+    if ( keepCamera ) {
+        if (!cam.focalPoint.every((k) => k==0)) { // focalPoint is [0,0,0] before any volumes are loaded
+            viewport.setCamera( cam )
+        }
+    }
+// setVolumesForViewports(renderingEngine, [{ volumeId }], [viewportId]);
     viewport.render();
 }
+
+async function setVolumeBySeries(study_uid, series_uid, keepCamera=true) {
+
+    // Get Cornerstone imageIds and fetch metadata into RAM
+    var { imageIds, metadata } = await cacheMetadata(
+        { studyInstanceUID: study_uid,
+        seriesInstanceUID: series_uid },
+        '/wado',
+    );
+    await setVolumeByImageIds(imageIds, series_uid, keepCamera);
+}
+
+async function setVolumeByStudy(study_uid, series_uid, keepCamera=true) {
+    var { imageIds, metadata } = await cacheMetadata(
+        { studyInstanceUID: study_uid },
+        '/wado',
+    );
+    seriesByTime = {}
+    for (var k of metadata){
+        var time = parseFloat(k[SERIES_TIME].Value[0]) - parseFloat(k[STUDY_TIME].Value[0])
+        if (seriesByTime[time] == undefined ){
+            seriesByTime[time] = []
+        }
+        seriesByTime[time].push(k)
+    }
+    volumesList = Object.entries(seriesByTime).map((k)=>[parseFloat(k[0]),k[1]])
+    volumesList.sort((k,v)=>(k[0]-v[0]))
+    
+    studyImageIds = []
+    for ( var v of volumesList ) {
+        imageIds = []
+        for (var k of v[1]) {
+            imageIds.push(getImageId(k,'/wado'))
+        }
+        var series_uid = v[1][0][SERIES_INSTANCE_UID].Value[0]
+        studyImageIds.push([imageIds, series_uid])
+    }
+    console.log(studyImageIds)
+    window.current_study = studyImageIds
+    document.getElementById("volume-picker").setAttribute("min",0)
+    document.getElementById("volume-picker").setAttribute("max",window.current_study.length-1)
+    document.getElementById("volume-picker").setAttribute("value",0)
+
+    await setVolumeByImageIds(studyImageIds[0][0], series_uid, keepCamera);
+    // console.log(metadata)
+}
+
+async function setGraspFrame(event) {
+    var study = window.current_study[event.target.value]
+    await setVolumeByImageIds(study[0],study[1], true);
+}
+
 window.onload = async function() {
     await run()
 }

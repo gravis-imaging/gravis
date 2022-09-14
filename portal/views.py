@@ -213,7 +213,8 @@ def viewer(request, case=""):
         "series": set(
             [(k.study_uid, k.series_uid, k.series_description) for k in instances]
         ),
-        "case": case
+        "studies": set([(k.study_uid, k.study_description) for k in instances]),
+        "case": case,
     }
     # logging.info(context["series"])
     return render(request, "viewer.html", context)
