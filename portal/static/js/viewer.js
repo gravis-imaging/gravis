@@ -131,8 +131,8 @@ async function run() {
     const content = document.getElementById('content');
     const element = document.createElement('div');
     element.id = 'cornerstone-element';
-    element.style.width = '500px';
-    element.style.height = '500px';
+    element.style.width = '100%';
+    element.style.height = '100%';
 
     content.appendChild(element);
 
