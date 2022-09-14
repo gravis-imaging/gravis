@@ -2,16 +2,22 @@
 // import { Cornerstone } from './static/cornerstone/bundle.js';
 // console.log(Cornerstone)
 const SOP_INSTANCE_UID = '00080018';
-const STUDY_TIME = '00080030'
-const SERIES_TIME = '00080031'
+const STUDY_DATE = '00080020';
+const STUDY_TIME = '00080030';
+const SERIES_DATE = '00080021';
+const SERIES_TIME = '00080031';
 const SERIES_INSTANCE_UID = '0020000E'; 
 const STUDY_INSTANCE_UID = '0020000D';
+const SERIES_DESCRIPTION = '0008103E';
 
+function getMeta(data, val) {
+    return data[val].Value[0]
+}
 
 function getImageId(instanceMetaData, wadoRsRoot) {
-    const StudyInstanceUID = instanceMetaData[STUDY_INSTANCE_UID].Value[0];
-    const SeriesInstanceUID = instanceMetaData[SERIES_INSTANCE_UID].Value[0];
-    const SOPInstanceUID = instanceMetaData[SOP_INSTANCE_UID].Value[0];
+    const StudyInstanceUID = getMeta(instanceMetaData,STUDY_INSTANCE_UID)
+    const SeriesInstanceUID = getMeta(instanceMetaData,SERIES_INSTANCE_UID)
+    const SOPInstanceUID = getMeta(instanceMetaData,SOP_INSTANCE_UID)
 
     const prefix = 'wadouri:'
 
@@ -209,46 +215,72 @@ async function setVolumeBySeries(study_uid, series_uid, keepCamera=true) {
     );
     await setVolumeByImageIds(imageIds, series_uid, keepCamera);
 }
+function parseDicomTime(date, timestamp) {    
+    const p = {
+        year: parseInt(date.slice(0,4)),
+        month: parseInt(date.slice(4,6))-1, // Javascript months are 0-indexed, DICOM months are 1-indexed
+        day: parseInt(date.slice(6,8)),
+        hour: parseInt(timestamp.slice(0,2)),
+        minute: parseInt(timestamp.slice(2,4)),
+        second: parseInt(timestamp.slice(4,6)),
+        millisecond: 0
+      };
+    if (timestamp.length > 6) {
+        p.millisecond = Math.round(1000*parseFloat(timestamp.slice(6)))
+    }
+    return new Date(p.year,p.month,p.day,p.hour,p.minute,p.second,p.millisecond)
+}
 
-async function setVolumeByStudy(study_uid, series_uid, keepCamera=true) {
+async function setVolumeByStudy(study_uid, keepCamera=true) {
     var { imageIds, metadata } = await cacheMetadata(
         { studyInstanceUID: study_uid },
         '/wado',
     );
     seriesByTime = {}
+    const studyTime = parseDicomTime(getMeta(metadata[0],STUDY_DATE),getMeta(metadata[0],STUDY_TIME))
+    console.log("Study time", studyTime)
     for (var k of metadata){
-        var time = parseFloat(k[SERIES_TIME].Value[0]) - parseFloat(k[STUDY_TIME].Value[0])
+        const seriesTime = parseDicomTime(getMeta(k,SERIES_DATE),getMeta(k,SERIES_TIME))
+        const time = seriesTime - studyTime
+
         if (seriesByTime[time] == undefined ){
             seriesByTime[time] = []
         }
         seriesByTime[time].push(k)
     }
-    volumesList = Object.entries(seriesByTime).map((k)=>[parseFloat(k[0]),k[1]])
-    volumesList.sort((k,v)=>(k[0]-v[0]))
-    
+    volumesList = Object.entries(seriesByTime).map((k)=>{return {time:parseFloat(k[0]), seriesList:k[1]}})
+    volumesList.sort((k,v)=>(k.time-v.time))
+
     studyImageIds = []
     for ( var v of volumesList ) {
         imageIds = []
-        for (var k of v[1]) {
-            imageIds.push(getImageId(k,'/wado'))
+        for (var s of v.seriesList) {
+            imageIds.push(getImageId(s,'/wado'))
         }
-        var series_uid = v[1][0][SERIES_INSTANCE_UID].Value[0]
-        studyImageIds.push([imageIds, series_uid])
+        var series_uid = getMeta(v.seriesList[0],SERIES_INSTANCE_UID);
+        var series_description = getMeta(v.seriesList[0],SERIES_DESCRIPTION);
+        var time = v.time/1000.0;
+        studyImageIds.push({imageIds, series_uid, series_description, time})
     }
     console.log(studyImageIds)
-    window.current_study = studyImageIds
     document.getElementById("volume-picker").setAttribute("min",0)
-    document.getElementById("volume-picker").setAttribute("max",window.current_study.length-1)
+    document.getElementById("volume-picker").setAttribute("max",studyImageIds.length-1)
     document.getElementById("volume-picker").setAttribute("value",0)
 
-    await setVolumeByImageIds(studyImageIds[0][0], series_uid, keepCamera);
+    await setVolumeByImageIds(studyImageIds[0].imageIds, studyImageIds[0].series_uid, keepCamera);
+    return studyImageIds
+
     // console.log(metadata)
 }
 
-async function setGraspFrame(event) {
-    var study = window.current_study[event.target.value]
-    await setVolumeByImageIds(study[0],study[1], true);
+async function setGraspVolume(seriesInfo) {
+    await setVolumeByImageIds(seriesInfo.imageIds,seriesInfo.series_uid)
 }
+
+// async function setGraspFrame(event) {
+//     var series = window.current_study[event.target.value]
+//     await setVolumeByImageIds(series.imageIds,series.series_uid, true);
+// }
 
 window.onload = async function() {
     await run()

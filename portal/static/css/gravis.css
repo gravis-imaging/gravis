@@ -7,6 +7,10 @@ h2 {
     font-size: 1.7rem;
 }
 
+.hidden {
+    display:none !important;
+}
+
 /* Fix for bug in MDBootstrap dark mode, affecting input boxes */
 .form-outline .form-control~.form-notch div {
     border-top-color: #bdbdbd;

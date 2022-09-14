@@ -40,11 +40,12 @@ on htmx:afterRequest
 </div>
 </div>
 
-
+<div x-data="{ current_study: null, current_time: 0, index: 0 }">
 <div class="w-25">
   <div class="">
     <div class="select-wrapper">
-      <select autocomplete="off" class="form-control" name="series" id="series" value="" onchange="pickStudy(event)">
+      <select autocomplete="off" class="form-control" name="series" id="series" value="" 
+        @change="current_study = await setVolumeByStudy($event.target.value)">
         <option value="" selected disabled hidden>Select study...</option>
         {% for i in studies %}
             <option value="{{i.0}}">{{ i.1 }}</option>
@@ -53,11 +54,15 @@ on htmx:afterRequest
       <div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 0px;"></div><div class="form-notch-trailing"></div></div>
     </div>
   </div>
-  </div>
+</div>
 
 <div id="content"></div>
-<input id='volume-picker' step="1" type='range' onchange="setGraspFrame(event)"></input>
-
+<div class="hidden" :class="{ 'hidden': current_study==null }">
+  <input id='volume-picker' type='range' value=0 step="1" autocomplete="off"
+    @input="index = $event.target.value; current_time=current_study[index].time" @change="setGraspVolume(current_study[index])"></input>
+  <label for='volume-picker' x-text="current_time.toFixed(2) + 's'"></label>
+</div>
+</div>
 <script defer src="/static/js/viewer.js"></script>
 <script type="text/javascript">
   function pickSeries(evt) {
