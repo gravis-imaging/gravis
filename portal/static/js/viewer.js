@@ -120,7 +120,7 @@ function createTools() {
     return toolGroup;
 }
 
-async function run() {
+async function initializeGraspViewer(wrapper) {
     const { RenderingEngine, Types, Enums, volumeLoader, CONSTANTS, setVolumesForViewports} = window.cornerstone;
 
     
@@ -128,13 +128,12 @@ async function run() {
     const { ORIENTATION } = CONSTANTS;
 
 
-    const content = document.getElementById('content');
     const element = document.createElement('div');
     element.id = 'cornerstone-element';
     element.style.width = '100%';
     element.style.height = '100%';
 
-    content.appendChild(element);
+    wrapper.appendChild(element);
 
     await cornerstone.helpers.initDemo(); 
 
@@ -283,5 +282,4 @@ async function setGraspVolume(seriesInfo) {
 // }
 
 window.onload = async function() {
-    await run()
 }
