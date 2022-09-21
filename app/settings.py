@@ -173,3 +173,5 @@ RQ_QUEUES = {
     #     'DB': 0,
     # }
 }
+
+GRAVIS_DATA = "/opt/gravis/data"

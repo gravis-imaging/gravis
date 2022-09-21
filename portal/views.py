@@ -1,15 +1,14 @@
 from http.client import HTTPResponse
 import logging
-import os
+import os, json
 from pathlib import Path
 from time import sleep
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
-from django.shortcuts import render
 from django.conf import settings
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.db import connections
@@ -189,7 +188,22 @@ def logout_request(request):
 
 @login_required
 def index(request):
-    context = {}
+    folder = settings.GRAVIS_DATA + '/cases'
+    f = "series.json"
+    file_paths = [ os.path.join(d,f) for d in os.scandir(folder) if d.is_dir() ]
+
+    data = []
+    for file_path in file_paths:
+        if os.path.isfile(file_path):
+            with open(file_path, 'r') as myfile:
+                d=myfile.read()
+            obj = json.loads(d)
+            data.append(obj)
+        # else:
+            # invalid TODO
+    context = {
+        'data': data
+    }
     return render(request, "index.html", context)
 
 

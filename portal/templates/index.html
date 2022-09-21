@@ -1,130 +1,116 @@
 {% extends 'portal.html' %}
 
 {% block content %}
-<div class="row mb-3">
-    <div class="col">
-        <h2><i class="fas fa-angle-double-right text-primary text-primary"></i>&nbsp;&nbsp;Case Browser</h2>        
-    </div>
-</div>
-<div class="row mt-2">
-    <div class="col">
-        <div id="tablewrapper" style="display: none;">
-        <table id="casetable" class="table table-dark table-bordered" >
-            <thead>
-                <tr>
-                    <th>Patient</th>
-                    <th>MRN</th>
-                    <th>ACC</th>
-                    <th>Type</th>
-                    <th>Received</th>
-                    <th>Status</th>
-                    <th>Reader</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Hans Wurst</td>
-                    <td>3423545</td>
-                    <td>8299123</td>
-                    <td>GRASP MRA</td>
-                    <td>9-13-23 12:00:00</td>
-                    <td><span class="badge badge-light">QUEUED</span></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td>Steven Quincy Urkel</td>
-                    <td>6634523</td>
-                    <td>5234235</td>
-                    <td>GRASP Onco</td>
-                    <td>9-14-23 14:03:40</td>
-                    <td><span class="badge bg-warning text-dark">PROCESSING</span></i></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td>Steven Quincy Urkel</td>
-                    <td>6634523</td>
-                    <td>5234235</td>
-                    <td>GRASP Onco</td>
-                    <td>9-14-23 14:03:40</td>
-                    <td><span class="badge bg-primary">VIEWING</span></td>
-                    <td>blockt02&nbsp;&nbsp;<i class="fa-solid fa-lock text-primary"></i></td>
-                </tr>               
-            </tbody>
-        </table>
-        </div>
-    </div>
-</div>
-{% endblock %}
 
 {% block header %}
-<link rel="stylesheet" type="text/css" href="/static/css/datatables.min.css" crossorigin/>
+<link rel="stylesheet" type="text/css" href="/static/css/datatables.min.css" crossorigin />
 {% endblock %}
 
 {% block addedscripts %}
-<script src="/static/js/jquery-3.5.1.min.js" crossorigin></script>
+<!--script src="/static/js/jquery-3.5.1.min.js" crossorigin></script-->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
 <script type="text/javascript" src="/static/js/datatables.min.js" crossorigin></script>
+{% endblock %}
 
-<script>  
-    $(document).ready(function () {
-        $('#casetable').DataTable( {
-            dom: "<'row browsertoolbar align-items-end'<'col-sm-12 col-md-6 browserbuttons'B><'col-sm-12 col-md-6'f>>" + "<'row'<'col-sm-12'tr>>" + "<'row'<'col-sm-12 col-md-5'><'col-sm-12 col-md-7'p>>",
-            select: true,
-            filter: true,
-            buttons: [
-            {
-                    text: '<i class="fas fa-folder-open"></i>',
-                    titleAttr: 'Open case',
-                    action: function ( e, dt, node, config ) {
-                        alert("Coming soon!");                    
-                    }
-                },                
-                {
-                    text: '<i class="fas fa-lock-open"></i>',
-                    titleAttr: 'Unlock case',
-                    action: function ( e, dt, node, config ) {
-                        alert("Coming soon!");                    
-                    }
-                },             
-                {
-                    text: '<i class="fa-solid fa-tags"></i>',
-                    titleAttr: 'Case information',
-                    action: function ( e, dt, node, config ) {
-                        alert("Coming soon!");                    
-                    }
-                },   
-                {
-                    text: '<i class="fas fa-trash"></i>',
-                    titleAttr: 'Remove case',
-                    action: function ( e, dt, node, config ) {
-                        alert("Coming soon!");                    
-                    }
-                },                
-                {
-                    extend: 'spacer',
-                    style: 'empty'
-                },                             
-                {
-                    extend: 'spacer',
-                    style: 'empty'
-                },                             
-                {
-                    text: '<i class="fa-solid fa-upload"></i>',
-                    titleAttr: 'Upload case',
-                    action: function ( e, dt, node, config ) {
-                        alert("Coming soon!");                    
-                    }
-                },   
-                {
-                    text: '<i class="fa-solid fa-floppy-disk"></i>',
-                    titleAttr: 'Download case',
-                    action: function ( e, dt, node, config ) {
-                        alert("Coming soon!");                    
-                    }
-                },   
-            ],
-            "initComplete": () => {$("#tablewrapper").show();}   
+<div class="row mb-3">
+    <div class="col">
+        <h2><i class="fas fa-angle-double-right text-primary text-primary"></i>&nbsp;&nbsp;Case Browser</h2>
+    </div>
+</div>
+<div>
+    <div class="row mt-2">
+        <div class="col">
+            <div id="tablewrapper" style="display: none;">
+                <table id="casetable" class="table table-dark table-bordered" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>MRN</th>
+                            <th>ACC</th>
+                            <th>Type</th>
+                            <th>Received</th>
+                            <th>Status</th>
+                            <th>Reader</th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(document).ready(function () {
+            $('#casetable').DataTable({
+                columns: [
+                    { data: 'patient_name' },
+                    { data: 'mrn' },
+                    { data: 'acc' },
+                    { data: 'type' },
+                    { data: 'received' },
+                    { data: 'status' },
+                    { data: 'reader' }
+                ],
+                dom: "<'row browsertoolbar align-items-end'<'col-sm-12 col-md-6 browserbuttons'B><'col-sm-12 col-md-6'f>>" + "<'row'<'col-sm-12'tr>>" + "<'row'<'col-sm-12 col-md-5'><'col-sm-12 col-md-7'p>>",
+                select: true,
+                filter: true,
+                buttons: [
+                    {
+                        text: '<i class="fas fa-folder-open"></i>',
+                        titleAttr: 'Open case',
+                        action: function (e, dt, node, config) {
+                            alert("Coming soon!");
+                        }
+                    },
+                    {
+                        text: '<i class="fas fa-lock-open"></i>',
+                        titleAttr: 'Unlock case',
+                        action: function (e, dt, node, config) {
+                            alert("Coming soon!");
+                        }
+                    },
+                    {
+                        text: '<i class="fa-solid fa-tags"></i>',
+                        titleAttr: 'Case information',
+                        action: function (e, dt, node, config) {
+                            alert("Coming soon!");
+                        }
+                    },
+                    {
+                        text: '<i class="fas fa-trash"></i>',
+                        titleAttr: 'Remove case',
+                        action: function (e, dt, node, config) {
+                            alert("Coming soon!");
+                        }
+                    },
+                    {
+                        extend: 'spacer',
+                        style: 'empty'
+                    },
+                    {
+                        extend: 'spacer',
+                        style: 'empty'
+                    },
+                    {
+                        text: '<i class="fa-solid fa-upload"></i>',
+                        titleAttr: 'Upload case',
+                        action: function (e, dt, node, config) {
+                            alert("Coming soon!");
+                        }
+                    },
+                    {
+                        text: '<i class="fa-solid fa-floppy-disk"></i>',
+                        titleAttr: 'Download case',
+                        action: function (e, dt, node, config) {
+                            alert("Coming soon!");
+                        }
+                    },
+                ],
+                data: {{ data| safe }},
+            "initComplete": () => { $("#tablewrapper").show(); }
+            });
         });
-        //$('#casetable').show();
-    });    
-</script>
+    </script>
+</div>
+
+
+
 {% endblock %}
