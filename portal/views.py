@@ -163,8 +163,6 @@ def work_queue_test(request):
 
 
 def login_request(request):
-    logger.debug("HELLO")
-
     if request.method == "POST":
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
