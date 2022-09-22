@@ -188,19 +188,50 @@ def logout_request(request):
 
 @login_required
 def index(request):
+    # TODO
+    # wait until disk/db decision is made: invalid when series.json does not exist or cannot be opened
+    # wait until disk/db decision is made: validate values from json
+    # lock cases.json file while preprocessor is working
+
+    cases = {}
     folder = settings.GRAVIS_DATA + '/cases'
+    cases_json = folder + '/cases.json'
+    if os.path.isfile(cases_json) and os.access(cases_json, os.R_OK):
+        try:
+            with open(cases_json, 'r') as cases_cache:
+                cases=json.load(cases_cache)       
+        except Exception:
+            logger.warning(  # handle_error
+                            f"Unable to read cases.json in {folder}. It will be recreated."
+                          )
+
     f = "series.json"
     file_paths = [ os.path.join(d,f) for d in os.scandir(folder) if d.is_dir() ]
 
     data = []
     for file_path in file_paths:
         if os.path.isfile(file_path):
-            with open(file_path, 'r') as myfile:
-                d=myfile.read()
-            obj = json.loads(d)
-            data.append(obj)
+            if file_path not in cases:
+                try:
+                    with open(file_path, 'r') as myfile:
+                        d=myfile.read()
+                    obj = json.loads(d)
+                    data.append(obj)
+                    cases[file_path] = data
+                except Exception:
+                    logger.error(  # handle_error
+                        f"Unable to read series.json in {folder}."
+                        # invalid TODO
+                    )
+            else:
+                data = cases[file_path]
+
         # else:
             # invalid TODO
+
+    with open(cases_json, 'w') as f:
+        json.dump(cases, f)  
+
     context = {
         'data': data
     }
