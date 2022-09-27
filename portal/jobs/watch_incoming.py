@@ -1,59 +1,99 @@
 import logging
 from datetime import timedelta
 from pathlib import Path
+import shutil
 from time import sleep
+import os, json
 
 import django_rq
 from django_rq.queues import get_queue
 from django.conf import settings
 import pydicom
 
-from portal.models import Case, DICOMInstance
+from portal.models import Case, DICOMInstance, DICOMSet
 
 logger = logging.getLogger(__name__)
 
 
 def do_watch():
+    print("AAA do_watch")
     data_folder = Path(settings.DATA_FOLDER)
     incoming = data_folder / "incoming"
-    store = data_folder / "store"
+    cases = data_folder / "cases"
 
-    complete = incoming.glob("*/.complete")
-    for k in list(complete):
+    f = ".complete"
+    folder_paths = [ Path(d) for d in os.scandir(incoming) if d.is_dir() and Path(os.path.join(d,f)).exists() ]
+  
+    for incoming_case in list(folder_paths):
+
         # Move
-        new_folder = store / k.parent.stem
+        print(f"Processing {incoming_case}")
+        new_folder = cases / incoming_case.stem
         dest_folder = new_folder / "input"
         new_folder.mkdir(parents=True, exist_ok=False)
-        k.parent.rename(
-            dest_folder
-        )  # /data/incoming/<foo>/ => /data/store/<foo>/input/
+        shutil.move(incoming_case, dest_folder)  # ./data/incoming/<foo>/ => ./data/cases/<foo>/input/
+       
+        # Read study.jon from the incoming folder
+        json_name = 'study.json'
+        incoming_json_file = Path(dest_folder / json_name)
+        try:
+            with open(incoming_json_file, 'r') as myfile:
+                d=myfile.read()
+            payload = json.loads(d)
+        except Exception:
+            print(f"Unable to read {json_name} in {dest_folder}.")
+            continue
 
-        # Register
+        # TODO: if case is in database erase it first
+        # Register Case
+        try:
+            new_case = Case(
+                case_location=str(new_folder)
+            )  # Case(data_location="/data/cases/<foo>")
+            new_case.save()
+        except Exception as e:
+            print("Exception ", e)
+            print(f"Cannot process incoming data set {incoming_case}")
+            continue
 
-        new_case = Case(
-            data_location=str(new_folder)
-        )  # Case(data_location="/data/store/<foo>")
-        new_case.save()
-
-        for k in dest_folder.glob("**/*"):
-            if not k.is_file():
+        # Register Dicom Set
+        try:
+            dicom_set = DICOMSet(
+                set_location = str(dest_folder),
+                json_payload = payload,
+                case = new_case,
+                is_incoming = True,
+            )
+            dicom_set.save()
+        except Exception as e:
+            print("Exception ", e)
+            print(f"Cannot process incoming data set {incoming_case}")
+            continue
+        
+        # Register Dicom Instances
+        for dcm in dest_folder.glob("**/*"):
+            if not dcm.is_file():
                 continue
             try:
-                ds = pydicom.dcmread(str(k), stop_before_pixels=True)
+                ds = pydicom.dcmread(str(dcm), stop_before_pixels=True)
             except:
                 continue
-            k = DICOMInstance(
-                study_uid=ds.StudyInstanceUID,
-                series_uid=ds.SeriesInstanceUID,
-                instance_uid=ds.SOPInstanceUID,
-                json_metadata=ds.to_json(),
-                file_location=str(k.relative_to(data_folder)),
-                study_description=ds.get("StudyDescription"),
-                series_description=ds.get("SeriesDescription"),
-                patient_name=ds.get("PatientName"),
-                case=new_case,
-            )
-            k.save()
+            try:
+                instance = DICOMInstance(
+                    instance_location=str(dcm.relative_to(data_folder)),
+                    study_uid=ds.StudyInstanceUID,
+                    series_uid=ds.SeriesInstanceUID,
+                    instance_uid=ds.SOPInstanceUID,
+                    json_metadata=ds.to_json(),
+                    dicom_set=dicom_set,
+                )
+                instance.save()
+            except Exception as e:
+                print("Exception ", e)
+                print(f"Cannot process incoming instance {str(dcm)}")
+                continue
+
+        print(f"Done Processing {incoming_case}")
 
 
 def watch():
