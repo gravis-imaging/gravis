@@ -52,7 +52,8 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 # Application definition
 
-INSTALLED_APPS = [
+INSTALLED_APPS = [    
+    "portal",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -61,7 +62,6 @@ INSTALLED_APPS = [
     # Cannot use staticfiles as we set headers on static responses via middleware
     # "django.contrib.staticfiles",
     "django_rq",
-    "portal",
 ]
 
 MIDDLEWARE = [

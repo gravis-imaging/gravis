@@ -160,8 +160,18 @@ def work_queue_test(request):
     new_job.save()
     return HttpResponseRedirect(f"/work_status/{new_job.id}/")
 
+    
+@login_required
+def watch_incoming(request):
+    from jobs.watch_incoming import do_watch
+    do_watch()
+    val = 0
+    return HttpResponseRedirect(f"/watch_status/{val}/")
+
 
 def login_request(request):
+    logger.debug("HELLO")
+
     if request.method == "POST":
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
@@ -203,7 +213,7 @@ def index(request):
                             f"Unable to read cases.json in {folder}. It will be recreated."
                           )
 
-    f = "series.json"
+    f = "study.json"
     file_paths = [ os.path.join(d,f) for d in os.scandir(folder) if d.is_dir() ]
 
     data = []

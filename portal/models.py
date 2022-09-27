@@ -1,7 +1,5 @@
-import uuid
 from django.db import models
-
-# Create your models here.
+import uuid
 
 
 class ImageJob(models.Model):
@@ -18,65 +16,50 @@ class DockerJob(models.Model):
     complete = models.BooleanField(default=False)
 
 
-class DICOMInstance(models.Model):
-    study_uid = models.CharField(max_length=100)
-    series_uid = models.CharField(max_length=100)
-    instance_uid = models.CharField(max_length=100)
-    file_location = models.CharField(max_length=10000)
-    json_metadata = models.JSONField(null=True)
-
-    patient_name = models.CharField(max_length=10000, null=True)
-    study_description = models.CharField(max_length=10000, null=True)
-    series_description = models.CharField(max_length=10000, null=True)
-
-    case = models.ForeignKey("Case", on_delete=models.PROTECT, null=True)
+class Case(models.Model):
+    case_location = models.CharField(max_length=10000, blank=False, null=False)
 
     class Meta:
+        db_table = 'portal_case'
+
+
+# class ProcessingResult(models.Model):
+    
+#     # processing_type = models.CharField(max_length=100) # either MRA or Onco
+    
+#     dicom_set = models.ForeignKey('DICOMSet', on_delete=models.CASCADE)
+#     # case = models.ForeignKey(Case, on_delete=models.CASCADE)
+
+#     class Meta:
+#         db_table = 'portal_processing_result'
+
+
+class DICOMSet(models.Model):
+    from datetime import datetime
+    # processing_type =  models.CharField(max_length=100)  # either MRA or Onco, will be inside study.json
+    set_location = models.CharField(max_length=10000, null=False)
+    created_at =  models.DateTimeField(default=datetime.now, blank = True)
+    json_payload = models.JSONField(null=False)
+    case = models.ForeignKey(Case, on_delete=models.CASCADE)
+    # origin = models.ForeignKey(ProcessingResult, on_delete=models.CASCADE, null=True) # null if incoming, otherwise outcome of a processing step
+    is_incoming = models.BooleanField()
+    class Meta:
+        db_table = 'portal_dicom_set'
+
+
+class DICOMInstance(models.Model):
+    instance_location = models.CharField(max_length=10000, null=False)
+    study_uid = models.CharField(max_length=100) 
+    series_uid = models.CharField(max_length=100) 
+    instance_uid = models.CharField(max_length=100)  
+    json_metadata = models.JSONField(null=False)
+    dicom_set = models.ForeignKey(DICOMSet, on_delete=models.CASCADE)
+  
+    class Meta:
+        db_table = 'portal_dicom_instance'
         constraints = [
             models.UniqueConstraint(
-                fields=["study_uid", "series_uid", "instance_uid", "case"],
+                fields=['dicom_set', 'study_uid', 'series_uid', 'instance_uid'],
                 name="unique_uids",
             )
         ]
-
-
-class Case(models.Model):
-    data_location = models.CharField(max_length=10000)
-
-
-# DBML
-# https://dbdiagram.io/
-# Table DicomInstance {
-#   id int [pk]
-#   set int [ref: > DicomSet.id]
-#   file_location path
-#   study_uid "dcm uuid"
-#   series_uid "dcm uuid"
-#   instance_uid "dcm uuid"
-#   json_metadata json
-
-#   Indexes {
-#     (set, study_uid, series_uid, instance_uid) [unique]
-#   }
-# }
-# Table DicomSet {
-#   id int [pk]
-#   case int [ ref: > Case.id]
-#   type text
-#   folder_location path
-#   created_by int [ ref: > ProcessingResult.id]
-# }
-
-# Table ProcessingResult {
-#   id int [pk]
-#   created_on timestamp
-#   type text
-#   json_result json
-#   input_set int [ ref: > DicomSet.id ]
-#   case int [ ref: > Case.id ]
-# }
-
-# Table Case {
-#   id int [pk]
-#   data_location varchar
-# }
