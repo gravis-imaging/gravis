@@ -161,14 +161,6 @@ def work_queue_test(request):
     return HttpResponseRedirect(f"/work_status/{new_job.id}/")
 
     
-@login_required
-def watch_incoming(request):
-    from jobs.watch_incoming import do_watch
-    do_watch()
-    val = 0
-    return HttpResponseRedirect(f"/watch_status/{val}/")
-
-
 def login_request(request):
     logger.debug("HELLO")
 

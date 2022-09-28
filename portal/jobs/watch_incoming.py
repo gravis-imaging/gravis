@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def do_watch():
-    print("AAA do_watch")
+    # print("AAA do_watch")
     data_folder = Path(settings.DATA_FOLDER)
     incoming = data_folder / "incoming"
     cases = data_folder / "cases"
@@ -44,15 +44,23 @@ def do_watch():
             print(f"Unable to read {json_name} in {dest_folder}.")
             continue
 
-        # TODO: if case is in database erase it first
+        # TODO: if case is in the database erase it first ?
         # Register Case
         try:
             new_case = Case(
-                case_location=str(new_folder)
+                patient_name = payload["patient_name"],
+                mrn = payload["mrn"],
+                acc = payload["acc"],
+                case_type = payload["case_type"],
+                exam_time = payload["exam_time"],
+                receive_time = payload["receive_time"],
+                twix_id = payload["twix_id"],
+                case_location=str(new_folder),
+                incoming_payload = payload,
             )  # Case(data_location="/data/cases/<foo>")
             new_case.save()
         except Exception as e:
-            print("Exception ", e)
+            print(f"Exception during Case model creation: {e}")
             print(f"Cannot process incoming data set {incoming_case}")
             continue
 
@@ -60,13 +68,12 @@ def do_watch():
         try:
             dicom_set = DICOMSet(
                 set_location = str(dest_folder),
-                json_payload = payload,
+                type = "Incoming",
                 case = new_case,
-                is_incoming = True,
             )
             dicom_set.save()
         except Exception as e:
-            print("Exception ", e)
+            print(f"Exception during DICOMSet model creation: {e}")
             print(f"Cannot process incoming data set {incoming_case}")
             continue
         
@@ -89,7 +96,7 @@ def do_watch():
                 )
                 instance.save()
             except Exception as e:
-                print("Exception ", e)
+                print(f"Exception during DICOMInstance model creation: {e}")
                 print(f"Cannot process incoming instance {str(dcm)}")
                 continue
 
