@@ -41,7 +41,7 @@ def retrieve_instance(request, study, series, instance, frame=1):
         # We're not running behind nginx so we are going to just serve the file ourselves.
         response = static.serve(
             request,
-            instance.file_location,
+            instance.instance_location,
             document_root=settings.DATA_FOLDER,
         )
         return response

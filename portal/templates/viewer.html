@@ -26,6 +26,7 @@ on htmx:afterRequest
   <button class='btn btn-primary mb-3'>Populate</button>
 </form>
 
+{% comment %} 
 <div class="w-25">
 <div class="">
   <div class="select-wrapper">
@@ -38,7 +39,8 @@ on htmx:afterRequest
     <div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 0px;"></div><div class="form-notch-trailing"></div></div>
   </div>
 </div>
-</div>
+</div> 
+{% endcomment %}
 
 <div x-data="{ current_study: null, current_time: 0, index: 0, loading: false }">
 <div class="w-25">
@@ -48,7 +50,7 @@ on htmx:afterRequest
         @change="loading=true; await $nextTick(); current_study = await setVolumeByStudy($event.target.value); current_time=current_study[0].time; loading=false;">
         <option value="" selected disabled hidden>Select study...</option>
         {% for i in studies %}
-            <option value="{{i.0}}">{{ i.1 }}</option>
+            <option value="{{i.0}}">{{ i.0 }}</option>
         {% endfor %}
       </select>
       <div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 0px;"></div><div class="form-notch-trailing"></div></div>

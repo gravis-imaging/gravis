@@ -16,14 +16,18 @@ logger = logging.getLogger(__name__)
 
 
 def do_watch():
-    print("AAA do_watch")
+    # print("AAA do_watch")
     data_folder = Path(settings.DATA_FOLDER)
     incoming = data_folder / "incoming"
     cases = data_folder / "cases"
 
     f = ".complete"
-    folder_paths = [ Path(d) for d in os.scandir(incoming) if d.is_dir() and Path(os.path.join(d,f)).exists() ]
-  
+    folder_paths = [
+        Path(d)
+        for d in os.scandir(incoming)
+        if d.is_dir() and Path(os.path.join(d, f)).exists()
+    ]
+
     for incoming_case in list(folder_paths):
 
         # Move
@@ -31,14 +35,16 @@ def do_watch():
         new_folder = cases / incoming_case.stem
         dest_folder = new_folder / "input"
         new_folder.mkdir(parents=True, exist_ok=False)
-        shutil.move(incoming_case, dest_folder)  # ./data/incoming/<foo>/ => ./data/cases/<foo>/input/
-       
+        shutil.move(
+            incoming_case, dest_folder
+        )  # ./data/incoming/<foo>/ => ./data/cases/<foo>/input/
+
         # Read study.jon from the incoming folder
-        json_name = 'study.json'
+        json_name = "study.json"
         incoming_json_file = Path(dest_folder / json_name)
         try:
-            with open(incoming_json_file, 'r') as myfile:
-                d=myfile.read()
+            with open(incoming_json_file, "r") as myfile:
+                d = myfile.read()
             payload = json.loads(d)
         except Exception:
             print(f"Unable to read {json_name} in {dest_folder}.")
@@ -59,17 +65,17 @@ def do_watch():
         # Register Dicom Set
         try:
             dicom_set = DICOMSet(
-                set_location = str(dest_folder),
-                json_payload = payload,
-                case = new_case,
-                is_incoming = True,
+                set_location=str(dest_folder),
+                json_payload=payload,
+                case=new_case,
+                is_incoming=True,
             )
             dicom_set.save()
         except Exception as e:
             print("Exception ", e)
             print(f"Cannot process incoming data set {incoming_case}")
             continue
-        
+
         # Register Dicom Instances
         for dcm in dest_folder.glob("**/*"):
             if not dcm.is_file():

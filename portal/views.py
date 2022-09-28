@@ -160,10 +160,11 @@ def work_queue_test(request):
     new_job.save()
     return HttpResponseRedirect(f"/work_status/{new_job.id}/")
 
-    
+
 @login_required
 def watch_incoming(request):
-    from jobs.watch_incoming import do_watch
+    from .jobs.watch_incoming import do_watch
+
     do_watch()
     val = 0
     return HttpResponseRedirect(f"/watch_status/{val}/")
@@ -202,27 +203,27 @@ def index(request):
     # lock cases.json file while preprocessor is working
 
     cases = {}
-    folder = settings.GRAVIS_DATA + '/cases'
-    cases_json = folder + '/cases.json'
+    folder = settings.GRAVIS_DATA + "/cases"
+    cases_json = folder + "/cases.json"
     if os.path.isfile(cases_json) and os.access(cases_json, os.R_OK):
         try:
-            with open(cases_json, 'r') as cases_cache:
-                cases=json.load(cases_cache)       
+            with open(cases_json, "r") as cases_cache:
+                cases = json.load(cases_cache)
         except Exception:
             logger.warning(  # handle_error
-                            f"Unable to read cases.json in {folder}. It will be recreated."
-                          )
+                f"Unable to read cases.json in {folder}. It will be recreated."
+            )
 
     f = "study.json"
-    file_paths = [ os.path.join(d,f) for d in os.scandir(folder) if d.is_dir() ]
+    file_paths = [os.path.join(d, f) for d in os.scandir(folder) if d.is_dir()]
 
     data = []
     for file_path in file_paths:
         if os.path.isfile(file_path):
             if file_path not in cases:
                 try:
-                    with open(file_path, 'r') as myfile:
-                        d=myfile.read()
+                    with open(file_path, "r") as myfile:
+                        d = myfile.read()
                     obj = json.loads(d)
                     data.append(obj)
                     cases[file_path] = data
@@ -235,14 +236,12 @@ def index(request):
                 data = cases[file_path]
 
         # else:
-            # invalid TODO
+        # invalid TODO
 
-    with open(cases_json, 'w') as f:
-        json.dump(cases, f)  
+    with open(cases_json, "w") as f:
+        json.dump(cases, f)
 
-    context = {
-        'data': data
-    }
+    context = {"data": data}
     return render(request, "index.html", context)
 
 
@@ -263,10 +262,8 @@ def viewer(request, case=""):
     instances = DICOMInstance.objects.all()
 
     context = {
-        "series": set(
-            [(k.study_uid, k.series_uid, k.series_description) for k in instances]
-        ),
-        "studies": set([(k.study_uid, k.study_description) for k in instances]),
+        "series": set([(k.study_uid, k.series_uid) for k in instances]),
+        "studies": set([(k.study_uid,) for k in instances]),
         "case": case,
     }
     # logging.info(context["series"])
