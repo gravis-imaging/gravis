@@ -62,63 +62,123 @@ function createTools() {
         PanTool,
         WindowLevelTool,
         StackScrollMouseWheelTool,
+        VolumeRotateMouseWheelTool,
         ZoomTool,
         ToolGroupManager,
+        CrosshairsTool,
         Enums: csToolsEnums,
     } = cornerstoneTools;
     const { MouseBindings } = csToolsEnums;
 
-    const toolGroupId = `STACK_TOOL_GROUP_ID`;
-    
+    const toolGroupIdA = `STACK_TOOL_GROUP_ID_A`;
+    const toolGroupIdB = `STACK_TOOL_GROUP_ID_B`;
+
     // Add tools to Cornerstone3D
-    cornerstoneTools.addTool(PanTool);
-    cornerstoneTools.addTool(WindowLevelTool);
+    // cornerstoneTools.addTool(PanTool);
+    // cornerstoneTools.addTool(WindowLevelTool);
     cornerstoneTools.addTool(StackScrollMouseWheelTool);
-    cornerstoneTools.addTool(ZoomTool);
+    cornerstoneTools.addTool(VolumeRotateMouseWheelTool);
+
+    // cornerstoneTools.addTool(ZoomTool);
+    cornerstoneTools.addTool(CrosshairsTool);
     // Define a tool group, which defines how mouse events map to tool commands for
     // Any viewport using the group
-    const toolGroup = ToolGroupManager.createToolGroup(toolGroupId);
+    const toolGroupA = ToolGroupManager.createToolGroup(toolGroupIdA);
 
+    for (var viewport of viewportIds.slice(0,3)) {
+        toolGroupA.addViewport(viewport, "gravisRenderEngine");
+    }
+
+    const toolGroupB = ToolGroupManager.createToolGroup(toolGroupIdB);
+    toolGroupB.addViewport("VIEW_MIP", "gravisRenderEngine");
     // Add tools to the tool group
-    toolGroup.addTool(WindowLevelTool.toolName );
-    toolGroup.addTool(PanTool.toolName );
-    toolGroup.addTool(ZoomTool.toolName );
-    toolGroup.addTool(StackScrollMouseWheelTool.toolName );
-
+    // toolGroup.addTool(WindowLevelTool.toolName );
+    // toolGroup.addTool(PanTool.toolName );
+    // toolGroup.addTool(ZoomTool.toolName );
+    toolGroupB.addTool(StackScrollMouseWheelTool.toolName );
+    toolGroupA.addTool(CrosshairsTool.toolName, {
+        getReferenceLineColor: (id) => { return ({"VIEW_AX": "rgb(255, 0, 0)","VIEW_SAG": "rgb(255, 255, 0)","VIEW_COR": "rgb(0, 255, 0)",})[id]},
+        // getReferenceLineControllable: (id)=> true,
+        // getReferenceLineDraggableRotatable: (id)=> true,
+        // getReferenceLineSlabThicknessControlsOn: (id)=> false,
+        // filterActorUIDsToSetSlabThickness: [viewportId(4)]
+      });
+    
     // toolGroup.addTool(WindowLevelTool.toolName, { volumeId } );
     // toolGroup.addTool(PanTool.toolName,  { volumeId } );
     // toolGroup.addTool(ZoomTool.toolName,  { volumeId } );
-    // toolGroup.addTool(StackScrollMouseWheelTool.toolName, { volumeId });
+    toolGroupB.addTool(StackScrollMouseWheelTool.toolName);
+    toolGroupB.setToolActive(StackScrollMouseWheelTool.toolName);
 
 
     // Set the initial state of the tools, here all tools are active and bound to
     // Different mouse inputs
-    toolGroup.setToolActive(WindowLevelTool.toolName, {
-    bindings: [
-        {
-        mouseButton: MouseBindings.Primary, // Left Click
-        },
-    ],
-    });
-    toolGroup.setToolActive(PanTool.toolName, {
-    bindings: [
-        {
-        mouseButton: MouseBindings.Auxiliary, // Middle Click
-        },
-    ],
-    });
-    toolGroup.setToolActive(ZoomTool.toolName, {
-    bindings: [
-        {
-        mouseButton: MouseBindings.Secondary, // Right Click
-        },
-    ],
-    });
+    // toolGroup.setToolActive(WindowLevelTool.toolName, {
+    // bindings: [
+    //     {
+    //     mouseButton: MouseBindings.Primary, // Left Click
+    //     },
+    // ],
+    // });
+
+    // toolGroup.setToolActive(CrosshairsTool.toolName, {
+    //     bindings: [{ mouseButton: MouseBindings.Primary }],
+    // });
+    
+    // toolGroup.setToolActive(PanTool.toolName, {
+    // bindings: [
+    //     {
+    //     mouseButton: MouseBindings.Auxiliary, // Middle Click
+    //     },
+    // ],
+    // });
+    // toolGroup.setToolActive(ZoomTool.toolName, {
+    // bindings: [
+    //     {
+    //     mouseButton: MouseBindings.Secondary, // Right Click
+    //     },
+    // ],
+    // });
     // As the Stack Scroll mouse wheel is a tool using the `mouseWheelCallback`
     // hook instead of mouse buttons, it does not need to assign any mouse button.
-    toolGroup.setToolActive(StackScrollMouseWheelTool.toolName);
-    return toolGroup;
+    return toolGroupA;
 }
+var viewportIds = []
+// const viewportId = (n) => `GRASP_VIEW_${n}`;
+
+const resizeObserver = new ResizeObserver(() => {
+    console.log('Size changed');
+  
+    renderingEngine = window.cornerstone.getRenderingEngine('gravisRenderEngine');
+  
+    if (renderingEngine) {
+      renderingEngine.resize(true, false);
+    }
+  });
+  
+function createViewportGrid(n) {
+    const viewportGrid = document.createElement('div');
+    viewportGrid.style.display = 'flex';
+    // viewportGrid.style.gridTemplateColumns = '1fr 1fr';
+
+    viewportGrid.style.flexDirection = 'row';
+    viewportGrid.style.flexWrap = 'wrap';
+    // viewportGrid.style.width = '1000px';
+    var elements = [];
+    size = "500px"
+    for (var i=0; i<n; i++) {
+        var el = document.createElement('div');
+        el.style.width = size;
+        el.style.height = size;
+        el.style.flex = "0 0 50%";
+        viewportGrid.appendChild(el);
+        elements.push(el)
+        resizeObserver.observe(el);
+    }
+    return [viewportGrid, elements];
+}
+
+
 
 async function initializeGraspViewer(wrapper) {
     const { RenderingEngine, Types, Enums, volumeLoader, CONSTANTS, setVolumesForViewports} = window.cornerstone;
@@ -130,10 +190,13 @@ async function initializeGraspViewer(wrapper) {
 
     const element = document.createElement('div');
     element.id = 'cornerstone-element';
-    element.style.width = '100%';
-    element.style.height = '100%';
+    // element.style.width = '100%';
+    // element.style.height = '100%';
 
+    const [viewportGrid, viewportElements] = createViewportGrid(4)
+    console.log(wrapper, viewportGrid, viewportElements);
     wrapper.appendChild(element);
+    element.appendChild(viewportGrid);
 
     await cornerstone.helpers.initDemo(); 
 
@@ -142,37 +205,57 @@ async function initializeGraspViewer(wrapper) {
     const renderingEngine = new RenderingEngine(renderingEngineId);
 
     // Create a stack viewport
-    const viewportId = 'GRASP_VIEW';
-    const viewportInput = {
-        viewportId,
-    //   type: Enums.ViewportType.STACK,
-        type: ViewportType.ORTHOGRAPHIC,
-        element,
-        defaultOptions: {
-            // orientation: ORIENTATION.SAGITTAL,
-            orientation: {
-            // Random oblique orientation
-            viewUp: [
-                -0.5962687530844388, 0.5453181550345819, -0.5891448751239446,
-            ],
-            sliceNormal: [
-                -0.5962687530844388, 0.5453181550345819, -0.5891448751239446,
-            ],
-            },
-            background: [0.2, 0, 0.2],
+    const viewportInput = [
+        {
+          viewportId: "VIEW_AX",
+          type: ViewportType.ORTHOGRAPHIC,
+          element: viewportElements[0],
+          defaultOptions: {
+            orientation: ORIENTATION.AXIAL,
+            background: [0, 0, 0],
+          },
         },
-    };
+        {
+          viewportId: "VIEW_SAG",
+          type: ViewportType.ORTHOGRAPHIC,
+          element: viewportElements[1],
+          defaultOptions: {
+            orientation: ORIENTATION.SAGITTAL,
+            background: [0, 0, 0],
+          },
+        },
+        {
+          viewportId: "VIEW_COR",
+          type: ViewportType.ORTHOGRAPHIC,
+          element: viewportElements[2],
+          defaultOptions: {
+            orientation: ORIENTATION.CORONAL,
+            background:[0, 0, 0],
+          },
+        },
+        {
+            viewportId: "VIEW_MIP",
+            type: ViewportType.ORTHOGRAPHIC,
+            element: viewportElements[3],
+            defaultOptions: {
+              orientation: ORIENTATION.SAGITTAL,
+              background: [0, 0, 0],
+            },
+          },  
+      ];
+    for (v of viewportInput) {
+        viewportIds.push(v.viewportId);
+    }
+    renderingEngine.setViewports(viewportInput)
+    // renderingEngine.enableElement(viewportInput);
+    cornerstone.tools.synchronizers.createCameraPositionSynchronizer("SYNC_CAMERAS");
 
-    renderingEngine.enableElement(viewportInput);
-    
     var toolGroup = createTools()
-    toolGroup.addViewport(viewportId, renderingEngineId);
-    // Get the stack viewport that was created
-    const viewport = (
-        renderingEngine.getViewport(viewportId)
-    );
-    viewport.render();
+    
+
+    renderingEngine.renderViewports(viewportIds);
 }
+var toolAlreadyActive = false;
 
 async function setVolumeByImageIds(imageIds, volumeName, keepCamera=true) {
     // const volumeName = series_uid; // Id of the volume less loader prefix
@@ -181,27 +264,68 @@ async function setVolumeByImageIds(imageIds, volumeName, keepCamera=true) {
     const renderingEngine = window.cornerstone.getRenderingEngine(
         'gravisRenderEngine'
     );
-    const viewport = (
-        renderingEngine.getViewport('GRASP_VIEW')
-    );
+    // const viewport = (
+    //     renderingEngine.getViewport('GRASP_VIEW')
+    // );
 
-    let cam = viewport.getCamera()
+    
+    let cams = []
+    for (var v of viewportIds.slice(0,3) ) {
+        viewport = renderingEngine.getViewport(v)
+        cams.push({viewport, cam:viewport.getCamera(), thickness:viewport.getSlabThickness()})
+    }
+    // let cams = viewport.getCamera()
     const volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, {
         imageIds,
     });
     volume.load();
     
-    await viewport.setVolumes([
-        { volumeId },
-        
-    ]);
+    await cornerstone.setVolumesForViewports( 
+        renderingEngine,
+        [{volumeId},],
+        viewportIds.slice(0,3)
+      );
+
+      const slabThickness = Math.sqrt(
+        volume.dimensions[0] * volume.dimensions[0] +
+        volume.dimensions[1] * volume.dimensions[1] +
+        volume.dimensions[2] * volume.dimensions[2]
+      );
+    await cornerstone.setVolumesForViewports(
+        renderingEngine,
+        [{volumeId, slabThickness},],
+        viewportIds.slice(3)
+      );
+      
+    // await viewport.setVolumes([
+    //     { volumeId },
+    // ]);
     if ( keepCamera ) {
-        if (!cam.focalPoint.every((k) => k==0)) { // focalPoint is [0,0,0] before any volumes are loaded
-            viewport.setCamera( cam )
+        // cams[0].viewport.setSlabThickness(cams[0].thickness)
+
+        for (var c of cams) {
+            if (!c.cam.focalPoint.every((k) => k==0)) { // focalPoint is [0,0,0] before any volumes are loaded
+                // c.viewport.setSlabThickness(c.thickness)
+                c.viewport.setCamera( c.cam )
+            }
         }
     }
 // setVolumesForViewports(renderingEngine, [{ volumeId }], [viewportId]);
-    viewport.render();
+    // viewport.render();
+    if (!toolAlreadyActive) {
+        const toolGroup = window.cornerstone.tools.ToolGroupManager.getToolGroup(`STACK_TOOL_GROUP_ID_A`);
+        toolGroup.setToolActive(window.cornerstone.tools.CrosshairsTool.toolName, {
+            bindings: [{ mouseButton: window.cornerstone.tools.Enums.MouseBindings.Primary }],
+        });
+        toolAlreadyActive = true;
+
+        // const synchronizer =
+        // cornerstone.tools.SynchronizerManager.getSynchronizer("SYNC_CAMERAS");
+        // synchronizer.add({ renderingEngineId: "gravisRenderEngine", viewportId:"VIEW_SAG" });
+        // synchronizer.add({ renderingEngineId: "gravisRenderEngine", viewportId:"VIEW_MIP" });
+
+    }
+    renderingEngine.renderViewports(viewportIds)
 }
 
 async function setVolumeBySeries(study_uid, series_uid, keepCamera=true) {

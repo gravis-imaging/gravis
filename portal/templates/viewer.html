@@ -25,7 +25,6 @@ on htmx:afterRequest
         call Swal.fire({title: 'Error', text:detail.xhr.responseText})">{% csrf_token %}
   <button class='btn btn-primary mb-3'>Populate</button>
 </form>
-
 {% comment %} 
 <div class="w-25">
 <div class="">
@@ -39,39 +38,49 @@ on htmx:afterRequest
     <div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 0px;"></div><div class="form-notch-trailing"></div></div>
   </div>
 </div>
-</div> 
-{% endcomment %}
+</div> {% endcomment %}
 
 <div x-data="{ current_study: null, current_time: 0, index: 0, loading: false }">
-<div class="w-25">
-  <div class="">
-    <div class="select-wrapper">
-      <select autocomplete="off" class="form-control" name="series" id="series" value="" 
-        @change="loading=true; await $nextTick(); current_study = await setVolumeByStudy($event.target.value); current_time=current_study[0].time; loading=false;">
-        <option value="" selected disabled hidden>Select study...</option>
-        {% for i in studies %}
-            <option value="{{i.0}}">{{ i.0 }}</option>
-        {% endfor %}
-      </select>
-      <div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 0px;"></div><div class="form-notch-trailing"></div></div>
+  <div class="w-25">
+    <div class="">
+      <div class="select-wrapper">
+        <select autocomplete="off" class="form-control" name="series" id="series" value="" 
+          @change="loading=true; await $nextTick(); current_study = await setVolumeByStudy($event.target.value); current_time=current_study[0].time; loading=false;">
+          <option value="" selected disabled hidden>Select study...</option>
+          {% for i in studies %}
+              <option value="{{i.0}}">{{ i.0 }}</option>
+          {% endfor %}
+        </select>
+        <div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 0px;"></div><div class="form-notch-trailing"></div></div>
+      </div>
     </div>
   </div>
-</div>
 
-<div x-cloak id="grasp-view-wrapper" x-init="initializeGraspViewer($el)" style="position:relative; width:500px; height:500px">
-  <div x-show="loading" style="z-index:1;" class="absolute pointer-events-none center-viewport"><div>Loading...</div></div>
-  <div x-show="!!current_study" class="absolute pointer-events-none" style="z-index:1; width:100%; height:100%;">
-    <div class="absolute pointer-events-none top-viewport left-viewport"></div>
-    <div class="absolute pointer-events-none top-viewport right-viewport" x-text="current_time.toFixed(2) + 's'">TR</div>
-    <div class="absolute pointer-events-none bottom-viewport right-viewport"></div>
-    <div class="absolute pointer-events-none bottom-viewport left-viewport"></div>
+  <div x-cloak id="grasp-view-outer" style="display:grid; grid-template-columns: 1fr; grid-template-rows: 1fr;">
+    <div x-show="loading" style="z-index:1; grid-area: 1 / 1 / 2 / 2;" class="pointer-events-none">
+      <div style="display: flex;justify-content: center;align-items: center; height:100%">Loading...</div>
+    </div>
+    <div x-init="initializeGraspViewer($el)" style="grid-area: 1 / 1 / 2 / 2;">
+    </div>
+
+    <div x-show="!!current_study" class="pointer-events-none" style="z-index:1; grid-area: 1 / 1 / 2 / 2;">
+      <div style='display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; height:100%'>
+        <div class="pointer-events-none"></div>
+        <div class="pointer-events-none" x-text="current_time.toFixed(2) + 's'"></div>
+        <div class="pointer-events-none"></div>
+        <div class="pointer-events-none"></div>
+      </div>
+    </div> 
+
+    <div x-show="!!current_study" x-data="{ selected_time:0 }"> 
+      <div style="display: flex;">
+        <input id='volume-picker' type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
+          @input="index = $event.target.value; selected_time=current_study[index].time"
+          @change="await setGraspVolume(current_study[index]); current_time=selected_time;"></input>
+        <label for='volume-picker' x-text="selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>
+      </div>
+    </div>
   </div>
-</div>
-<div x-cloak x-show="!!current_study" x-data="{ selected_time:0 }">
-  <input id='volume-picker' type='range' value=0 step="1" autocomplete="off"
-    @input="index = $event.target.value; selected_time=current_study[index].time" @change="await setGraspVolume(current_study[index]); current_time=selected_time;"></input>
-  <label for='volume-picker' x-text="selected_time.toFixed(2) + 's'"></label>
-</div>
 </div>
 <script defer src="/static/js/viewer.js"></script>
 <script type="text/javascript">
