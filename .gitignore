@@ -1,5 +1,6 @@
 # App-specific excludes
 app/db.sqlite3
+
 env/*
 
 # Byte-compiled / optimized / DLL files

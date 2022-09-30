@@ -47,8 +47,7 @@ create_folders () {
   if [[ ! -e $DATA_PATH ]]; then
       echo "## Creating $DATA_PATH..."
       sudo mkdir "$DATA_PATH"
-      # sudo mkdir "$DATA_PATH"/incoming "$DATA_PATH"/studies "$DATA_PATH"/outgoing "$DATA_PATH"/success
-      # sudo mkdir "$DATA_PATH"/error "$DATA_PATH"/discard "$DATA_PATH"/processing
+      sudo mkdir "$DATA_PATH"/incoming "$DATA_PATH"/cases "$DATA_PATH"/error 
       sudo chown -R $OWNER:$OWNER $DATA_PATH
       sudo chmod a+x $DATA_PATH
   else

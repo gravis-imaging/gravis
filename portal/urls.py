@@ -7,10 +7,9 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path("", views.index, name="index"),
-    path("docker_job/", views.docker_job),
-    path("work_test/", views.work_queue_test),
-    path("watch_incoming/", views.watch_incoming),
-    path("work_status/<int:id>/", views.work_status),
+    # path("docker_job/", views.docker_job),
+    # path("work_test/", views.work_queue_test),
+    # path("work_status/<int:id>/", views.work_status),
     path("viewer/<str:case>", views.viewer, name="viewer"),
     path("login/", views.login_request, name="login"),
     path("logout/", views.logout_request, name="logout"),
