@@ -11,12 +11,12 @@ from django.shortcuts import redirect, render
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 
-from .models import *
+from .models import Case
 
 logger = logging.getLogger(__name__)
 from django.contrib.staticfiles import views as static_views
 
-# TODO: Work with Roy to remove test/extra functions
+
 @login_required
 def serve_file(request, path):
     """Serve a file that should only be available to logged-in users."""
@@ -58,49 +58,22 @@ def logout_request(request):
 
 @login_required
 def index(request):
-    # TODO
-    # wait until disk/db decision is made: invalid when series.json does not exist or cannot be opened
-    # wait until disk/db decision is made: validate values from json
-    # lock cases.json file while preprocessor is working
-
-    cases = {}
-    folder = settings.GRAVIS_DATA + "/cases"
-    cases_json = folder + "/cases.json"
-    if os.path.isfile(cases_json) and os.access(cases_json, os.R_OK):
-        try:
-            with open(cases_json, "r") as cases_cache:
-                cases = json.load(cases_cache)
-        except Exception:
-            logger.warning(  # handle_error
-                f"Unable to read cases.json in {folder}. It will be recreated."
-            )
-
-    f = "study.json"
-    file_paths = [os.path.join(d, f) for d in os.scandir(folder) if d.is_dir()]
 
     data = []
-    for file_path in file_paths:
-        if os.path.isfile(file_path):
-            if file_path not in cases:
-                try:
-                    with open(file_path, "r") as myfile:
-                        d = myfile.read()
-                    obj = json.loads(d)
-                    data.append(obj)
-                    cases[file_path] = data
-                except Exception:
-                    logger.error(  # handle_error
-                        f"Unable to read series.json in {folder}."
-                        # invalid TODO
-                    )
-            else:
-                data = cases[file_path]
-
-        # else:
-        # invalid TODO
-
-    with open(cases_json, "w") as f:
-        json.dump(cases, f)
+    objects = Case.objects.all()
+    for object in objects:
+        data.append(
+            {
+                "patient_name": object.patient_name,
+                "mrn": object.mrn,
+                "acc": object.acc,
+                "case_type": object.case_type,
+                "exam_time": object.exam_time,
+                "receive_time": object.receive_time,
+                "status": object.status,
+                "reader": object.reader,
+            }
+        )
 
     context = {"data": data}
     return render(request, "index.html", context)

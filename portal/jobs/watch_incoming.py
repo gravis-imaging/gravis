@@ -9,82 +9,37 @@ from django.conf import settings
 
 from portal.models import Case, DICOMInstance, DICOMSet
 from common.generate_folder_name import generate_folder_name
+from common.constants import gravis_names, gravis_folder_names
 import common.helper as helper
 
 
-logger = logging.getLogger(__name__)
-
-
 def process_folder(incoming_case: Path):
-    data_folder = Path(settings.DATA_FOLDER)
-    cases = data_folder / "cases"
-
+    cases = Path(settings.CASES_FOLDER)
+    error_folder = Path(settings.ERROR_FOLDER)
     # Move
     print(f"Processing {incoming_case}")
     dest_folder_name = generate_folder_name()
     new_folder = cases / dest_folder_name
-    input_dest_folder = new_folder / "input"
-    processed_dest_folder = new_folder / "processed"
-    findings_dest_folder = new_folder / "findings"
+    input_dest_folder = new_folder / gravis_folder_names.INPUT
+    processed_dest_folder = new_folder / gravis_folder_names.PROCESSED
+    findings_dest_folder = new_folder / gravis_folder_names.FINDINGS
 
-    lock_file = Path(incoming_case) / ".lock"
+    lock_file = Path(incoming_case) / gravis_names.LOCK
     if lock_file.exists():
         # Series is locked, so another instance might be working on it
-        return
+        return True
 
     # Create lock file in the incoming folder and prevent other instances from working on this series
     try:
         lock = helper.FileLock(lock_file)
-    except FileExistsError:
-        # Series likely already processed by other instance of router
-        return
     except:
         # Can't create lock file, so something must be seriously wrong
-        logger.error(
+        print(
             f"Unable to create lock file {lock_file} in {incoming_case}"
         )  # handle_error
-        return
-
-    try:
-        input_dest_folder.mkdir(parents=True, exist_ok=False)
-    except Exception as e:
-        print(f"Exception {e}. Cannot create {input_dest_folder}")
         return False
 
-    try:
-        processed_dest_folder.mkdir(parents=True, exist_ok=False)
-    except Exception as e:
-        print(f"Exception {e}. Cannot create {processed_dest_folder}")
-        return False
-
-    try:
-        findings_dest_folder.mkdir(parents=True, exist_ok=False)
-    except Exception as e:
-        print(f"Exception {e}. Cannot create {findings_dest_folder}")
-        return False
-
-    # Move files
-    try:
-        files_to_copy = incoming_case.glob("**/*")
-        for file_path in files_to_copy:
-            dst_path = os.path.join(input_dest_folder, os.path.basename(file_path))
-            shutil.move(
-                file_path, dst_path
-            )  # ./data/incoming/<Incoming_UID>/ => ./data/cases/<UID>/input/
-    except Exception as e:
-        print(
-            f"Exception {e} during copying files from {incoming_case} to {input_dest_folder}"
-        )
-        return False
-
-    # Delete empty folder from incoming
-    try:
-        os.rmdir(incoming_case)
-    except Exception as e:
-        print(f"Exception {e} trying to delete an empty {incoming_case}")
-        # return False
-
-    # Read study.jon from the incoming folder
+    # Read study.jon from the incoming folder.
     json_name = "study.json"
     incoming_json_file = Path(input_dest_folder / json_name)
     try:
@@ -93,10 +48,24 @@ def process_folder(incoming_case: Path):
         payload = json.loads(d)
     except Exception:
         print(f"Unable to read {json_name} in {input_dest_folder}.")
+        move_files(incoming_case, error_folder)
         return False
 
-    # TODO: if case is in the database erase it first ?
-    # Register Case
+    # Create directories for further processing.
+    try:
+        input_dest_folder.mkdir(parents=True, exist_ok=False)
+        processed_dest_folder.mkdir(parents=True, exist_ok=False)
+        findings_dest_folder.mkdir(parents=True, exist_ok=False)
+    except Exception as e:
+        print(f"Exception {e}.")
+        print(f"Cannot create one of the processing folders for {incoming_case}")
+        return False
+
+    # Move files
+    if not move_files(incoming_case, input_dest_folder):
+        return False
+
+    # Register Case and check that all required fields are in json
     try:
         new_case = Case(
             patient_name=payload["patient_name"],
@@ -107,12 +76,17 @@ def process_folder(incoming_case: Path):
             receive_time=payload["receive_time"],
             twix_id=payload["twix_id"],
             case_location=str(new_folder),
+            settings=payload["settings"],
             incoming_payload=payload,
         )  # Case(data_location="./data/cases/[UID]")
         new_case.save()
     except Exception as e:
         print(f"Exception during Case model creation: {e}")
         print(f"Cannot process incoming data set {incoming_case}")
+        print(
+            f"Please check that all fields in json file {incoming_json_file} are valid"
+        )
+        move_files(input_dest_folder, error_folder)
         return False
 
     # Register DICOM Set
@@ -125,7 +99,10 @@ def process_folder(incoming_case: Path):
         dicom_set.save()
     except Exception as e:
         print(f"Exception during DICOMSet model creation: {e}")
-        print(f"Cannot process incoming data set {incoming_case}")
+        print(f"Cannot create a db table for incoming data set {incoming_case}")
+        move_files(input_dest_folder, error_folder)
+        # Delete associated case from db
+        new_case.delete()
         return False
 
     # Register DICOM Instances
@@ -134,8 +111,14 @@ def process_folder(incoming_case: Path):
             continue
         try:
             ds = pydicom.dcmread(str(dcm), stop_before_pixels=True)
-        except:
-            continue
+        except Exception as e:
+            print(f"Exception during reading dicom file: {e}")
+            print(f"Cannot process incoming instance {str(dcm)}")
+            move_files(input_dest_folder, error_folder)
+            # Delete associated case from db
+            new_case.delete()
+            return False
+
         try:
             instance = DICOMInstance(
                 instance_location=str(dcm.relative_to(input_dest_folder)),
@@ -149,26 +132,48 @@ def process_folder(incoming_case: Path):
         except Exception as e:
             print(f"Exception during DICOMInstance model creation: {e}")
             print(f"Cannot process incoming instance {str(dcm)}")
-            continue
+            move_files(input_dest_folder, error_folder)
+            # Delete associated case from db
+            new_case.delete()
+            return False
 
     try:
         lock.free()
     except Exception:
-        logger.error(
+        print(
             f"Unable to remove lock file {lock_file}" in {incoming_case}
         )  # handle_error
-        return
+        return False
+
+    new_case.status = Case.CaseStatus.QUEUED
+    new_case.save()
 
     print(f"Done Processing {incoming_case}")
     return True
 
 
+def move_files(source_folder, destination_folder):
+    try:
+        files_to_copy = source_folder.glob("**/*")
+        for file_path in files_to_copy:
+            dst_path = os.path.join(destination_folder, os.path.basename(file_path))
+            shutil.move(
+                file_path, dst_path
+            )  # ./data/incoming/<Incoming_UID>/ => ./data/cases/<UID>/input/
+        # Delete empty folder from incoming
+        os.rmdir(source_folder)
+    except Exception as e:
+        print(
+            f"Exception {e} during copying files from {source_folder} to {destination_folder}"
+        )
+        return False
+    return True
+
+
 def scan_incoming_folder():
+    incoming = Path(settings.INCOMING_FOLDER)
+    f = gravis_names.COMPLETE
 
-    data_folder = Path(settings.DATA_FOLDER)
-    incoming = data_folder / "incoming"
-
-    f = ".complete"
     folder_paths = [
         Path(d)
         for d in os.scandir(incoming)
@@ -178,16 +183,18 @@ def scan_incoming_folder():
     for incoming_case in list(folder_paths):
         process_folder(incoming_case)
 
-        # TODO: if return is false move it to the error folder
-        # else set status of the case to Case.CaseStatus.QUEUED
+
+def trigger_queued_cases():
+    # TODO: Fetch cases from DB that have status QUEUED and launch RQ
+    pass
 
 
 def watch():
-    print("AAA watch()")
     while True:
-        sleep(1)
+        sleep(settings.INCOMING_SCAN_INTERVAL)
         try:
             scan_incoming_folder()
+            trigger_queued_cases()
         except:
             logging.error("Failure in incoming")
 

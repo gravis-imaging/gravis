@@ -10,13 +10,11 @@ fi
 
 GRAVIS_BASE=/opt/gravis
 DATA_PATH=$GRAVIS_BASE/data
-CONFIG_PATH=$GRAVIS_BASE/config
 DB_PATH=$GRAVIS_BASE/db
 GRAVIS_SRC=.
 
 echo "gravis installation folder: $GRAVIS_BASE"
 echo "Data folder: $DATA_PATH"
-echo "Config folder: $CONFIG_PATH"
 echo "Database folder: $DB_PATH"
 echo "gravis source directory: $(readlink -f $GRAVIS_SRC)"
 echo ""
@@ -39,7 +37,6 @@ create_folder () {
 
 create_folders () {
   create_folder $GRAVIS_BASE
-  create_folder $CONFIG_PATH
 #   if [ $INSTALL_TYPE != "systemd" ]; then
 #     create_folder $DB_PATH
 #   fi

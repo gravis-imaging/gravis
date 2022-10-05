@@ -16,7 +16,12 @@ import environ
 env = environ.Env(
     # set casting, default value
     DEBUG=(bool, True),
+    APPLIANCE_NAME=(str, "master"),
     DATA_FOLDER=(str, "/opt/gravis/data"),
+    INCOMING_FOLDER=(str, "/opt/gravis/data/incoming"),
+    CASES_FOLDER=(str, "/opt/gravis/data/cases"),
+    ERROR_FOLDER=(str, "/opt/gravis/data/error"),
+    INCOMING_SCAN_INTERVAL=(int, 1),
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -32,8 +37,12 @@ SECRET_KEY = "django-insecure-r$afdbw+6xgz#af8-e2z=#@kjs2r#$th^m=60v1&almulq5fuh
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env("DEBUG")
-
+APPLIANCE_NAME = env("APPLIANCE_NAME")
 DATA_FOLDER = env("DATA_FOLDER")
+INCOMING_FOLDER = env("INCOMING_FOLDER")
+CASES_FOLDER = env("CASES_FOLDER")
+ERROR_FOLDER = env("ERROR_FOLDER")
+INCOMING_SCAN_INTERVAL = env("INCOMING_SCAN_INTERVAL")
 
 STATICFILES_DIRS = [
     DATA_FOLDER,
@@ -52,7 +61,7 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 # Application definition
 
-INSTALLED_APPS = [    
+INSTALLED_APPS = [
     "portal",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -173,5 +182,3 @@ RQ_QUEUES = {
     #     'DB': 0,
     # }
 }
-
-GRAVIS_DATA = "/opt/gravis/data"
