@@ -24,45 +24,31 @@ def process_folder(incoming_case: Path):
     processed_dest_folder = new_folder / gravis_folder_names.PROCESSED
     findings_dest_folder = new_folder / gravis_folder_names.FINDINGS
 
-    lock_file = Path(incoming_case) / gravis_names.LOCK
-    if lock_file.exists():
+    lock_file_path = Path(incoming_case) / gravis_names.LOCK
+    if lock_file_path.exists():
         # Series is locked, so another instance might be working on it
         return True
 
     # Create lock file in the incoming folder and prevent other instances from working on this series
     try:
-        lock = helper.FileLock(lock_file)
+        lock = helper.FileLock(lock_file_path)
     except:
         # Can't create lock file, so something must be seriously wrong
         print(
-            f"Unable to create lock file {lock_file} in {incoming_case}"
+            f"Unable to create lock file {gravis_names.LOCK} in {incoming_case}"
         )  # handle_error
         return False
 
     # Read study.jon from the incoming folder.
     json_name = "study.json"
-    incoming_json_file = Path(input_dest_folder / json_name)
+    incoming_json_file = Path(incoming_case / json_name)
     try:
         with open(incoming_json_file, "r") as myfile:
             d = myfile.read()
         payload = json.loads(d)
     except Exception:
-        print(f"Unable to read {json_name} in {input_dest_folder}.")
+        print(f"Unable to read {json_name} in {incoming_case}")
         move_files(incoming_case, error_folder)
-        return False
-
-    # Create directories for further processing.
-    try:
-        input_dest_folder.mkdir(parents=True, exist_ok=False)
-        processed_dest_folder.mkdir(parents=True, exist_ok=False)
-        findings_dest_folder.mkdir(parents=True, exist_ok=False)
-    except Exception as e:
-        print(f"Exception {e}.")
-        print(f"Cannot create one of the processing folders for {incoming_case}")
-        return False
-
-    # Move files
-    if not move_files(incoming_case, input_dest_folder):
         return False
 
     # Register Case and check that all required fields are in json
@@ -86,7 +72,7 @@ def process_folder(incoming_case: Path):
         print(
             f"Please check that all fields in json file {incoming_json_file} are valid"
         )
-        move_files(input_dest_folder, error_folder)
+        move_files(incoming_case, error_folder)
         return False
 
     # Register DICOM Set
@@ -100,13 +86,13 @@ def process_folder(incoming_case: Path):
     except Exception as e:
         print(f"Exception during DICOMSet model creation: {e}")
         print(f"Cannot create a db table for incoming data set {incoming_case}")
-        move_files(input_dest_folder, error_folder)
+        move_files(incoming_case, error_folder)
         # Delete associated case from db
         new_case.delete()
         return False
 
     # Register DICOM Instances
-    for dcm in input_dest_folder.glob("**/*.dcm"):
+    for dcm in incoming_case.glob("**/*.dcm"):
         if not dcm.is_file():
             continue
         try:
@@ -114,14 +100,14 @@ def process_folder(incoming_case: Path):
         except Exception as e:
             print(f"Exception during reading dicom file: {e}")
             print(f"Cannot process incoming instance {str(dcm)}")
-            move_files(input_dest_folder, error_folder)
+            move_files(incoming_case, error_folder)
             # Delete associated case from db
             new_case.delete()
             return False
 
         try:
             instance = DICOMInstance(
-                instance_location=str(dcm.relative_to(input_dest_folder)),
+                instance_location=str(dcm.relative_to(incoming_case)),
                 study_uid=ds.StudyInstanceUID,
                 series_uid=ds.SeriesInstanceUID,
                 instance_uid=ds.SOPInstanceUID,
@@ -129,20 +115,44 @@ def process_folder(incoming_case: Path):
                 dicom_set=dicom_set,
             )
             instance.save()
+            print("Instance created!")
         except Exception as e:
             print(f"Exception during DICOMInstance model creation: {e}")
             print(f"Cannot process incoming instance {str(dcm)}")
-            move_files(input_dest_folder, error_folder)
+            move_files(incoming_case, error_folder)
             # Delete associated case from db
             new_case.delete()
             return False
+
+    # Create directories for further processing.
+    try:
+        input_dest_folder.mkdir(parents=True, exist_ok=False)
+        processed_dest_folder.mkdir(parents=True, exist_ok=False)
+        findings_dest_folder.mkdir(parents=True, exist_ok=False)
+    except Exception as e:
+        print(f"Exception {e}.")
+        print(f"Cannot create one of the processing folders for {incoming_case}")
+        new_case.delete()
+        return False
+
+    # Move files
+    if not move_files(incoming_case, input_dest_folder):
+        new_case.delete()
+        return False
 
     try:
         lock.free()
     except Exception:
         print(
-            f"Unable to remove lock file {lock_file}" in {incoming_case}
+            f"Unable to remove lock file {lock_file_path}" in {incoming_case}
         )  # handle_error
+        return False
+
+    try:
+        # Delete empty folder from incoming
+        os.rmdir(incoming_case)
+    except Exception as e:
+        print(f"Exception {e} during deleting empty folder: {incoming_case}")
         return False
 
     new_case.status = Case.CaseStatus.QUEUED
@@ -155,13 +165,15 @@ def process_folder(incoming_case: Path):
 def move_files(source_folder, destination_folder):
     try:
         files_to_copy = source_folder.glob("**/*")
+        lock_file_path = Path(source_folder) / gravis_names.LOCK
         for file_path in files_to_copy:
+            if file_path == lock_file_path:
+                continue
             dst_path = os.path.join(destination_folder, os.path.basename(file_path))
             shutil.move(
                 file_path, dst_path
             )  # ./data/incoming/<Incoming_UID>/ => ./data/cases/<UID>/input/
-        # Delete empty folder from incoming
-        os.rmdir(source_folder)
+
     except Exception as e:
         print(
             f"Exception {e} during copying files from {source_folder} to {destination_folder}"
