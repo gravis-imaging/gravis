@@ -8,6 +8,8 @@ asgiref==3.5.2
     # via django
 async-timeout==4.0.2
     # via redis
+attrs==22.1.0
+    # via pytest
 certifi==2022.9.14
     # via requests
 charset-normalizer==2.1.1
@@ -28,18 +30,29 @@ docker==6.0.0
     # via -r requirements.in
 idna==3.4
     # via requests
+iniconfig==1.1.1
+    # via pytest
 numpy==1.23.2
     # via -r requirements.in
 packaging==21.3
     # via
     #   docker
+    #   pytest
     #   redis
 pillow==9.2.0
     # via -r requirements.in
+pluggy==1.0.0
+    # via pytest
+py==1.11.0
+    # via pytest
 pydicom==2.3.0
     # via -r requirements.in
 pyparsing==3.0.9
     # via packaging
+pytest==7.1.3
+    # via pytest-django
+pytest-django==4.5.2
+    # via -r requirements.in
 redis==4.3.4
     # via
     #   django-rq
@@ -50,6 +63,8 @@ rq==1.11.0
     # via django-rq
 sqlparse==0.4.2
     # via django
+tomli==2.0.1
+    # via pytest
 urllib3==1.26.12
     # via
     #   docker
