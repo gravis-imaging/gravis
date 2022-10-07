@@ -11,7 +11,7 @@ from django.shortcuts import redirect, render
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 
-from .models import Case
+from .models import Case, DICOMInstance
 
 logger = logging.getLogger(__name__)
 from django.contrib.staticfiles import views as static_views
@@ -92,11 +92,13 @@ def config(request):
 
 
 @login_required
-def viewer(request, case=""):
-    instances = Case.objects.all()
+def viewer(request, case):
+    case = Case.objects.get(id=case)
+    dicom_set = case.dicom_sets.get(type="Incoming")
+    instances = dicom_set.instances.all()
 
     context = {
-        "series": set([(k.study_uid, k.series_uid) for k in instances]),
+        # "series": set([(k.study_uid, k.series_uid) for k in instances]),
         "studies": set([(k.study_uid,) for k in instances]),
         "case": case,
     }

@@ -66,6 +66,7 @@ function createTools() {
         ZoomTool,
         ToolGroupManager,
         CrosshairsTool,
+        EllipticalROITool,
         Enums: csToolsEnums,
     } = cornerstoneTools;
     const { MouseBindings } = csToolsEnums;
@@ -76,11 +77,9 @@ function createTools() {
     // Add tools to Cornerstone3D
     // cornerstoneTools.addTool(PanTool);
     // cornerstoneTools.addTool(WindowLevelTool);
-    cornerstoneTools.addTool(StackScrollMouseWheelTool);
-    cornerstoneTools.addTool(VolumeRotateMouseWheelTool);
+    const tools = [CrosshairsTool, EllipticalROITool, StackScrollMouseWheelTool, VolumeRotateMouseWheelTool]
+    tools.map(cornerstoneTools.addTool)
 
-    // cornerstoneTools.addTool(ZoomTool);
-    cornerstoneTools.addTool(CrosshairsTool);
     // Define a tool group, which defines how mouse events map to tool commands for
     // Any viewport using the group
     const toolGroupA = ToolGroupManager.createToolGroup(toolGroupIdA);
@@ -94,21 +93,32 @@ function createTools() {
     // Add tools to the tool group
     // toolGroup.addTool(WindowLevelTool.toolName );
     // toolGroup.addTool(PanTool.toolName );
-    // toolGroup.addTool(ZoomTool.toolName );
+
+    toolGroupA.addTool(EllipticalROITool.toolName,
+        {
+            centerPointRadius: 1,
+        });
+    
+    styles = cornerstone.tools.annotation.config.style.getDefaultToolStyles()
+    styles.global.color = "rgb(255,0,0)"
+    styles.global.lineWidth = "5"
+    cornerstone.tools.annotation.config.style.setDefaultToolStyles(styles)
+    toolGroupA.addTool(StackScrollMouseWheelTool.toolName );
+
+
     toolGroupB.addTool(StackScrollMouseWheelTool.toolName );
-    toolGroupA.addTool(CrosshairsTool.toolName, {
-        getReferenceLineColor: (id) => { return ({"VIEW_AX": "rgb(255, 0, 0)","VIEW_SAG": "rgb(255, 255, 0)","VIEW_COR": "rgb(0, 255, 0)",})[id]},
-        // getReferenceLineControllable: (id)=> true,
-        // getReferenceLineDraggableRotatable: (id)=> true,
-        // getReferenceLineSlabThicknessControlsOn: (id)=> false,
-        // filterActorUIDsToSetSlabThickness: [viewportId(4)]
-      });
+    // toolGroupA.addTool(CrosshairsTool.toolName, {
+    //     getReferenceLineColor: (id) => { return ({"VIEW_AX": "rgb(255, 0, 0)","VIEW_SAG": "rgb(255, 255, 0)","VIEW_COR": "rgb(0, 255, 0)",})[id]},
+    //     // getReferenceLineControllable: (id)=> true,
+    //     // getReferenceLineDraggableRotatable: (id)=> true,
+    //     // getReferenceLineSlabThicknessControlsOn: (id)=> false,
+    //     // filterActorUIDsToSetSlabThickness: [viewportId(4)]
+    //   });
     
     // toolGroup.addTool(WindowLevelTool.toolName, { volumeId } );
     // toolGroup.addTool(PanTool.toolName,  { volumeId } );
     // toolGroup.addTool(ZoomTool.toolName,  { volumeId } );
     toolGroupB.addTool(StackScrollMouseWheelTool.toolName);
-    toolGroupB.setToolActive(StackScrollMouseWheelTool.toolName);
 
 
     // Set the initial state of the tools, here all tools are active and bound to
@@ -174,6 +184,10 @@ function createViewportGrid(n) {
         viewportGrid.appendChild(el);
         elements.push(el)
         resizeObserver.observe(el);
+
+        el.addEventListener(cornerstone.Enums.Events.CAMERA_MODIFIED, (evt) => {
+            console.log({position: evt.detail.camera.position, focalPoint:evt.detail.camera.focalPoint} );
+        });
     }
     return [viewportGrid, elements];
 }
@@ -314,9 +328,21 @@ async function setVolumeByImageIds(imageIds, volumeName, keepCamera=true) {
     // viewport.render();
     if (!toolAlreadyActive) {
         const toolGroup = window.cornerstone.tools.ToolGroupManager.getToolGroup(`STACK_TOOL_GROUP_ID_A`);
-        toolGroup.setToolActive(window.cornerstone.tools.CrosshairsTool.toolName, {
-            bindings: [{ mouseButton: window.cornerstone.tools.Enums.MouseBindings.Primary }],
-        });
+        // toolGroup.setToolActive(window.cornerstone.tools.CrosshairsTool.toolName, {
+        //     bindings: [{ mouseButton: window.cornerstone.tools.Enums.MouseBindings.Primary }],
+        // });
+        toolGroup.setToolActive(cornerstone.tools.EllipticalROITool.toolName, {
+            bindings: [
+              {
+                mouseButton: cornerstone.tools.Enums.MouseBindings.Primary, // Left Click
+              },
+            ],
+          });
+        toolGroup.setToolActive(window.cornerstone.tools.StackScrollMouseWheelTool.toolName);
+
+        const toolGroupB = window.cornerstone.tools.ToolGroupManager.getToolGroup(`STACK_TOOL_GROUP_ID_B`);
+        toolGroupB.setToolActive(window.cornerstone.tools.StackScrollMouseWheelTool.toolName);
+
         toolAlreadyActive = true;
 
         // const synchronizer =

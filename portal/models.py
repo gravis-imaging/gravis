@@ -99,7 +99,7 @@ class DICOMSet(models.Model):
     type = models.CharField(
         max_length=100, blank=False, null=False
     )  # Incoming, MIP, subtraction
-    case = models.ForeignKey(Case, on_delete=models.CASCADE)
+    case = models.ForeignKey(Case, on_delete=models.CASCADE, related_name='dicom_sets')
     processing_result = models.ForeignKey(
         ProcessingResult, on_delete=models.SET_NULL, default=None, null=True
     )  # null if incoming, otherwise outcome of a processing step
@@ -121,7 +121,7 @@ class DICOMInstance(models.Model):
     series_uid = models.CharField(max_length=200)
     instance_uid = models.CharField(max_length=200)
     json_metadata = models.JSONField(null=False)
-    dicom_set = models.ForeignKey(DICOMSet, on_delete=models.CASCADE)
+    dicom_set = models.ForeignKey(DICOMSet, on_delete=models.CASCADE, related_name='instances')
 
     class Meta:
         db_table = "gravis_dicom_instance"
