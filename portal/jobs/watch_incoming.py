@@ -12,18 +12,21 @@ from common.generate_folder_name import generate_folder_name
 from common.constants import gravis_names, gravis_folder_names
 import common.helper as helper
 
+logger = logging.getLogger(__name__)
+
 
 def process_folder(incoming_case: Path):
-    cases = Path(settings.CASES_FOLDER)
-    error_folder = Path(settings.ERROR_FOLDER)
-    # Move
+    # Move from incoming to cases
     print(f"Processing {incoming_case}")
+
+    cases = Path(settings.CASES_FOLDER)
     dest_folder_name = generate_folder_name()
     new_folder = cases / dest_folder_name
+    error_folder = Path(settings.ERROR_FOLDER) / dest_folder_name
     input_dest_folder = new_folder / gravis_folder_names.INPUT
     processed_dest_folder = new_folder / gravis_folder_names.PROCESSED
     findings_dest_folder = new_folder / gravis_folder_names.FINDINGS
-
+    complete_file_path = Path(incoming_case) / gravis_names.COMPLETE
     lock_file_path = Path(incoming_case) / gravis_names.LOCK
     if lock_file_path.exists():
         # Series is locked, so another instance might be working on it
@@ -34,9 +37,9 @@ def process_folder(incoming_case: Path):
         lock = helper.FileLock(lock_file_path)
     except:
         # Can't create lock file, so something must be seriously wrong
-        print(
+        logger.exception(
             f"Unable to create lock file {gravis_names.LOCK} in {incoming_case}"
-        )  # handle_error
+        )
         return False
 
     # Read study.jon from the incoming folder.
@@ -47,7 +50,7 @@ def process_folder(incoming_case: Path):
             d = myfile.read()
         payload = json.loads(d)
     except Exception:
-        print(f"Unable to read {json_name} in {incoming_case}")
+        logger.exception(f"Unable to read {json_name} in {incoming_case}")
         move_files(incoming_case, error_folder)
         return False
 
@@ -67,9 +70,8 @@ def process_folder(incoming_case: Path):
         )  # Case(data_location="./data/cases/[UID]")
         new_case.save()
     except Exception as e:
-        print(f"Exception during Case model creation: {e}")
-        print(f"Cannot process incoming data set {incoming_case}")
-        print(
+        logger.exception(f"Cannot process incoming data set {incoming_case}")
+        logger.exception(
             f"Please check that all fields in json file {incoming_json_file} are valid"
         )
         move_files(incoming_case, error_folder)
@@ -84,8 +86,9 @@ def process_folder(incoming_case: Path):
         )
         dicom_set.save()
     except Exception as e:
-        print(f"Exception during DICOMSet model creation: {e}")
-        print(f"Cannot create a db table for incoming data set {incoming_case}")
+        logger.exception(
+            f"Cannot create a db table for incoming data set {incoming_case}"
+        )
         move_files(incoming_case, error_folder)
         # Delete associated case from db
         new_case.delete()
@@ -98,8 +101,9 @@ def process_folder(incoming_case: Path):
         try:
             ds = pydicom.dcmread(str(dcm), stop_before_pixels=True)
         except Exception as e:
-            print(f"Exception during reading dicom file: {e}")
-            print(f"Cannot process incoming instance {str(dcm)}")
+            logger.exception(
+                f"Exception during dicom file reading. Cannot process incoming instance {str(dcm)}"
+            )
             move_files(incoming_case, error_folder)
             # Delete associated case from db
             new_case.delete()
@@ -115,10 +119,10 @@ def process_folder(incoming_case: Path):
                 dicom_set=dicom_set,
             )
             instance.save()
-            print("Instance created!")
         except Exception as e:
-            print(f"Exception during DICOMInstance model creation: {e}")
-            print(f"Cannot process incoming instance {str(dcm)}")
+            logger.exception(
+                f"Exception during DICOMInstance model creation. Cannot process incoming instance {str(dcm)}"
+            )
             move_files(incoming_case, error_folder)
             # Delete associated case from db
             new_case.delete()
@@ -130,8 +134,9 @@ def process_folder(incoming_case: Path):
         processed_dest_folder.mkdir(parents=True, exist_ok=False)
         findings_dest_folder.mkdir(parents=True, exist_ok=False)
     except Exception as e:
-        print(f"Exception {e}.")
-        print(f"Cannot create one of the processing folders for {incoming_case}")
+        logger.exception(
+            f"Cannot create one of the processing folders for {incoming_case}"
+        )
         new_case.delete()
         return False
 
@@ -143,16 +148,17 @@ def process_folder(incoming_case: Path):
     try:
         lock.free()
     except Exception:
-        print(
+        logger.exception(
             f"Unable to remove lock file {lock_file_path}" in {incoming_case}
         )  # handle_error
         return False
 
     try:
-        # Delete empty folder from incoming
+        # Delete .complete and empty folder from incoming
+        os.unlink(complete_file_path)
         os.rmdir(incoming_case)
     except Exception as e:
-        print(f"Exception {e} during deleting empty folder: {incoming_case}")
+        logger.exception(f"Exception during deleting empty folder: {incoming_case}")
         return False
 
     new_case.status = Case.CaseStatus.QUEUED
@@ -166,8 +172,9 @@ def move_files(source_folder, destination_folder):
     try:
         files_to_copy = source_folder.glob("**/*")
         lock_file_path = Path(source_folder) / gravis_names.LOCK
+        complete_file_path = Path(source_folder) / gravis_names.COMPLETE
         for file_path in files_to_copy:
-            if file_path == lock_file_path:
+            if file_path == lock_file_path or file_path == complete_file_path:
                 continue
             dst_path = os.path.join(destination_folder, os.path.basename(file_path))
             shutil.move(
@@ -175,8 +182,8 @@ def move_files(source_folder, destination_folder):
             )  # ./data/incoming/<Incoming_UID>/ => ./data/cases/<UID>/input/
 
     except Exception as e:
-        print(
-            f"Exception {e} during copying files from {source_folder} to {destination_folder}"
+        logger.exception(
+            f"Exception during copying files from {source_folder} to {destination_folder}"
         )
         return False
     return True
