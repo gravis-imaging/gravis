@@ -68,10 +68,10 @@ def index(request):
                 "mrn": object.mrn,
                 "acc": object.acc,
                 "case_type": object.case_type,
-                "exam_time": object.exam_time,
-                "receive_time": object.receive_time,
+                "exam_time": object.exam_time.strftime("%Y-%m-%d %H:%M"),
+                "receive_time": object.receive_time.strftime("%Y-%m-%d %H:%M"),
                 "status": object.status,
-                "reader": object.reader,
+                "reader": str(object.reader),
             }
         )
 
