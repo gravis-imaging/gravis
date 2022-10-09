@@ -27,14 +27,14 @@ class Case(models.Model):
         SVIEW = "SVW", "Series Viewer"
 
     class CaseStatus(models.TextChoices):
-        RECEIVED = "RCVD", "RECEIVED"
-        QUEUED = "QUED", "QUEUED"
-        PROCESSING = "PROC", "PROCESSING"
-        READY = "RDY", "READY"
-        VIEWING = "VIEW", "VIEWING"
-        COMPLETE = "COMP", "COMPLETE"
-        ARCHIVED = "ARCH", "ARCHIVED"
-        ERROR = "ERR", "ERROR"
+        RECEIVED = "RCVD", "Received"
+        QUEUED = "QUED", "Queued"
+        PROCESSING = "PROC", "Processing"
+        READY = "RDY", "Ready"
+        VIEWING = "VIEW", "Viewing"
+        COMPLETE = "COMP", "Complete"
+        ARCHIVED = "ARCH", "Archived"
+        ERROR = "ERR", "Error"
 
     patient_name = models.CharField(max_length=100, blank=False, null=False)
     mrn = models.CharField(max_length=100, blank=False, null=False)
@@ -99,7 +99,7 @@ class DICOMSet(models.Model):
     type = models.CharField(
         max_length=100, blank=False, null=False
     )  # Incoming, MIP, subtraction
-    case = models.ForeignKey(Case, on_delete=models.CASCADE, related_name='dicom_sets')
+    case = models.ForeignKey(Case, on_delete=models.CASCADE, related_name="dicom_sets")
     processing_result = models.ForeignKey(
         ProcessingResult, on_delete=models.SET_NULL, default=None, null=True
     )  # null if incoming, otherwise outcome of a processing step
@@ -121,7 +121,9 @@ class DICOMInstance(models.Model):
     series_uid = models.CharField(max_length=200)
     instance_uid = models.CharField(max_length=200)
     json_metadata = models.JSONField(null=False)
-    dicom_set = models.ForeignKey(DICOMSet, on_delete=models.CASCADE, related_name='instances')
+    dicom_set = models.ForeignKey(
+        DICOMSet, on_delete=models.CASCADE, related_name="instances"
+    )
 
     class Meta:
         db_table = "gravis_dicom_instance"
