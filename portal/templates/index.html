@@ -13,6 +13,7 @@
                 <table id="casetable" class="table table-dark table-bordered" style="width:100%">
                     <thead>
                         <tr>
+                            <th style="display:none;">ID</th>
                             <th>Patient</th>
                             <th>MRN</th>
                             <th>ACC</th>
@@ -23,6 +24,37 @@
                             <th>Reader</th>
                         </tr>
                     </thead>
+                    <tbody>
+                        {% for item in data %}
+                        <tr>
+                            <td style="display:none;">{{ item.case_id }}</td>
+                            <td>{{ item.patient_name }}</td>
+                            <td>{{ item.mrn }}</td>
+                            <td>{{ item.acc }}</td>
+                            <td>{{ item.case_type }}</td>
+                            <td>{{ item.exam_time }}</td>
+                            <td>{{ item.receive_time }}</td>
+                            {% if item.status == 'Received' %}
+                                <td><span class="badge bg-secondary">{{ item.status }}</span></td>
+                            {% elif item.status == 'Queued' %}
+                                <td><span class="badge bg-primary">{{ item.status }}</span></td>
+                            {% elif item.status == 'Processing' %}
+                                <td><span class="badge bg-light text-dark">{{ item.status }}</span></td>
+                            {% elif item.status == 'Ready' %}
+                                <td><span class="badge badge-light">{{ item.status }}</span></td>
+                            {% elif item.status == 'Viewing' %}
+                                <td><span class="badge bg-warning text-dark">{{ item.status }}</span></td>
+                            {% elif item.status == 'Complete' %}
+                                <td><span class="badge bg-success">{{ item.status }}</span></td>
+                            {% elif item.status == 'Archived' %}
+                                <td><span class="badge bg-dark">{{ item.status }}</span></td>
+                            {% elif item.status == 'Error' %}
+                                <td><span class="badge bg-danger">{{ item.status }}</span></td>
+                            {% endif %}
+                            <td>{{ item.reader }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -43,16 +75,18 @@
 <script>
     $(document).ready(function () {
         $('#casetable').DataTable({
-            columns: [
-                { data: 'patient_name' },
-                { data: 'mrn' },
-                { data: 'acc' },
-                { data: 'case_type' },
-                { data: 'exam_time' },
-                { data: 'receive_time' },
-                { data: 'status' },
-                { data: 'reader' }
-            ],
+            
+            // columns: [
+            //     // { data: 'case_id' },
+            //     { data: 'patient_name' },
+            //     { data: 'mrn' },
+            //     { data: 'acc' },
+            //     { data: 'case_type' },
+            //     { data: 'exam_time' },
+            //     { data: 'receive_time' },
+            //     { data: 'status' },
+            //     { data: 'reader' }
+            // ],
             dom: "<'row browsertoolbar align-items-end'<'col-sm-12 col-md-6 browserbuttons'B><'col-sm-12 col-md-6'f>>" + "<'row'<'col-sm-12'tr>>" + "<'row'<'col-sm-12 col-md-5'><'col-sm-12 col-md-7'p>>",
             select: true,
             filter: true,
@@ -78,13 +112,15 @@
                         alert("Coming soon!");
                     }
                 },
-                {
+                {% if user.is_staff %}
+                    {
                     text: '<i class="fas fa-trash"></i>',
                     titleAttr: 'Remove case',
                     action: function (e, dt, node, config) {
                         alert("Coming soon!");
                     }
                 },
+                {% endif %}
                 {
                     extend: 'spacer',
                     style: 'empty'
@@ -108,10 +144,10 @@
                     }
                 },
             ],
-            data: {{ data| safe }},
-        "initComplete": () => { $("#tablewrapper").show(); }
-                            });
-                        });
+            // data: {{ data| safe }},
+            "initComplete": () => { $("#tablewrapper").show(); }
+         });
+    });
 </script>
 
 

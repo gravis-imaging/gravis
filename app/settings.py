@@ -52,7 +52,6 @@ MEDIA_URL = "/media/"
 
 ALLOWED_HOSTS = ["*"]
 
-
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:9090",
     "http://localhost:8001",
@@ -62,7 +61,6 @@ CSRF_TRUSTED_ORIGINS = [
 # Application definition
 
 INSTALLED_APPS = [
-    "portal",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -71,6 +69,7 @@ INSTALLED_APPS = [
     # Cannot use staticfiles as we set headers on static responses via middleware
     # "django.contrib.staticfiles",
     "django_rq",
+    "portal",
 ]
 
 MIDDLEWARE = [

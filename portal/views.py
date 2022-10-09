@@ -56,6 +56,9 @@ def logout_request(request):
     return redirect("/login")
 
 
+# TODO: Status viewer from django rq - Case Information button is clicked
+
+
 @login_required
 def index(request):
 
@@ -64,13 +67,14 @@ def index(request):
     for object in objects:
         data.append(
             {
+                'case_id': str(object.id),
                 "patient_name": object.patient_name,
                 "mrn": object.mrn,
                 "acc": object.acc,
                 "case_type": object.case_type,
                 "exam_time": object.exam_time.strftime("%Y-%m-%d %H:%M"),
                 "receive_time": object.receive_time.strftime("%Y-%m-%d %H:%M"),
-                "status": object.status,
+                "status": Case.CaseStatus(object.status).name.title(),
                 "reader": str(object.reader),
             }
         )
