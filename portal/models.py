@@ -81,15 +81,15 @@ class ProcessingJob(models.Model):
     output_folder = models.CharField(max_length=1000, blank=False, null=False)
     rq_id = models.CharField(max_length=100, blank=True, null=True)
 
-    # class Meta:
-    #     db_table = "gravis_processing_result"
-    #     constraints = [
-    #         models.CheckConstraint(
-    #             check=models.Q(json_result__isnull=False)
-    #             | models.Q(dicom_set__isnull=False),
-    #             name="both_dicom_set_and_json_result_cannot_be_null",
-    #         )
-    #     ]
+    class Meta:
+        db_table = "gravis_processing_job"
+        # constraints = [
+        #     models.CheckConstraint(
+        #         check=models.Q(json_result__isnull=False)
+        #         | models.Q(dicom_set__isnull=False),
+        #         name="both_dicom_set_and_json_result_cannot_be_null",
+        #     )
+        # ]
 
 
 class DICOMSet(models.Model):

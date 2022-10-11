@@ -10,7 +10,7 @@ import SimpleITK as sitk
 def load_grasp_files(dir_name: str):
 
     if not Path(dir_name).exists():
-        print(f"IN path does not exist !{dir_name}!")
+        print(f"load_grasp_files() IN path does not exist {dir_name}")
         sys.exit(1)
 
     data_directory = os.path.dirname(dir_name)
@@ -264,10 +264,11 @@ def main():
     import os
 
     dir_name = os.environ["GRAVIS_IN_DIR"]
-    input_dir_name = dir_name + "/input/"
+    output_dir_name = os.environ["GRAVIS_OUT_DIR"]
+    input_dir_name = dir_name 
 
     if not Path(input_dir_name).exists():
-        print(f"IN path does not exist {input_dir_name}")
+        print(f"main() IN path does not exist {input_dir_name}")
         sys.exit(1)
 
     # Create default values for all module settings
@@ -289,7 +290,7 @@ def main():
         subtracted_images, angle_step, full_rotation_flag
     )
 
-    output_dir_name = dir_name + "/processed/"
+    
     save_grasp_files(
         output_dir_name,
         processed_images,

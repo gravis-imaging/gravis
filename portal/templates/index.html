@@ -41,7 +41,7 @@
                             {% elif item.status == 'Processing' %}
                                 <td><span class="badge bg-light text-dark">{{ item.status }}</span></td>
                             {% elif item.status == 'Ready' %}
-                                <td><span class="badge badge-light">{{ item.status }}</span></td>
+                                <td><span class="badge bg-info text-dark">{{ item.status }}</span></td>
                             {% elif item.status == 'Viewing' %}
                                 <td><span class="badge bg-warning text-dark">{{ item.status }}</span></td>
                             {% elif item.status == 'Complete' %}

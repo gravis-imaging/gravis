@@ -251,32 +251,36 @@ def scan_incoming_folder():
 
 
 def trigger_queued_cases():
-    print("AAA trigger_queued_cases")
+    print("trigger_queued_cases()")
     # TODO: create a file in input folders with case id???
     cases = Path(settings.CASES_FOLDER)
     # f = gravis_names.COMPLETE
-    input = gravis_folder_names.INPUT
-    processed = gravis_folder_names.PROCESSED
+    input = gravis_folder_names.INPUT + "/"
+    processed = gravis_folder_names.PROCESSED + "/"
     folder_paths = [
         Path(d)
         for d in os.scandir(cases)
         if d.is_dir() and Path(os.path.join(d, input)).exists()
     ]
-
     for folder in folder_paths:
-        case = Case.objects.filter(case_location=folder)
-        if len(case) > 0 and case[0].status == Case.CaseStatus.QUEUED:
-            # process
-            # case[0].status = Case.CaseStatus.PROCESSING
-            # case[0].save()
+        cases = Case.objects.filter(case_location=folder)
+        if len(cases) > 0 and cases[0].status == Case.CaseStatus.QUEUED:
+            case = cases[0]
+            case.status = Case.CaseStatus.PROCESSING
+            case.save()
+            try:
+                new_job = ProcessingJob(
+                    docker_image="gravis-processing",
+                    input_folder=str(folder / input),
+                    output_folder=str(folder / processed),
+                    category="DICOMSet",
+                    case=case,
+                )
+            except Exception as e:
+                logger.exception(
+                    f"Exception creating a new processing job for {str(folder / input)}"
+                )
 
-            new_job = ProcessingJob(
-                docker_image="gravis-processing",
-                input_folder=str(folder / input),
-                output_folder=str(folder / processed),
-                category = "DICOMSet",
-                case=case
-            )
             new_job.save()
             result = django_rq.enqueue(do_docker_job, new_job.id)
             new_job.rq_id = result.id
@@ -290,10 +294,10 @@ def do_docker_job(job_id):
     job: ProcessingJob = ProcessingJob.objects.get(id=job_id)
 
     volumes = {
-        job.input_folder: {"bind": "/tmp/data", "mode": "rw"},
-        job.output_folder: {"bind": "/tmp/output", "mode": "rw"},
+        job.input_folder: {"bind": "/tmp/data/", "mode": "rw"},
+        job.output_folder: {"bind": "/tmp/output/", "mode": "rw"},
     }
-    environment = dict(GRAVIS_IN_DIR="/tmp/data", GRAVIS_OUT_DIR="/tmp/output")
+    environment = dict(GRAVIS_IN_DIR="/tmp/data/", GRAVIS_OUT_DIR="/tmp/output/")
 
     container = docker_client.containers.run(
         job.docker_image,
@@ -303,11 +307,9 @@ def do_docker_job(job_id):
         # group_add=[os.getegid()],
         detach=True,
     )
-    job.case.status = Case.CaseStatus.PROCESSING
-    job.save()
+
     print("Docker is running...")
     docker_result = container.wait()
-    print(docker_result)
     print("=== MODULE OUTPUT - BEGIN ========================================")
     if container.logs() is not None:
         logs = container.logs().decode("utf-8")
@@ -315,12 +317,12 @@ def do_docker_job(job_id):
     print("=== MODULE OUTPUT - END ==========================================")
     job.complete = True
     dicom_set = DICOMSet(
-        set_location=job.output_folder,
-        type="Processed",
-        case=job.case
+        set_location=job.output_folder, type="Processed", case=job.case
     )
     dicom_set.save()
+    job.dicom_set = dicom_set
     job.case.status = Case.CaseStatus.READY
+    job.case.save()
     job.save()
 
 
