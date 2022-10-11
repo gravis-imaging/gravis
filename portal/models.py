@@ -13,6 +13,7 @@ from django.contrib.auth.models import User
 #         db_table = 'gravis_docker_job'
 
 
+
 class Case(models.Model):
     """
     A model to represent a Gravis case.
@@ -73,18 +74,19 @@ class ProcessingResult(models.Model):
         max_length=100, blank=False, null=False
     )  # success, fail, description
     json_result = models.JSONField(null=True)
+    parameters = models.JSONField(null=True)
     dicom_set = models.ForeignKey("DICOMSet", on_delete=models.CASCADE, null=True)
     case = models.ForeignKey(Case, on_delete=models.CASCADE)
 
     class Meta:
         db_table = "gravis_processing_result"
-        constraints = [
-            models.CheckConstraint(
-                check=models.Q(json_result__isnull=False)
-                | models.Q(dicom_set__isnull=False),
-                name="both_dicom_set_and_json_result_cannot_be_null",
-            )
-        ]
+        # constraints = [
+        #     models.CheckConstraint(
+        #         check=models.Q(json_result__isnull=False)
+        #         | models.Q(dicom_set__isnull=False),
+        #         name="both_dicom_set_and_json_result_cannot_be_null",
+        #     )
+        # ]
 
 
 class DICOMSet(models.Model):
@@ -101,7 +103,7 @@ class DICOMSet(models.Model):
     )  # Incoming, MIP, subtraction
     case = models.ForeignKey(Case, on_delete=models.CASCADE, related_name="dicom_sets")
     processing_result = models.ForeignKey(
-        ProcessingResult, on_delete=models.SET_NULL, default=None, null=True
+        ProcessingResult, on_delete=models.SET_NULL, default=None, null=True, related_name="result_sets"
     )  # null if incoming, otherwise outcome of a processing step
 
     class Meta:

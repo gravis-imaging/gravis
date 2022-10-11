@@ -41,7 +41,7 @@ on htmx:afterRequest
 </div> {% endcomment %}
 
 
-<div x-data="{ current_study: null, current_time: 0, index: 0, loading: false }">
+<div x-data="{ current_study: null, current_time: 0, index: 0, loading: false, job_loading: null, case_id: {{case.id}} }">
   <div class="w-25">
     <div class="">
       <div class="select-wrapper">
@@ -66,10 +66,13 @@ on htmx:afterRequest
 
     <div x-show="!!current_study" class="pointer-events-none" style="z-index:1; grid-area: 1 / 1 / 2 / 2;">
       <div style='display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; height:100%'>
-        <div></div>
-        <div x-text="current_time.toFixed(2) + 's'"></div>
-        <div></div>
-        <div></div>
+
+        <template x-for="i in 3">
+          <div>
+            <button style="pointer-events: auto" class="btn-primary btn-large m-2" @click="job_loading = testGetSlice(i-1, case_id);">Click me</button>
+          </div>
+        </template>
+       
       </div>
     </div> 
 
