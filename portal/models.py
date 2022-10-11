@@ -58,7 +58,7 @@ class Case(models.Model):
         db_table = "gravis_case"
 
 
-class ProcessingResult(models.Model):
+class ProcessingJob(models.Model):
     """
     A model to represent processing results for a specific gravis case.
     Can have none, one or more DICOM set results or other result types -
@@ -70,21 +70,26 @@ class ProcessingResult(models.Model):
         max_length=100, blank=False, null=False
     )  # dicom set, json, image
     status = models.CharField(
-        max_length=100, blank=False, null=False
+        max_length=100, blank=True, null=True
     )  # success, fail, description
     json_result = models.JSONField(null=True)
     dicom_set = models.ForeignKey("DICOMSet", on_delete=models.CASCADE, null=True)
     case = models.ForeignKey(Case, on_delete=models.CASCADE)
 
-    class Meta:
-        db_table = "gravis_processing_result"
-        constraints = [
-            models.CheckConstraint(
-                check=models.Q(json_result__isnull=False)
-                | models.Q(dicom_set__isnull=False),
-                name="both_dicom_set_and_json_result_cannot_be_null",
-            )
-        ]
+    docker_image = models.CharField(max_length=100, blank=False, null=False)
+    input_folder = models.CharField(max_length=1000, blank=False, null=False)
+    output_folder = models.CharField(max_length=1000, blank=False, null=False)
+    rq_id = models.CharField(max_length=100, blank=True, null=True)
+
+    # class Meta:
+    #     db_table = "gravis_processing_result"
+    #     constraints = [
+    #         models.CheckConstraint(
+    #             check=models.Q(json_result__isnull=False)
+    #             | models.Q(dicom_set__isnull=False),
+    #             name="both_dicom_set_and_json_result_cannot_be_null",
+    #         )
+    #     ]
 
 
 class DICOMSet(models.Model):
@@ -101,7 +106,7 @@ class DICOMSet(models.Model):
     )  # Incoming, MIP, subtraction
     case = models.ForeignKey(Case, on_delete=models.CASCADE, related_name="dicom_sets")
     processing_result = models.ForeignKey(
-        ProcessingResult, on_delete=models.SET_NULL, default=None, null=True
+        ProcessingJob, on_delete=models.SET_NULL, default=None, null=True
     )  # null if incoming, otherwise outcome of a processing step
 
     class Meta:
