@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import views, rqjobs
 
 from django.conf import settings
 from django.conf.urls.static import static
@@ -16,5 +16,6 @@ urlpatterns = [
     path("config/", views.config, name="config"),
     path("user/", views.user, name="user"),
     path("media/<path:path>", views.serve_file),
+    *rqjobs.urls,
     *static(settings.STATIC_URL, document_root="portal/static/"),
 ]

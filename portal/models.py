@@ -13,6 +13,7 @@ from django.contrib.auth.models import User
 #         db_table = 'gravis_docker_job'
 
 
+
 class Case(models.Model):
     """
     A model to represent a Gravis case.
@@ -73,6 +74,7 @@ class ProcessingJob(models.Model):
         max_length=100, blank=True, null=True
     )  # success, fail, description
     json_result = models.JSONField(null=True)
+    parameters = models.JSONField(null=True)
     dicom_set = models.ForeignKey("DICOMSet", on_delete=models.CASCADE, null=True)
     case = models.ForeignKey(Case, on_delete=models.CASCADE)
 
@@ -106,7 +108,7 @@ class DICOMSet(models.Model):
     )  # Incoming, MIP, subtraction
     case = models.ForeignKey(Case, on_delete=models.CASCADE, related_name="dicom_sets")
     processing_result = models.ForeignKey(
-        ProcessingJob, on_delete=models.SET_NULL, default=None, null=True
+        ProcessingJob, on_delete=models.SET_NULL, default=None, null=True, related_name="result_sets"
     )  # null if incoming, otherwise outcome of a processing step
 
     class Meta:

@@ -185,9 +185,9 @@ function createViewportGrid(n) {
         elements.push(el)
         resizeObserver.observe(el);
 
-        el.addEventListener(cornerstone.Enums.Events.CAMERA_MODIFIED, (evt) => {
-            console.log({position: evt.detail.camera.position, focalPoint:evt.detail.camera.focalPoint} );
-        });
+        // el.addEventListener(cornerstone.Enums.Events.CAMERA_MODIFIED, (evt) => {
+        //     console.log({position: evt.detail.camera.position, focalPoint:evt.detail.camera.focalPoint} );
+        // });
     }
     return [viewportGrid, elements];
 }
@@ -247,15 +247,15 @@ async function initializeGraspViewer(wrapper) {
             background:[0, 0, 0],
           },
         },
-        {
-            viewportId: "VIEW_MIP",
-            type: ViewportType.ORTHOGRAPHIC,
-            element: viewportElements[3],
-            defaultOptions: {
-              orientation: ORIENTATION.SAGITTAL,
-              background: [0, 0, 0],
-            },
-          },  
+        // {
+        //     viewportId: "VIEW_MIP",
+        //     type: ViewportType.ORTHOGRAPHIC,
+        //     element: viewportElements[3],
+        //     defaultOptions: {
+        //       orientation: ORIENTATION.SAGITTAL,
+        //       background: [0, 0, 0],
+        //     },
+        //   },  
       ];
     for (v of viewportInput) {
         viewportIds.push(v.viewportId);
@@ -270,6 +270,7 @@ async function initializeGraspViewer(wrapper) {
     renderingEngine.renderViewports(viewportIds);
 }
 var toolAlreadyActive = false;
+
 
 async function setVolumeByImageIds(imageIds, volumeName, keepCamera=true) {
     // const volumeName = series_uid; // Id of the volume less loader prefix
@@ -431,5 +432,75 @@ async function setGraspVolume(seriesInfo) {
 //     await setVolumeByImageIds(series.imageIds,series.series_uid, true);
 // }
 
+function getCookie(name) {
+    let cookieValue = null;
+
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+
+                break;
+            }
+        }
+    }
+
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
+async function startJob(type, case_, params) {
+    body = {
+        case: case_,
+        parameters: params,
+    };
+    result = (await fetch(`/job/${type}`, {
+        method: 'POST', 
+        credentials: 'same-origin',        
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken,
+        },
+        body: JSON.stringify(body),
+    })).json()
+    return result
+}
+
+async function getJob(job, info) {
+    result = (await fetch(`/job/${job}?${new URLSearchParams(info)}`, {
+        method: 'GET',   credentials: 'same-origin'
+    })).json()
+    return result
+}
+
 window.onload = async function() {
+}
+
+
+async function testGetSlice(n, case_id) {
+    const renderingEngine = window.cornerstone.getRenderingEngine(
+        'gravisRenderEngine'
+    ); 
+    viewport = renderingEngine.getViewport(viewportIds[n])
+    cam = viewport.getCamera()
+
+    const volumeId = viewport.getActors()[0].uid;
+    volume = cornerstone.cache.getVolume(volumeId)
+    index = cornerstone.utilities.transformWorldToIndex(volume.imageData, cam.focalPoint)
+    
+    // console.log(volume)
+    // console.log(volume.metadata.SeriesInstanceUID)
+    // console.log(viewport)
+    // console.log(cam)
+    // console.log(volumeId)
+    console.log(index, cam.viewPlaneNormal)
+    job_id = await startJob("test", case_id, {"index":index, normal: cam.viewPlaneNormal})
+    console.log(job_id)
+    return job_id
+    // const response = await fetch()
 }
