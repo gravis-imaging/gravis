@@ -4,6 +4,7 @@ import shutil
 from time import sleep
 import os, json
 from unicodedata import category
+from uuid import uuid4
 import pydicom
 import docker
 
@@ -166,6 +167,7 @@ def process_folder(incoming_case: Path):
 
     new_case.status = Case.CaseStatus.QUEUED
     new_case.save()
+    print(new_case.status)
 
     print(f"Done Processing {incoming_case}")
     return True
@@ -252,39 +254,24 @@ def scan_incoming_folder():
 
 def trigger_queued_cases():
     print("trigger_queued_cases()")
-    # TODO: create a file in input folders with case id???
-    cases = Path(settings.CASES_FOLDER)
-    # f = gravis_names.COMPLETE
-    input = gravis_folder_names.INPUT + "/"
-    processed = gravis_folder_names.PROCESSED + "/"
-    folder_paths = [
-        Path(d)
-        for d in os.scandir(cases)
-        if d.is_dir() and Path(os.path.join(d, input)).exists()
-    ]
-    for folder in folder_paths:
-        cases = Case.objects.filter(case_location=folder)
-        if len(cases) > 0 and cases[0].status == Case.CaseStatus.QUEUED:
-            case = cases[0]
-            case.status = Case.CaseStatus.PROCESSING
-            case.save()
-            try:
-                new_job = ProcessingJob(
-                    docker_image="gravis-processing",
-                    input_folder=str(folder / input),
-                    output_folder=str(folder / processed),
-                    category="DICOMSet",
-                    case=case,
-                )
-            except Exception as e:
-                logger.exception(
-                    f"Exception creating a new processing job for {str(folder / input)}"
-                )
-
-            new_job.save()
-            result = django_rq.enqueue(do_docker_job, new_job.id)
-            new_job.rq_id = result.id
-            new_job.save()
+    cases = Case.objects.filter(status = Case.CaseStatus.QUEUED)
+    for case in cases:
+        try:
+            dicom_set=case.dicom_sets.get(type="Incoming")
+            new_job = ProcessingJob(
+                docker_image="gravis-processing",
+                dicom_set=dicom_set,
+                category="DICOMSet",
+                case=case,
+            )
+        except Exception as e:
+            logger.exception(
+                f"Exception creating a new processing job for {dicom_set.set_location} "
+            )
+        new_job.save()
+        result = django_rq.enqueue(do_docker_job, new_job.id)
+        new_job.rq_id = result.id
+        new_job.save()
 
 
 def do_docker_job(job_id):
@@ -293,10 +280,23 @@ def do_docker_job(job_id):
 
     job: ProcessingJob = ProcessingJob.objects.get(id=job_id)
 
+    job.case.status = Case.CaseStatus.PROCESSING
+    job.case.save()
+
+    input_folder = job.case.case_location + "/input/"
+    output_folder = job.case.case_location + "/processed/" + str(uuid4())
+
     volumes = {
-        job.input_folder: {"bind": "/tmp/data/", "mode": "rw"},
-        job.output_folder: {"bind": "/tmp/output/", "mode": "rw"},
+        input_folder: {"bind": "/tmp/data/", "mode": "rw"},
+        output_folder: {"bind": "/tmp/output/", "mode": "rw"},
     }
+    try:
+        Path(output_folder).mkdir(parents=True, exist_ok=False) # ???    
+    except Exception as e:
+         logger.exception(
+                    f"Exception creating a folder {output_folder}"
+                )
+
     environment = dict(GRAVIS_IN_DIR="/tmp/data/", GRAVIS_OUT_DIR="/tmp/output/")
 
     container = docker_client.containers.run(
@@ -310,6 +310,7 @@ def do_docker_job(job_id):
 
     print("Docker is running...")
     docker_result = container.wait()
+    print(docker_result)
     print("=== MODULE OUTPUT - BEGIN ========================================")
     if container.logs() is not None:
         logs = container.logs().decode("utf-8")
@@ -317,7 +318,7 @@ def do_docker_job(job_id):
     print("=== MODULE OUTPUT - END ==========================================")
     job.complete = True
     dicom_set = DICOMSet(
-        set_location=job.output_folder, type="Processed", case=job.case
+        set_location=output_folder, type="Processed", case=job.case
     )
     dicom_set.save()
     job.dicom_set = dicom_set
