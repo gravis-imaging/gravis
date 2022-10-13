@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
+from pydicom import Dataset
 
 
 # class DockerJob(models.Model):
@@ -132,6 +133,14 @@ class DICOMInstance(models.Model):
         DICOMSet, on_delete=models.CASCADE, related_name="instances"
     )
 
+    @classmethod
+    def from_dataset(cls, ds: Dataset):
+        return DICOMInstance(
+            study_uid=ds.StudyInstanceUID,
+            series_uid=ds.SeriesInstanceUID,
+            instance_uid=ds.SOPInstanceUID,
+            json_metadata=ds.to_json(),
+        )
     class Meta:
         db_table = "gravis_dicom_instance"
         constraints = [

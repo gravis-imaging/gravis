@@ -84,12 +84,12 @@ function createTools() {
     // Any viewport using the group
     const toolGroupA = ToolGroupManager.createToolGroup(toolGroupIdA);
 
-    for (var viewport of viewportIds.slice(0,3)) {
+    for (var viewport of viewportIds) {
         toolGroupA.addViewport(viewport, "gravisRenderEngine");
     }
 
     const toolGroupB = ToolGroupManager.createToolGroup(toolGroupIdB);
-    toolGroupB.addViewport("VIEW_MIP", "gravisRenderEngine");
+    // toolGroupB.addViewport("VIEW_MIP", "gravisRenderEngine");
     // Add tools to the tool group
     // toolGroup.addTool(WindowLevelTool.toolName );
     // toolGroup.addTool(PanTool.toolName );
@@ -185,9 +185,9 @@ function createViewportGrid(n) {
         elements.push(el)
         resizeObserver.observe(el);
 
-        // el.addEventListener(cornerstone.Enums.Events.CAMERA_MODIFIED, (evt) => {
-        //     console.log({position: evt.detail.camera.position, focalPoint:evt.detail.camera.focalPoint} );
-        // });
+        el.addEventListener(cornerstone.Enums.Events.CAMERA_MODIFIED, (evt) => {
+           // console.log({position: evt.detail.camera.position, focalPoint:evt.detail.camera.focalPoint, viewPlaneNormal: evt.detail.camera.viewPlaneNormal} );
+        });
     }
     return [viewportGrid, elements];
 }
@@ -247,15 +247,15 @@ async function initializeGraspViewer(wrapper) {
             background:[0, 0, 0],
           },
         },
-        // {
-        //     viewportId: "VIEW_MIP",
-        //     type: ViewportType.ORTHOGRAPHIC,
-        //     element: viewportElements[3],
-        //     defaultOptions: {
-        //       orientation: ORIENTATION.SAGITTAL,
-        //       background: [0, 0, 0],
-        //     },
-        //   },  
+        {
+            viewportId: "VIEW_CINE",
+            type: ViewportType.STACK,
+            element: viewportElements[3],
+            defaultOptions: {
+            //   orientation: ORIENTATION.SAGITTAL,
+              background: [0, 0, 0],
+            },
+          },  
       ];
     for (v of viewportInput) {
         viewportIds.push(v.viewportId);
@@ -301,16 +301,16 @@ async function setVolumeByImageIds(imageIds, volumeName, keepCamera=true) {
         viewportIds.slice(0,3)
       );
 
-      const slabThickness = Math.sqrt(
-        volume.dimensions[0] * volume.dimensions[0] +
-        volume.dimensions[1] * volume.dimensions[1] +
-        volume.dimensions[2] * volume.dimensions[2]
-      );
-    await cornerstone.setVolumesForViewports(
-        renderingEngine,
-        [{volumeId, slabThickness},],
-        viewportIds.slice(3)
-      );
+    //   const slabThickness = Math.sqrt(
+    //     volume.dimensions[0] * volume.dimensions[0] +
+    //     volume.dimensions[1] * volume.dimensions[1] +
+    //     volume.dimensions[2] * volume.dimensions[2]
+    //   );
+    // await cornerstone.setVolumesForViewports(
+    //     renderingEngine,
+    //     [{volumeId, slabThickness},],
+    //     viewportIds.slice(3)
+    //   );
       
     // await viewport.setVolumes([
     //     { volumeId },
@@ -472,10 +472,42 @@ async function startJob(type, case_, params) {
 }
 
 async function getJob(job, info) {
-    result = (await fetch(`/job/${job}?${new URLSearchParams(info)}`, {
+    result = await (await fetch(`/job/${job}?${new URLSearchParams(info)}`, {
         method: 'GET',   credentials: 'same-origin'
     })).json()
     return result
+}
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function getJobInstances(job, info) {
+    console.log("getJobInstances", job, info);
+    for (let i=0;i<100;i++) {
+        result = await getJob(job,info)
+        if ( result["status"] == "SUCCESS" ) {
+            break
+        }
+        await sleep(1000);
+    }
+    urls = []
+    for ( var instance of result["dicom_sets"][0] ) {
+        urls.push("wadouri:" + 
+        "/wado" +
+        '/studies/' +
+        instance.study_uid +
+        '/series/' +
+        instance.series_uid +
+        '/instances/' +
+        instance.instance_uid +
+        '/frames/1')
+    };
+    const renderingEngine = window.cornerstone.getRenderingEngine(
+        'gravisRenderEngine'
+    );
+    viewport = renderingEngine.getViewport("VIEW_CINE");
+    await viewport.setStack(urls);
+    return urls;
 }
 
 window.onload = async function() {

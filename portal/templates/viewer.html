@@ -69,7 +69,7 @@ on htmx:afterRequest
 
         <template x-for="i in 3">
           <div>
-            <button style="pointer-events: auto" class="btn-primary btn-large m-2" @click="job_loading = testGetSlice(i-1, case_id);">Click me</button>
+            <button style="pointer-events: auto" class="btn-primary btn-large m-2" x-on:click="await $nextTick(); const job_loading = await testGetSlice(i-1, case_id); getJobInstances('test', job_loading);">Click me</button>
           </div>
         </template>
        

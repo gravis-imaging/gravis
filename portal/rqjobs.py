@@ -9,8 +9,10 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.urls import path
 import numpy as np
+from pydicom import Dataset
+import pydicom
 from urllib3 import HTTPResponse
-
+from datetime import datetime
 from portal.models import Case, DICOMInstance, DICOMSet, ProcessingJob
 
 import django_rq
@@ -35,8 +37,11 @@ class WorkJobView(View):
             dicom_sets = []
             for set in sets:
                 dicom_sets.append([])
-                for instance in set.instances.all():
-                    dicom_sets[-1].append(instance.json_metadata)
+                instances = list(set.instances.all())
+                # sort by acquisition number
+                instances.sort(key=lambda x: int(json.loads(x.json_metadata)["00200012"]["Value"][0]))
+                for instance in instances:
+                    dicom_sets[-1].append(dict(study_uid=instance.study_uid, series_uid=instance.series_uid, instance_uid=instance.instance_uid))
             result["dicom_sets"] = dicom_sets
         # job.result.dicom_set.instances()
         return JsonResponse(result)
@@ -76,43 +81,73 @@ class WorkJobView(View):
         job.status = "SUCCESS"
         job.save()
 
+def get_time(ds):
+    dt = pydicom.valuerep.DA(ds.InstanceCreationDate)
+    tm = pydicom.valuerep.TM(ds.InstanceCreationTime)
+    return datetime.combine(dt,tm)
+
+
 class TestWork(WorkJobView):
     type = "TEST"
 
     @classmethod
     def do_job(cls, job: ProcessingJob):
-        params = job.parameters
-        axis = 0
-        index = 70
+        normal = job.parameters["normal"]
+        axis = np.argmax(np.abs(normal))
+
+        if axis == 0:
+            index = job.parameters["index"][2]
+        elif axis == 1:
+            index = job.parameters["index"][0]
+        elif axis == 2:
+            index = job.parameters["index"][1]
+        # index = job.parameters["index"][axis]
+
+        print(normal, axis, index)
         instances = job.dicom_set.instances.all()
         series_uids = {k.series_uid for k in instances}
 
-        by_series = {uid: [k for k in instances if k.series_uid == uid] for uid in series_uids}
-        
-        files_by_series = {uid: [ Path(i.dicom_set.set_location) / i.instance_location for i in by_series[uid]] for uid in series_uids}
+        split_by_series = [ [k for k in instances if k.series_uid == uid] for uid in series_uids]
+        # files_by_series = {uid: [ Path(i.dicom_set.set_location) / i.instance_location for i in by_series[uid]] for uid in series_uids}
+        files_by_series = [ [ Path(i.dicom_set.set_location) / i.instance_location for i in k] for k in split_by_series ]
         # print(files_by_series)
         # array = None
-
-        new_set = DICOMSet(set_location = Path(job.case.case_location) / str(uuid.uuid4()),
+        
+        new_set = DICOMSet(set_location = Path(job.case.case_location) / "processed" / str(uuid.uuid4()),
             type = "CINE",
             case = job.case,
             processing_result = job)
         new_set.save()
-        
+        output_folder = Path(new_set.set_location)
+        output_folder.mkdir()
         result = []
-        for k in files_by_series:
-            v = DicomVolume(files_by_series[k])
-            n=0
-            array = np.asarray([d.pixel_array for d in v])
-            array = array.transpose(1,2,0)
-            frame = array.take(index,axis=axis)
 
+        new_study_uid = pydicom.uid.generate_uid()
+        new_series_uid = pydicom.uid.generate_uid()
+        for i, series in enumerate(files_by_series[::5]):
+            v = DicomVolume(series)
+            array2 = np.asarray([d.pixel_array for d in v]).transpose(0,2,1)
+            print(array2.shape)
+            frame = array2.take(index,axis=axis).T
+            ds = v[0].copy()
+            ds.PixelData = frame.tobytes() #v[50].pixel_array.tobytes()
+            ds.StudyInstanceUID = new_study_uid
+            ds.SeriesInstanceUID = new_series_uid
+            ds.SOPInstanceUID = pydicom.uid.generate_uid()
+            ds.Rows = frame.shape[0]
+            ds.Columns = frame.shape[1]
+            # ds.is_little_endian = True
+            # ds.is_implicit_VR = False
+            new_file = output_folder / f"frame.{i}.dcm"
+            ds.save_as(new_file)
+            
+            new_instance = DICOMInstance.from_dataset(ds)
+            new_instance.dicom_set = new_set
+            new_instance.instance_location = str(new_file.relative_to(new_set.set_location))
+            new_instance.save()
 
-            job.case.case_location
-
-
-
-        return ({"result":1234}, None)
+        
+        return ({"result":1234}, new_set)
 
 urls = [
     path("job/test", TestWork.as_view())
