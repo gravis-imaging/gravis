@@ -1,18 +1,8 @@
+from time import time
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
 from pydicom import Dataset
-
-
-# class DockerJob(models.Model):
-#     docker_image = models.CharField(max_length=10000)
-#     input_folder = models.CharField(max_length=10000)
-#     output_folder = models.CharField(max_length=10000)
-#     complete = models.BooleanField(default=False)
-
-#     class Meta:
-#         db_table = 'gravis_docker_job'
-
 
 
 class Case(models.Model):
@@ -54,7 +44,8 @@ class Case(models.Model):
     case_location = models.CharField(max_length=10000, blank=False, null=False)
     settings = models.JSONField(null=True)
     incoming_payload = models.JSONField(null=False)
-    reader = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True)
+    last_read_by = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True, related_name='last_read_by')
+    viewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True, related_name='viewed_by')
 
     class Meta:
         db_table = "gravis_case"
@@ -78,10 +69,7 @@ class ProcessingJob(models.Model):
     parameters = models.JSONField(null=True)
     dicom_set = models.ForeignKey("DICOMSet", on_delete=models.CASCADE, null=True)
     case = models.ForeignKey(Case, on_delete=models.CASCADE)
-
     docker_image = models.CharField(max_length=100, blank=False, null=False)
-    input_folder = models.CharField(max_length=1000, blank=False, null=False)
-    output_folder = models.CharField(max_length=1000, blank=False, null=False)
     rq_id = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
@@ -149,3 +137,16 @@ class DICOMInstance(models.Model):
                 name="unique_uids",
             )
         ]
+
+# class CaseHistory(models.Model):
+#     """
+#     A model to represent a Case History
+#     """
+
+#     action_time
+#     reader
+#     case
+#     action 
+
+
+

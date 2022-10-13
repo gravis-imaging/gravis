@@ -74,8 +74,10 @@
 
 <script>
     $(document).ready(function () {
-        $('#casetable').DataTable({
-            
+        
+       
+        var case_data_table = $('#casetable').DataTable({
+           
             // columns: [
             //     // { data: 'case_id' },
             //     { data: 'patient_name' },
@@ -145,10 +147,23 @@
                 },
             ],
             // data: {{ data| safe }},
-            "initComplete": () => { $("#tablewrapper").show(); }
-         });
+            "initComplete": () => { 
+                $("#tablewrapper").show();}
+        });
+
+        $('#casetable tbody').on( 'dblclick', 'tr', function () {
+            var tr = $(this).closest('tr');
+            var row = case_data_table.row(tr);
+            var case_id = row.data()[0];
+            var link = '/viewer/'+case_id
+            window.open(link);
+        });
+        
     });
+    
 </script>
 
-
 {% endblock %}
+
+
+<!-- window.open('{% url 'viewer' case_id %}', target='_self'); -->
