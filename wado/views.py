@@ -88,8 +88,9 @@ def test_populate_instances(request):
 @login_required
 def study_metadata(request, study):
     instances = DICOMInstance.objects.filter(study_uid=study)
-    metadatas = [json.loads(k.json_metadata) for k in instances]
-    return JsonResponse(metadatas, safe=False)
+    metadatas = [i.json_metadata for i in instances]
+    data = "[" + ",".join(metadatas) + "]"
+    return HttpResponse(data, content_type="application/json")
 
 
 @login_required
