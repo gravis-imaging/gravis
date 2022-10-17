@@ -46,7 +46,7 @@ on htmx:afterRequest
     <div class="">
       <div class="select-wrapper">
         <select autocomplete="off" class="form-control" name="series" id="series" value="" x-bind:disabled="viewer == null"
-          @change="loading=true; await $nextTick(); current_study = await viewer.setVolumeByStudy($event.target.value); current_time=current_study[0].time; loading=false;">
+          @change="loading=true; await $nextTick(); current_study = await viewer.setVolumeByStudy($event.target.value, case_id); current_time=current_study[0].time; loading=false;">
           <option value="" selected disabled hidden>Select study...</option>
           {% for i in studies %}
               <option value="{{i.0}}">{{ i.0 }}</option>
@@ -70,9 +70,9 @@ on htmx:afterRequest
         <template x-for="i in 3">
           <div>
             <button style="pointer-events: auto" class="btn-primary btn-large m-2" 
-              x-text="viewer.viewportIds[i-1]" 
+              x-text="viewer && viewer.viewportIds[i-1]" 
               x-bind:disabled="job_loading != null"
-              x-on:click="await $nextTick(); job_loading = await viewer.renderCineFromViewport(i-1, case_id); await getJobInstances('test', job_loading); job_loading = null">
+              x-on:click="await $nextTick(); job_loading = await viewer.renderCineFromViewport(i-1, case_id); await getJobInstances('cine', job_loading, case_id); job_loading = null">
                 Click me
               </button>
           </div>

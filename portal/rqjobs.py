@@ -81,14 +81,9 @@ class WorkJobView(View):
         job.status = "SUCCESS"
         job.save()
 
-def get_time(ds):
-    dt = pydicom.valuerep.DA(ds.InstanceCreationDate)
-    tm = pydicom.valuerep.TM(ds.InstanceCreationTime)
-    return datetime.combine(dt,tm)
 
-
-class TestWork(WorkJobView):
-    type = "TEST"
+class CineJob(WorkJobView):
+    type = "CINE"
 
     @classmethod
     def do_job(cls, job: ProcessingJob):
@@ -196,8 +191,8 @@ class TestWork(WorkJobView):
             new_instance.save()
 
         
-        return ({"result":1234}, new_set)
+        return ({}, new_set)
 
 urls = [
-    path("job/test", TestWork.as_view())
+    path("job/cine", CineJob.as_view())
 ]

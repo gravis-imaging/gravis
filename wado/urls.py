@@ -7,20 +7,20 @@ from . import views
 
 
 urlpatterns = [
-    path("populate-instances", views.test_populate_instances),
+    # path("populate-instances", views.test_populate_instances),
     # path("", views.query),
     path(
-        "studies/<str:study>/series/<str:series>/instances/<str:instance>",
+        "<str:case>/studies/<str:study>/series/<str:series>/instances/<str:instance>",
         views.retrieve_instance,
     ),
     path(
-        "studies/<str:study>/series/<str:series>/instances/<str:instance>/frames/<int:frame>",
+        "<str:case>/studies/<str:study>/series/<str:series>/instances/<str:instance>/frames/<int:frame>",
         views.retrieve_instance,
     ),
-    path("studies/<str:study>/metadata", views.study_metadata),
-    path("studies/<str:study>/series/<str:series>/metadata", views.series_metadata),
+    path("<str:case>/studies/<str:study>/metadata", views.study_metadata),
+    path("<str:case>/studies/<str:study>/series/<str:series>/metadata", views.series_metadata),
     path(
-        "studies/<str:study>/series/<str:series>/instances/<str:instance>/metadata",
+        "<str:case>/studies/<str:study>/series/<str:series>/instances/<str:instance>/metadata",
         views.instance_metadata,
     ),
 ]

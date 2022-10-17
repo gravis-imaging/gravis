@@ -2,7 +2,8 @@ from time import time
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
-from pydicom import Dataset
+from pydicom import Dataset, valuerep 
+from datetime import datetime
 
 
 class Case(models.Model):
@@ -116,6 +117,12 @@ class DICOMInstance(models.Model):
     study_uid = models.CharField(max_length=200)
     series_uid = models.CharField(max_length=200)
     instance_uid = models.CharField(max_length=200)
+
+    acquisition_seconds = models.FloatField(null=True)
+    acquisition_number = models.IntegerField(null=True)
+    series_number = models.IntegerField(null=True)
+    slice_location = models.FloatField(null=True)
+
     json_metadata = models.JSONField(null=False)
     dicom_set = models.ForeignKey(
         DICOMSet, on_delete=models.CASCADE, related_name="instances"
@@ -123,10 +130,18 @@ class DICOMInstance(models.Model):
 
     @classmethod
     def from_dataset(cls, ds: Dataset):
+        series_dt = datetime.combine(valuerep.DA(ds.SeriesDate), valuerep.TM(ds.SeriesTime))
+        study_dt = datetime.combine(valuerep.DA(ds.StudyDate), valuerep.TM(ds.StudyTime))
+        delta = (series_dt - study_dt)
+
         return DICOMInstance(
             study_uid=ds.StudyInstanceUID,
             series_uid=ds.SeriesInstanceUID,
             instance_uid=ds.SOPInstanceUID,
+            acquisition_number=ds.get("AcquisitionNumber"),
+            series_number=ds.get("InstanceNumber"),
+            slice_location=ds.get("SliceLocation"),
+            acquisition_seconds = delta.total_seconds(),
             json_metadata=ds.to_json(),
         )
     class Meta:
@@ -137,6 +152,10 @@ class DICOMInstance(models.Model):
                 name="unique_uids",
             )
         ]
+        indexes = [
+            models.Index(fields=['series_uid', 'acquisition_number']),
+            models.Index(fields=['study_uid', 'series_number']),
+        ]    
 
 # class CaseHistory(models.Model):
 #     """

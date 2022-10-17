@@ -30,11 +30,11 @@ from django.views import static
 
 
 @login_required
-def retrieve_instance(request, study, series, instance, frame=1):
+def retrieve_instance(request, study, series, instance, case, frame=1):
     if frame != 1:
         return HttpResponse(status_code=500)
     instance = DICOMInstance.objects.get(
-        study_uid=study, series_uid=series, instance_uid=instance
+        study_uid=study, series_uid=series, instance_uid=instance, dicom_set__case=case
     )
 
     file_location = Path(instance.dicom_set.set_location) / instance.instance_location
@@ -84,26 +84,26 @@ def test_populate_instances(request):
         )
     return HttpResponse("Done!")
 
-
 @login_required
-def study_metadata(request, study):
-    instances = DICOMInstance.objects.filter(study_uid=study)
+def study_metadata(request, case, study):
+    instances = DICOMInstance.objects.filter(study_uid=study, dicom_set__case=case)
     metadatas = [i.json_metadata for i in instances]
     data = "[" + ",".join(metadatas) + "]"
+
     return HttpResponse(data, content_type="application/json")
 
 
 @login_required
-def series_metadata(request, study, series):
-    instances = DICOMInstance.objects.filter(study_uid=study, series_uid=series)
+def series_metadata(request, case, study, series):
+    instances = DICOMInstance.objects.filter(study_uid=study, series_uid=series, dicom_set__case=case)
     metadatas = [json.loads(k.json_metadata) for k in instances]
     return JsonResponse(metadatas, safe=False)
 
 
 @login_required
-def instance_metadata(request, study, series, instance):
+def instance_metadata(request, case, study, series, instance):
     instances = DICOMInstance.objects.filter(
-        study_uid=study, series_uid=series, instance_uid=instance
+        study_uid=study, series_uid=series, instance_uid=instance, dicom_set__case=case
     )
     metadatas = [json.loads(k.json_metadata) for k in instances]
     return JsonResponse(metadatas, safe=False)

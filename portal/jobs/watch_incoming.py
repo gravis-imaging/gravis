@@ -114,14 +114,9 @@ def process_folder(incoming_case: Path):
             return False
 
         try:
-            instance = DICOMInstance(
-                instance_location=str(dcm.relative_to(incoming_case)),
-                study_uid=ds.StudyInstanceUID,
-                series_uid=ds.SeriesInstanceUID,
-                instance_uid=ds.SOPInstanceUID,
-                json_metadata=ds.to_json(),
-                dicom_set=dicom_set,
-            )
+            instance = DICOMInstance.from_dataset(ds)
+            instance.instance_location = str(dcm.relative_to(incoming_case))
+            instance.dicom_set = dicom_set
             instance.save()
         except Exception as e:
             logger.exception(
@@ -253,7 +248,7 @@ def scan_incoming_folder():
 
 
 def trigger_queued_cases():
-    print("trigger_queued_cases()")
+    # print("trigger_queued_cases()")
     cases = Case.objects.filter(status = Case.CaseStatus.QUEUED)
     for case in cases:
         try:
@@ -334,6 +329,6 @@ def watch():
             scan_incoming_folder()
             trigger_queued_cases()
         except:
-            logging.error("Failure in incoming")
+            logging.exception("Failure in incoming")
 
     # get_queue("default").enqueue_in(timedelta(seconds=2), watch)

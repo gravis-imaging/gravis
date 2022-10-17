@@ -82,6 +82,10 @@ class Migration(migrations.Migration):
                 ('study_uid', models.CharField(max_length=200)),
                 ('series_uid', models.CharField(max_length=200)),
                 ('instance_uid', models.CharField(max_length=200)),
+                ('acquisition_seconds', models.FloatField(null=True)),
+                ('acquisition_number', models.IntegerField(null=True)),
+                ('series_number', models.IntegerField(null=True)),
+                ('slice_location', models.FloatField(null=True)),
                 ('json_metadata', models.JSONField()),
                 ('dicom_set', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='instances', to='portal.dicomset')),
             ],
@@ -92,5 +96,13 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name='dicominstance',
             constraint=models.UniqueConstraint(fields=('dicom_set', 'study_uid', 'series_uid', 'instance_uid'), name='unique_uids'),
+        ),
+        migrations.AddIndex(
+            model_name='dicominstance',
+            index=models.Index(fields=['series_uid', 'acquisition_number'], name='gravis_dico_series__b4f03f_idx'),
+        ),
+        migrations.AddIndex(
+            model_name='dicominstance',
+            index=models.Index(fields=['study_uid', 'series_number'], name='gravis_dico_study_u_6806d2_idx'),
         ),
     ]

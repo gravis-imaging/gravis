@@ -359,11 +359,11 @@ class GraspViewer {
     //     await this.setVolumeByImageIds(imageIds, series_uid, keepCamera);
     // }
 
-    async setVolumeByStudy(study_uid, keepCamera=true) {
+    async setVolumeByStudy(study_uid, case_id, keepCamera=true) {
         console.log("Caching metadata")
         var { imageIds, metadata } = await cacheMetadata(
             { studyInstanceUID: study_uid },
-            '/wado',
+            '/wado/'+case_id,
         );
         console.log("Cached metadata")
         var seriesByTime = {}
@@ -385,7 +385,7 @@ class GraspViewer {
         for ( var v of volumesList ) {
             imageIds = []
             for (var s of v.seriesList) {
-                imageIds.push(getImageId(s,'/wado'))
+                imageIds.push(getImageId(s,'/wado/'+case_id))
             }
             var series_uid = getMeta(v.seriesList[0],SERIES_INSTANCE_UID);
             var series_description = getMeta(v.seriesList[0],SERIES_DESCRIPTION);
@@ -419,7 +419,7 @@ class GraspViewer {
         // console.log(volumeId)
         // console.log(index, cam.viewPlaneNormal)
         // job_id = {id: 1}
-        var job_id = await startJob("test", case_id, {"index":index, normal: cam.viewPlaneNormal, viewUp: cam.viewUp})
+        var job_id = await startJob("cine", case_id, {"index":index, normal: cam.viewPlaneNormal, viewUp: cam.viewUp})
         // console.log(job_id)
         return job_id
         // const response = await fetch()
@@ -502,8 +502,8 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function getJobInstances(job, info) {
-    console.log("getJobInstances", job, info);
+async function getJobInstances(job, info, case_id) {
+    console.log("getJobInstances", job, info, case_id);
     for (let i=0;i<100;i++) {
         result = await getJob(job,info)
         if ( result["status"] == "SUCCESS" ) {
@@ -514,7 +514,7 @@ async function getJobInstances(job, info) {
     var urls = []
     for ( var instance of result["dicom_sets"][0] ) {
         urls.push("wadouri:" + 
-        "/wado" +
+        "/wado/" +case_id+
         '/studies/' +
         instance.study_uid +
         '/series/' +

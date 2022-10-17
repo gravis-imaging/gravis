@@ -75,7 +75,7 @@ def index(request):
                 "exam_time": object.exam_time.strftime("%Y-%m-%d %H:%M"),
                 "receive_time": object.receive_time.strftime("%Y-%m-%d %H:%M"),
                 "status": Case.CaseStatus(object.status).name.title(),
-                "reader": str(object.reader),
+                # "reader": str(object.reader),
             }
         )
 
