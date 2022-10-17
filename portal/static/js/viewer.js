@@ -186,7 +186,8 @@ function createViewportGrid(n) {
         resizeObserver.observe(el);
 
         el.addEventListener(cornerstone.Enums.Events.CAMERA_MODIFIED, (evt) => {
-           // console.log({position: evt.detail.camera.position, focalPoint:evt.detail.camera.focalPoint, viewPlaneNormal: evt.detail.camera.viewPlaneNormal} );
+            console.log(evt.detail.camera.position)
+        //    console.log({position: evt.detail.camera.position, focalPoint:evt.detail.camera.focalPoint, viewPlaneNormal: evt.detail.camera.viewPlaneNormal} );
         });
     }
     return [viewportGrid, elements];
@@ -218,6 +219,19 @@ async function initializeGraspViewer(wrapper) {
     const renderingEngineId = 'gravisRenderEngine';
     const renderingEngine = new RenderingEngine(renderingEngineId);
 
+//   AXIAL: {
+//     sliceNormal: <Point3>[0, 0, -1],
+//     viewUp: <Point3>[0, -1, 0],
+//   },
+//   SAGITTAL: {
+//     sliceNormal: <Point3>[1, 0, 0],
+//     viewUp: <Point3>[0, 0, 1],
+//   },
+//   CORONAL: {
+//     sliceNormal: <Point3>[0, 1, 0],
+//     viewUp: <Point3>[0, 0, 1],
+//   },
+
     // Create a stack viewport
     const viewportInput = [
         {
@@ -225,7 +239,11 @@ async function initializeGraspViewer(wrapper) {
           type: ViewportType.ORTHOGRAPHIC,
           element: viewportElements[0],
           defaultOptions: {
+
             orientation: ORIENTATION.AXIAL,
+                        // { sliceNormal: [0, 0, 1],
+                        // viewUp: [0, -1, 0], }
+
             background: [0, 0, 0],
           },
         },
@@ -235,6 +253,8 @@ async function initializeGraspViewer(wrapper) {
           element: viewportElements[1],
           defaultOptions: {
             orientation: ORIENTATION.SAGITTAL,
+                        //     sliceNormal:[1, 0, 0],
+                        //      viewUp: [0, 0, 1],
             background: [0, 0, 0],
           },
         },
@@ -293,6 +313,10 @@ async function setVolumeByImageIds(imageIds, volumeName, keepCamera=true) {
     const volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, {
         imageIds,
     });
+
+    // TODO: this is meant to "snap" the direction onto the nearest axes
+    // It seems to work but does it always?
+    volume.imageData.setDirection(volume.direction.map(Math.round))
     volume.load();
     
     await cornerstone.setVolumesForViewports( 
@@ -531,7 +555,8 @@ async function testGetSlice(n, case_id) {
     // console.log(cam)
     // console.log(volumeId)
     console.log(index, cam.viewPlaneNormal)
-    job_id = await startJob("test", case_id, {"index":index, normal: cam.viewPlaneNormal})
+    // job_id = {id: 1}
+    job_id = await startJob("test", case_id, {"index":index, normal: cam.viewPlaneNormal, viewUp: cam.viewUp})
     console.log(job_id)
     return job_id
     // const response = await fetch()
