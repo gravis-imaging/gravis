@@ -10,7 +10,7 @@ import SimpleITK as sitk
 def load_grasp_files(dir_name: str):
 
     if not Path(dir_name).exists():
-        print("IN path does not exist")
+        print(f"load_grasp_files() IN path does not exist {dir_name}")
         sys.exit(1)
 
     data_directory = os.path.dirname(dir_name)
@@ -41,7 +41,8 @@ def load_grasp_files(dir_name: str):
         "0008|0020",  # Study Date
         "0008|0030",  # Study Time
         "0008|0050",  # Accession Number
-        "0008|0060" "0010|0010",  # Modality  # Patient Name
+        "0008|0060",  # Modality
+        "0010|0010",  # Patient Name
         "0010|0020",  # Patient ID
         "0010|0030",  # Patient Birth Date
         "0020|000d",  # Study Instance UID, for machine consumption
@@ -52,6 +53,7 @@ def load_grasp_files(dir_name: str):
     images = []
     # Use the functional interface to read the image series.
     for series_ID in series_IDs:
+        print("AAA ", series_ID)
         series_file_names = reader.GetGDCMSeriesFileNames(data_directory, series_ID)
         reader.SetFileNames(series_file_names)
         image = reader.Execute()
@@ -72,7 +74,7 @@ def load_grasp_files(dir_name: str):
         ]
 
         tags_to_save_dict[t] = series_tag_values
-        image = sitk.Cast(image, sitk.sitkFloat32)
+
         images.append(image)
         t += 1
 
@@ -89,8 +91,8 @@ def get_time_index_of_minimum_intensities(images, n_slices):
 
     min_intensity_value = min(intensities)
     min_intensity_index = intensities.index(min_intensity_value)
-
-    return min_intensity_index
+    print("min_intensity_index ", min_intensity_index)
+    return min_intensity_index 
 
 
 def subtract_images(images, min_intensity_index):
@@ -99,6 +101,7 @@ def subtract_images(images, min_intensity_index):
     subtracted_images = []
     for i in range(min_intensity_index + 1, n):
         subtracted_image = images[i] - images[min_intensity_index]
+        subtracted_image = sitk.Cast(subtracted_image, sitk.sitkFloat32)
         subtracted_images.append(subtracted_image)
 
     return subtracted_images
@@ -117,6 +120,7 @@ def create_projections(subtracted_images, angle_step, full_rotation_flag):
     ptype = "max"
     paxis = 1
     rotation_axis = [0, 0, 1]
+    
     for image in subtracted_images:
         max_angle = np.pi
         max_angle_degree = 180.0
@@ -196,10 +200,10 @@ def create_projections(subtracted_images, angle_step, full_rotation_flag):
     return processed_images
 
 
-def save_grasp_files(
-    output_dir_name, processed_images, tags_to_save_dict, angle_step, begin_time_index
+def save_processed_images(
+    output_dir_name, processed_images, tags_to_save_dict, begin_time_index, angle_step
 ):
-
+    print("save_processed_images called")
     if not os.path.exists(output_dir_name):
         os.mkdir(output_dir_name)
         print("Directory ", output_dir_name, " Created ")
@@ -208,6 +212,8 @@ def save_grasp_files(
 
     writer = sitk.ImageFileWriter()
     writer.KeepOriginalImageUIDOn()
+
+    print("BBB ", len(processed_images))
 
     # Different times
     t = begin_time_index
@@ -222,40 +228,80 @@ def save_grasp_files(
             + modification_time
             + f".{t:03d}"
         )
-        # Different angles
-        i = 0
-        for image in images:
-            image = sitk.Cast(image, sitk.sitkInt16)
+        print("angle_step ", angle_step)
+        if angle_step == 1:
+            for i in range(images.GetDepth()):
+                image_slice = images[:, :, i]
+                image_slice = sitk.Cast(image_slice, sitk.sitkInt16)
 
-            [
-                image.SetMetaData(tag, value)
-                for tag, value in series_tag_values
-                if tag not in ("0018|0050")
-            ]
-            [
-                image.SetMetaData(tag, f"{float(value)*max(image.GetSize())}")
-                for tag, value in series_tag_values
-                if tag in ("0018|0050")
-            ]
-            image.SetMetaData(
-                "0008|0012", time.strftime("%Y%m%d")
-            )  # Instance Creation Date
-            image.SetMetaData(
-                "0008|0013", time.strftime("%H%M%S")
-            )  # Instance Creation Time
-            image.SetMetaData("0008|0021", modification_date)  # Series Date,
-            image.SetMetaData("0008|0031", modification_time)  # Series Time
-            image.SetMetaData("0020|000e", seriesID)  # Series Instance UID
-            image.SetMetaData("0020|0013", f"{i+1:04d}")  # Instance Number
+                [
+                    image_slice.SetMetaData(tag, value)
+                    for tag, value in series_tag_values
+                    if tag not in ("0018|0050")
+                ]
+                [
+                    image_slice.SetMetaData(
+                        tag, f"{float(value)*max(image_slice.GetSize())}"
+                    )
+                    for tag, value in series_tag_values
+                    if tag in ("0018|0050")
+                ]
+                image_slice.SetMetaData(
+                    "0008|0012", time.strftime("%Y%m%d")
+                )  # Instance Creation Date
+                image_slice.SetMetaData(
+                    "0008|0013", time.strftime("%H%M%S")
+                )  # Instance Creation Time
+                image_slice.SetMetaData("0008|0021", modification_date)  # Series Date,
+                image_slice.SetMetaData("0008|0031", modification_time)  # Series Time
+                image_slice.SetMetaData("0020|000e", seriesID)  # Series Instance UID
+                image_slice.SetMetaData("0020|0013", f"{i+1:04d}")  # Instance Number
 
-            writer.SetFileName(
-                os.path.join(
+                path_name = os.path.join(
                     output_dir_name,
-                    "reco." + f"{t:03d}" + "." + f"{i*angle_step:03d}" + ".dcm",
+                    "sub." + f"{t:03d}" + "." + f"{i*angle_step:03d}" + ".dcm",
                 )
-            )
-            writer.Execute(image)
-            i += 1
+
+                writer.SetFileName(path_name)
+                writer.Execute(image_slice)
+                i += 1
+        else:
+            # Different angles
+            i = 0
+            for image_slice in images:
+                image_slice = sitk.Cast(image_slice, sitk.sitkInt16)
+
+                [
+                    image_slice.SetMetaData(tag, value)
+                    for tag, value in series_tag_values
+                    if tag not in ("0018|0050")
+                ]
+                [
+                    image_slice.SetMetaData(
+                        tag, f"{float(value)*max(image_slice.GetSize())}"
+                    )
+                    for tag, value in series_tag_values
+                    if tag in ("0018|0050")
+                ]
+                image_slice.SetMetaData(
+                    "0008|0012", time.strftime("%Y%m%d")
+                )  # Instance Creation Date
+                image_slice.SetMetaData(
+                    "0008|0013", time.strftime("%H%M%S")
+                )  # Instance Creation Time
+                image_slice.SetMetaData("0008|0021", modification_date)  # Series Date,
+                image_slice.SetMetaData("0008|0031", modification_time)  # Series Time
+                image_slice.SetMetaData("0020|000e", seriesID)  # Series Instance UID
+                image_slice.SetMetaData("0020|0013", f"{i+1:04d}")  # Instance Number
+
+                path_name = os.path.join(
+                    output_dir_name,
+                    "mip." + f"{t:03d}" + "." + f"{i*angle_step:03d}" + ".dcm",
+                )
+
+                writer.SetFileName(path_name)
+                writer.Execute(image_slice)
+                i += 1
         t += 1
 
 
@@ -263,11 +309,11 @@ def main():
 
     import os
 
-    dir_name = os.environ["GRAVIS_IN_DIR"]
-    input_dir_name = dir_name + "/input/"
-
+    input_dir_name = os.environ["GRAVIS_IN_DIR"]
+    output_dir_name_sub = os.environ["GRAVIS_OUT_DIR_SUB"]
+    output_dir_name_mip = os.environ["GRAVIS_OUT_DIR_MIP"]
     if not Path(input_dir_name).exists():
-        print("IN path does not exist")
+        print(f"main() IN path does not exist {input_dir_name}")
         sys.exit(1)
 
     # Create default values for all module settings
@@ -277,6 +323,7 @@ def main():
     # settings = {"n_slices": 20, "angle_step": 10, "full_rotation_flag": False}
     n_slices = 20
     angle_step = 10
+    angle_step_fake = 1  # need this to have correct format for subtracted images
     full_rotation_flag = False
 
     images, tags_to_save_dict = load_grasp_files(input_dir_name)
@@ -288,14 +335,21 @@ def main():
     processed_images = create_projections(
         subtracted_images, angle_step, full_rotation_flag
     )
-
-    output_dir_name = dir_name + "/processed/"
-    save_grasp_files(
-        output_dir_name,
+    print("will call save subtracted images")
+    save_processed_images(
+        output_dir_name_sub,
+        subtracted_images,
+        tags_to_save_dict,
+        min_intensity_index + 1,
+        angle_step_fake,
+    )
+    print("will call save processed images")
+    save_processed_images(
+        output_dir_name_mip,
         processed_images,
         tags_to_save_dict,
-        angle_step,
         min_intensity_index + 1,
+        angle_step,
     )
 
     sys.exit(0)

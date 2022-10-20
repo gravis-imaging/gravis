@@ -25,7 +25,7 @@ class Case(models.Model):
         VIEWING = "VIEW", "Viewing"
         COMPLETE = "COMP", "Complete"
         ARCHIVED = "ARCH", "Archived"
-        ERROR = "ERR", "Error"
+        ERROR = "ERR", "Error" # initial db registration, copying to input, json check failure
 
     patient_name = models.CharField(max_length=100, blank=False, null=False)
     mrn = models.CharField(max_length=100, blank=False, null=False)
@@ -41,7 +41,7 @@ class Case(models.Model):
     num_spokes = models.CharField(max_length=1000, default="", blank=True, null=True)
     twix_id = models.CharField(max_length=1000, blank=False, null=False)
     case_location = models.CharField(max_length=10000, blank=False, null=False)
-    settings = models.JSONField(null=True)
+    settings = models.JSONField(null=True) # use presets, smoothing, num_angles etc
     incoming_payload = models.JSONField(null=False)
     last_read_by = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True, related_name='last_read_by')
     viewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True, related_name='viewed_by')
@@ -63,7 +63,10 @@ class ProcessingJob(models.Model):
     )  # dicom set, json, image
     status = models.CharField(
         max_length=100, blank=True, null=True
-    )  # success, fail, description
+    )  # pending, processing, success, fail, description
+    error_description = models.CharField(
+        max_length=1000, blank=True, null=True
+    )
     json_result = models.JSONField(null=True)
     parameters = models.JSONField(null=True)
     dicom_set = models.ForeignKey("DICOMSet", on_delete=models.CASCADE, null=True)
@@ -93,9 +96,12 @@ class DICOMSet(models.Model):
     created_at = models.DateTimeField(default=timezone.now, blank=True)
     type = models.CharField(
         max_length=100, blank=False, null=False
-    )  # Incoming, MIP, subtraction
+    )  # Incoming, Processed
+    output_type = models.CharField(
+        max_length=100, blank=True, null=True
+    )  # MIP, Subtraction
     case = models.ForeignKey(Case, on_delete=models.CASCADE, related_name="dicom_sets")
-    processing_result = models.ForeignKey(
+    processing_job = models.ForeignKey(
         ProcessingJob, on_delete=models.SET_NULL, default=None, null=True, related_name="result_sets"
     )  # null if incoming, otherwise outcome of a processing step
 

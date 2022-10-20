@@ -1,4 +1,5 @@
-import logging
+# import logging
+from loguru import logger
 from pathlib import Path
 import shutil
 from time import sleep
@@ -16,12 +17,13 @@ from common.generate_folder_name import generate_folder_name
 from common.constants import gravis_names, gravis_folder_names
 import common.helper as helper
 
-logger = logging.getLogger(__name__)
+# logging.basicConfig(filename='watch_incoming.log', filemode='a', format='%(name)s - %(levelname)s - %(message)s')
+# logger = logging.getLogger(__name__)
 
 
 def process_folder(incoming_case: Path):
     # Move from incoming to cases
-    print(f"Processing {incoming_case}")
+    logger.info(f"Processing {incoming_case}")
 
     cases = Path(settings.CASES_FOLDER)
     dest_folder_name = generate_folder_name()
@@ -169,7 +171,7 @@ def process_folder(incoming_case: Path):
     new_case.save()
     print(new_case.status)
 
-    print(f"Done Processing {incoming_case}")
+    logger.info(f"Done Processing {incoming_case}")
     return True
 
 
@@ -208,122 +210,200 @@ def scan_incoming_folder():
         process_folder(incoming_case)
 
 
-# def trigger_queued_cases():
-#     print("AAA trigger_queued_cases")
+def report_success(job, connection, result, *args, **kwargs):
+    logger.info(f"SUCCESS job = {job}; result = {result}")
+    # TODO: Store in db
 
 
-#     cases = Path(settings.CASES_FOLDER)
-#     # f = gravis_names.COMPLETE
-#     input = gravis_folder_names.INPUT
-#     folder_paths = [
-#         Path(d)
-#         for d in os.scandir(cases)
-#         if d.is_dir() and Path(os.path.join(d, input)).exists()
-#     ]
-#     # print(folder_paths)
-#     client = docker.from_env()
-#     containers = {}
-#     for folder in folder_paths:
-#         object = Case.objects.filter(case_location=folder)
-#         if len(object) > 0 and object[0].status == Case.CaseStatus.QUEUED:
-#             # process
-#             object[0].status = Case.CaseStatus.PROCESSING
-#             object[0].save()
-#             container = client.containers.run(
-#                 image="gravis-processing",
-#                 # name="gp-worker",
-#                 environment=["GRAVIS_IN_DIR=/data"],
-#                 volumes=[
-#                     str(folder)+":/data",
-#                 ],
-#                 detach=True,
-#             )
-#             containers[container] = object[0]
-
-#             container.logs()
-
-#     # containers = client.containers.list(all=True)
-#     # print("KKK ", containers)
-#     for container in containers:
-#         container_state = container.attrs["State"]
-#         if container_state["Status"] == "exited":
-#             object = containers[container]
-#             object.status = Case.CaseStatus.READY
-#             object.save()
+def report_failure(job, connection, type, value, traceback):
+    logger.info(f"FAILURE job = {job}; traceback = {traceback}")
+    # TODO: Store in db
 
 
 def trigger_queued_cases():
     print("trigger_queued_cases()")
-    cases = Case.objects.filter(status = Case.CaseStatus.QUEUED)
+    cases = Case.objects.filter(status=Case.CaseStatus.QUEUED)
     for case in cases:
+        case.status = Case.CaseStatus.PROCESSING
+        case.save()
         try:
-            dicom_set=case.dicom_sets.get(type="Incoming")
+            dicom_set = case.dicom_sets.get(type="Incoming")
             new_job = ProcessingJob(
                 docker_image="gravis-processing",
                 dicom_set=dicom_set,
                 category="DICOMSet",
                 case=case,
+                status="Pending",
             )
+            new_job.save()
         except Exception as e:
+            case.status = Case.CaseStatus.ERROR
+            case.save()
             logger.exception(
                 f"Exception creating a new processing job for {dicom_set.set_location} "
             )
-        new_job.save()
-        result = django_rq.enqueue(do_docker_job, new_job.id)
-        new_job.rq_id = result.id
-        new_job.save()
+        else:
+            try:
+                result = django_rq.enqueue(
+                    do_docker_job,
+                    new_job.id,
+                    on_success=report_success,
+                    on_failure=report_failure,
+                )
+                new_job.rq_id = result.id
+                new_job.save()
+            except Exception as e:
+                process_job_error(new_job.id, e)
+                logger.exception(
+                    f"Exception enqueueing a new processing job for {dicom_set.set_location} "
+                )
 
 
 def do_docker_job(job_id):
-    print(":::Docker job begin:::")
-    docker_client = docker.from_env()
 
-    job: ProcessingJob = ProcessingJob.objects.get(id=job_id)
+    # Run the container and handle errors of running the container
+    processing_success = True
 
-    job.case.status = Case.CaseStatus.PROCESSING
-    job.case.save()
-
-    input_folder = job.case.case_location + "/input/"
-    output_folder = job.case.case_location + "/processed/" + str(uuid4())
-
-    volumes = {
-        input_folder: {"bind": "/tmp/data/", "mode": "rw"},
-        output_folder: {"bind": "/tmp/output/", "mode": "rw"},
-    }
     try:
-        Path(output_folder).mkdir(parents=True, exist_ok=False) # ???    
+        job: ProcessingJob = ProcessingJob.objects.get(id=job_id)
     except Exception as e:
-         logger.exception(
-                    f"Exception creating a folder {output_folder}"
-                )
+        logger.exception(f"ProcessingJob with id {job_id} does not exist.")
+        return False
 
-    environment = dict(GRAVIS_IN_DIR="/tmp/data/", GRAVIS_OUT_DIR="/tmp/output/")
+    try:
+        docker_client = docker.from_env()
 
-    container = docker_client.containers.run(
-        job.docker_image,
-        volumes=volumes,
-        environment=environment,
-        # user=f"{os.getuid()}:{os.getegid()}",
-        # group_add=[os.getegid()],
-        detach=True,
-    )
+        job.status = "Processing"
+        job.save()
+        docker_tag = job.docker_image
 
-    print("Docker is running...")
-    docker_result = container.wait()
-    print(docker_result)
-    print("=== MODULE OUTPUT - BEGIN ========================================")
-    if container.logs() is not None:
-        logs = container.logs().decode("utf-8")
-        print(logs)
-    print("=== MODULE OUTPUT - END ==========================================")
-    job.complete = True
-    dicom_set = DICOMSet(
-        set_location=output_folder, type="Processed", case=job.case
-    )
-    dicom_set.save()
-    job.dicom_set = dicom_set
-    job.case.status = Case.CaseStatus.READY
-    job.case.save()
+        input_folder = job.case.case_location + "/input/"
+        # Volume for subtracted slices
+        output_folder_sub = job.case.case_location + "/processed/" + str(uuid4())
+        # Volume for MIP slices
+        output_folder_mip = job.case.case_location + "/processed/" + str(uuid4())
+
+        volumes = {
+            input_folder: {"bind": "/tmp/data/", "mode": "rw"},
+            output_folder_sub: {"bind": "/tmp/output/sub/", "mode": "rw"},
+            output_folder_mip: {"bind": "/tmp/output/mip/", "mode": "rw"},
+        }
+
+        environment = dict(
+            GRAVIS_IN_DIR="/tmp/data/",
+            GRAVIS_OUT_DIR_SUB="/tmp/output/sub/",
+            GRAVIS_OUT_DIR_MIP="/tmp/output/mip/",
+        )
+
+        Path(output_folder_sub).mkdir(parents=True, exist_ok=False)
+        Path(output_folder_mip).mkdir(parents=True, exist_ok=False)
+    except Exception as e:
+        process_job_error(job_id, e)
+
+        logger.exception(f"Exception setting up job parameters for {input_folder}")
+        processing_success = False
+    else:
+        try:
+            logger.info(":::Docker job begin:::")
+            logger.info(
+                {
+                    "docker_tag": docker_tag,
+                    "volumes": volumes,
+                    "environment": environment,
+                }
+            )
+
+            container = docker_client.containers.run(
+                docker_tag,
+                volumes=volumes,
+                environment=environment,
+                # user=f"{os.getuid()}:{os.getegid()}",
+                # group_add=[os.getegid()],
+                detach=True,
+            )
+
+            docker_result = container.wait()
+            logger.info("DOCKER RESULTS: ", docker_result)
+
+            logger.info(
+                "=== MODULE OUTPUT - BEGIN ========================================"
+            )
+            if container.logs() is not None:
+                logs = container.logs().decode("utf-8")
+                logger.info(logs)
+            logger.info(
+                "=== MODULE OUTPUT - END =========================================="
+            )
+
+            # Check if the processing was successful (i.e., container returned exit code 0)
+            exit_code = docker_result.get("StatusCode")
+            if exit_code != 0:
+                error_description = f"Error while running container {docker_tag} - exit code {exit_code}"
+                process_job_error(job_id, error_description)
+                logger.error(error_description)  # handle_error
+                processing_success = False
+
+            # Remove the container now to avoid that the drive gets full
+            container.remove()
+
+        except docker.errors.APIError as e:
+            # Something really serious happened
+            process_job_error(job_id, e)
+            logger.error(
+                f"API error while trying to run Docker container, tag: {docker_tag}"
+            )  # handle_error
+            processing_success = False
+
+        except docker.errors.ImageNotFound as e:
+            process_job_error(job_id, e)
+            logger.error(
+                f"Error running docker container. Image for tag {docker_tag} not found."
+            )  # handle_error
+            processing_success = False
+
+        except Exception as e:
+            process_job_error(job_id, e)
+            logger.error(
+                f"Error running docker container. Image for tag {docker_tag} not found."
+            )  # handle_error
+            processing_success = False
+
+    if processing_success:
+        job.complete = True
+        try:
+            dicom_set_sub = DICOMSet(
+                set_location=output_folder_sub, type="Processed", output_type="SUB", case=job.case
+            )
+            dicom_set_sub.save()
+            dicom_set_mip = DICOMSet(
+                set_location=output_folder_mip, type="Processed", output_type="MIP", case=job.case
+            )
+            dicom_set_mip.save()
+            job.status = "Success"
+            # job.dicom_set = dicom_set
+            job.case.status = Case.CaseStatus.READY
+            job.case.save()
+            job.save()
+        except Exception as e:
+            process_job_error(job_id, e)
+            logger.error(
+                f"Error creating output DICOMSet for {input_folder} for case {job.case}."
+            )  # handle_error
+            processing_success = False
+   
+    return processing_success
+
+
+def process_job_error(job_id, error_description):
+    try:
+        job: ProcessingJob = ProcessingJob.objects.get(id=job_id)
+    except Exception as e:
+        logger.exception(f"ProcessingJob with id {job_id} does not exist.")
+        return False
+    # job.case.status = Case.CaseStatus.ERROR
+    # job.case.save()
+    job.status = "Fail"
+    job.error_description = error_description
     job.save()
 
 
@@ -334,6 +414,6 @@ def watch():
             scan_incoming_folder()
             trigger_queued_cases()
         except:
-            logging.error("Failure in incoming")
+            logger.error("Failure in incoming")
 
     # get_queue("default").enqueue_in(timedelta(seconds=2), watch)
