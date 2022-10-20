@@ -41,12 +41,12 @@ on htmx:afterRequest
 </div> {% endcomment %}
 
 
-<div x-data="{ current_study: null, current_time: 0, index: 0, loading: false, job_loading: null, case_id: {{case.id}} }">
+<div x-data="{ viewer: null, current_study: null, current_time: 0, index: 0, loading: false, job_loading: null, case_id: {{case.id}} }">
   <div class="w-25">
     <div class="">
       <div class="select-wrapper">
-        <select autocomplete="off" class="form-control" name="series" id="series" value="" 
-          @change="loading=true; await $nextTick(); current_study = await setVolumeByStudy($event.target.value); current_time=current_study[0].time; loading=false;">
+        <select autocomplete="off" class="form-control" name="series" id="series" value="" x-bind:disabled="viewer == null"
+          @change="loading=true; await $nextTick(); current_study = await viewer.setVolumeByStudy($event.target.value, case_id); current_time=current_study[0].time; loading=false;">
           <option value="" selected disabled hidden>Select study...</option>
           {% for i in studies %}
               <option value="{{i.0}}">{{ i.0 }}</option>
@@ -61,7 +61,7 @@ on htmx:afterRequest
     <div x-show="loading" style="z-index:1; grid-area: 1 / 1 / 2 / 2;" class="pointer-events-none">
       <div style="display: flex;justify-content: center;align-items: center; height:100%">Loading...</div>
     </div>
-    <div x-init="initializeGraspViewer($el)" style="grid-area: 1 / 1 / 2 / 2;">
+    <div x-init="viewer = await new GraspViewer($el);" style="grid-area: 1 / 1 / 2 / 2;">
     </div>
 
     <div x-show="!!current_study" class="pointer-events-none" style="z-index:1; grid-area: 1 / 1 / 2 / 2;">
@@ -69,10 +69,19 @@ on htmx:afterRequest
 
         <template x-for="i in 3">
           <div>
-            <button style="pointer-events: auto" class="btn-primary btn-large m-2" @click="job_loading = testGetSlice(i-1, case_id);">Click me</button>
+            <button style="pointer-events: auto" class="btn-primary btn-large m-2" 
+              x-text="viewer && viewer.viewportIds[i-1]" 
+              x-bind:disabled="job_loading != null"
+              x-on:click="await $nextTick(); job_loading = await viewer.renderCineFromViewport(i-1, case_id); await getJobInstances('cine', job_loading, case_id); job_loading = null">
+                Click me
+              </button>
           </div>
         </template>
-       
+          <div>
+            <div x-show="job_loading" style="height:100%;">
+              <div style="display: flex;justify-content: center;align-items: center; height:100%; background-color:rgba(0, 0, 0, 0.5);">Loading...</div>
+            </div>
+          </div>
       </div>
     </div> 
 
@@ -88,7 +97,7 @@ on htmx:afterRequest
 </div>
 <script defer src="/static/js/viewer.js"></script>
 <script type="text/javascript">
-  function pickSeries(evt) {
+  /*function pickSeries(evt) {
     if (evt.target.value == "") {
       return;
     }
@@ -109,6 +118,6 @@ on htmx:afterRequest
 
   window.onload = async function () {
     // 
-  }
+  }*/
 </script>
 {% endblock %}

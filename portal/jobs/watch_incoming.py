@@ -116,14 +116,9 @@ def process_folder(incoming_case: Path):
             return False
 
         try:
-            instance = DICOMInstance(
-                instance_location=str(dcm.relative_to(incoming_case)),
-                study_uid=ds.StudyInstanceUID,
-                series_uid=ds.SeriesInstanceUID,
-                instance_uid=ds.SOPInstanceUID,
-                json_metadata=ds.to_json(),
-                dicom_set=dicom_set,
-            )
+            instance = DICOMInstance.from_dataset(ds)
+            instance.instance_location = str(dcm.relative_to(incoming_case))
+            instance.dicom_set = dicom_set
             instance.save()
         except Exception as e:
             logger.exception(
@@ -221,8 +216,8 @@ def report_failure(job, connection, type, value, traceback):
 
 
 def trigger_queued_cases():
-    print("trigger_queued_cases()")
-    cases = Case.objects.filter(status=Case.CaseStatus.QUEUED)
+    # print("trigger_queued_cases()")
+    cases = Case.objects.filter(status = Case.CaseStatus.QUEUED)
     for case in cases:
         case.status = Case.CaseStatus.PROCESSING
         case.save()
