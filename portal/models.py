@@ -96,12 +96,13 @@ class DICOMSet(models.Model):
 
     set_location = models.CharField(max_length=10000, null=False)
     created_at = models.DateTimeField(default=timezone.now, blank=True)
-    type = models.CharField(
+    expires_at = models.DateTimeField(blank=True, null=True)
+    origin = models.CharField(
         max_length=100, blank=False, null=False
     )  # Incoming, Processed
-    output_type = models.CharField(
+    type = models.CharField(
         max_length=100, blank=True, null=True
-    )  # MIP, Subtraction
+    )  # MIP, Subtraction, Onco
     case = models.ForeignKey(Case, on_delete=models.CASCADE, related_name="dicom_sets")
     processing_job = models.ForeignKey(
         ProcessingJob, on_delete=models.SET_NULL, default=None, null=True, related_name="result_sets"

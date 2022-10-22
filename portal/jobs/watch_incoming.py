@@ -87,7 +87,7 @@ def process_folder(incoming_case: Path):
     try:
         dicom_set = DICOMSet(
             set_location=str(input_dest_folder),
-            type="Incoming",
+            origin="Incoming",
             case=new_case,
         )
         dicom_set.save()
@@ -172,6 +172,7 @@ def process_folder(incoming_case: Path):
 
 def move_files(source_folder, destination_folder):
     try:
+        destination_folder.mkdir(parents=True, exist_ok=True)
         files_to_copy = source_folder.glob("**/*")
         lock_file_path = Path(source_folder) / gravis_names.LOCK
         complete_file_path = Path(source_folder) / gravis_names.COMPLETE
@@ -206,23 +207,27 @@ def scan_incoming_folder():
 
 
 def report_success(job, connection, result, *args, **kwargs):
-    logger.info(f"SUCCESS job = {job}; result = {result}")
+    logger.info(
+        f"SUCCESS job = {job}; result = {result}; connection = {connection}; args = {args}"
+    )
     # TODO: Store in db
 
 
 def report_failure(job, connection, type, value, traceback):
-    logger.info(f"FAILURE job = {job}; traceback = {traceback}")
+    logger.info(
+        f"FAILURE job = {job}; traceback = {traceback}; type = {type}; value = {value}"
+    )
     # TODO: Store in db
 
 
 def trigger_queued_cases():
     # print("trigger_queued_cases()")
-    cases = Case.objects.filter(status = Case.CaseStatus.QUEUED)
+    cases = Case.objects.filter(status=Case.CaseStatus.QUEUED)
     for case in cases:
         case.status = Case.CaseStatus.PROCESSING
         case.save()
         try:
-            dicom_set = case.dicom_sets.get(type="Incoming")
+            dicom_set = case.dicom_sets.get(origin="Incoming")
             new_job = ProcessingJob(
                 docker_image="gravis-processing",
                 dicom_set=dicom_set,
@@ -274,24 +279,23 @@ def do_docker_job(job_id):
 
         input_folder = job.case.case_location + "/input/"
         # Volume for subtracted slices
-        output_folder_sub = job.case.case_location + "/processed/" + str(uuid4())
-        # Volume for MIP slices
-        output_folder_mip = job.case.case_location + "/processed/" + str(uuid4())
+        output_folder = job.case.case_location + "/processed/" + str(uuid4())
 
         volumes = {
             input_folder: {"bind": "/tmp/data/", "mode": "rw"},
-            output_folder_sub: {"bind": "/tmp/output/sub/", "mode": "rw"},
-            output_folder_mip: {"bind": "/tmp/output/mip/", "mode": "rw"},
+            output_folder: {"bind": "/tmp/output/", "mode": "rw"},
         }
 
+        # settings = {"n_slices": 20, "angle_step": 10, "full_rotation_flag": False}
         environment = dict(
             GRAVIS_IN_DIR="/tmp/data/",
-            GRAVIS_OUT_DIR_SUB="/tmp/output/sub/",
-            GRAVIS_OUT_DIR_MIP="/tmp/output/mip/",
+            GRAVIS_OUT_DIR="/tmp/output/",
+            GRAVIS_ANGLE_STEP=10,
+            GRAVIS_MIP_FULL_ROTATION=False,
+            GRAVIS_NUM_BOTTOM_SLICES=20,
         )
 
-        Path(output_folder_sub).mkdir(parents=True, exist_ok=False)
-        Path(output_folder_mip).mkdir(parents=True, exist_ok=False)
+        Path(output_folder).mkdir(parents=True, exist_ok=False)
     except Exception as e:
         process_job_error(job_id, e)
 
@@ -367,11 +371,17 @@ def do_docker_job(job_id):
         job.complete = True
         try:
             dicom_set_sub = DICOMSet(
-                set_location=output_folder_sub, type="Processed", output_type="SUB", case=job.case
+                set_location=output_folder + "sub/",
+                origin="Processed",
+                type="SUB",
+                case=job.case,
             )
             dicom_set_sub.save()
             dicom_set_mip = DICOMSet(
-                set_location=output_folder_mip, type="Processed", output_type="MIP", case=job.case
+                set_location=output_folder + "mip/",
+                origin="Processed",
+                type="MIP",
+                case=job.case,
             )
             dicom_set_mip.save()
             job.status = "Success"
@@ -385,18 +395,19 @@ def do_docker_job(job_id):
                 f"Error creating output DICOMSet for {input_folder} for case {job.case}."
             )  # handle_error
             processing_success = False
-   
+
     return processing_success
 
 
 def process_job_error(job_id, error_description):
+    logger.error(error_description)
     try:
         job: ProcessingJob = ProcessingJob.objects.get(id=job_id)
     except Exception as e:
         logger.exception(f"ProcessingJob with id {job_id} does not exist.")
         return False
-    # job.case.status = Case.CaseStatus.ERROR
-    # job.case.save()
+    job.case.status = Case.CaseStatus.ERROR
+    job.case.save()
     job.status = "Fail"
     job.error_description = error_description
     job.save()
