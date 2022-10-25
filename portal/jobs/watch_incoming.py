@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 from time import sleep
 import os, json
-from unicodedata import category
+from typing import Tuple
 from uuid import uuid4
 import pydicom
 import docker
@@ -20,6 +20,29 @@ import common.helper as helper
 # logging.basicConfig(filename='watch_incoming.log', filemode='a', format='%(name)s - %(levelname)s - %(message)s')
 # logger = logging.getLogger(__name__)
 
+def register_dicom_instances(case_path: str, dicom_set) -> Tuple[bool, str]:
+    # Register DICOM Instances
+    for dcm in Path(case_path).glob("**/*.dcm"):
+        if not dcm.is_file():
+            continue
+        try:
+            ds = pydicom.dcmread(str(dcm), stop_before_pixels=True)
+        except Exception as e:
+            logger.exception(
+                f"Exception during dicom file reading. Cannot process incoming instance {str(dcm)}"
+            )
+            return (False, e)
+        try:
+            instance = DICOMInstance.from_dataset(ds)
+            instance.instance_location = str(dcm.relative_to(Path(case_path)))
+            instance.dicom_set = dicom_set
+            instance.save()
+        except Exception as e:
+            logger.exception(
+                f"Exception during DICOMInstance model creation. Cannot process incoming instance {str(dcm)}"
+            )
+            return (False, e)
+    return (True, "")
 
 def process_folder(incoming_case: Path):
     # Move from incoming to cases
@@ -100,35 +123,13 @@ def process_folder(incoming_case: Path):
         new_case.delete()
         return False
 
-    # Register DICOM Instances
-    for dcm in incoming_case.glob("**/*.dcm"):
-        if not dcm.is_file():
-            continue
-        try:
-            ds = pydicom.dcmread(str(dcm), stop_before_pixels=True)
-        except Exception as e:
-            logger.exception(
-                f"Exception during dicom file reading. Cannot process incoming instance {str(dcm)}"
-            )
-            move_files(incoming_case, error_folder)
-            # Delete associated case from db
-            new_case.delete()
-            return False
-
-        try:
-            instance = DICOMInstance.from_dataset(ds)
-            instance.instance_location = str(dcm.relative_to(incoming_case))
-            instance.dicom_set = dicom_set
-            instance.save()
-        except Exception as e:
-            logger.exception(
-                f"Exception during DICOMInstance model creation. Cannot process incoming instance {str(dcm)}"
-            )
-            move_files(incoming_case, error_folder)
-            # Delete associated case from db
-            new_case.delete()
-            return False
-
+    register_instanceess_success = register_dicom_instances(str(incoming_case), dicom_set)[0]
+    if not register_instanceess_success:
+        move_files(incoming_case, error_folder)
+        # Delete associated case from db
+        new_case.delete()
+        return False
+    
     # Create directories for further processing.
     try:
         input_dest_folder.mkdir(parents=True, exist_ok=False)
@@ -170,7 +171,7 @@ def process_folder(incoming_case: Path):
     return True
 
 
-def move_files(source_folder, destination_folder):
+def move_files(source_folder: Path, destination_folder: Path):
     try:
         destination_folder.mkdir(parents=True, exist_ok=True)
         files_to_copy = source_folder.glob("**/*")
@@ -371,19 +372,29 @@ def do_docker_job(job_id):
         job.complete = True
         try:
             dicom_set_sub = DICOMSet(
-                set_location=output_folder + "sub/",
+                set_location=output_folder + "/sub",
                 origin="Processed",
                 type="SUB",
                 case=job.case,
+                processing_job_id = job,
             )
             dicom_set_sub.save()
             dicom_set_mip = DICOMSet(
-                set_location=output_folder + "mip/",
+                set_location=output_folder + "/mip",
                 origin="Processed",
                 type="MIP",
                 case=job.case,
+                processing_job_id = job,
             )
             dicom_set_mip.save()
+            register_instanceess_success, error = register_dicom_instances(output_folder + "/sub", dicom_set_sub)
+            if not register_instanceess_success:
+                process_job_error(job_id, error)                
+                return False
+            register_instanceess_success, error = register_dicom_instances(output_folder + "/mip", dicom_set_mip)    
+            if not register_instanceess_success:
+                process_job_error(job_id, error)  
+                return False    
             job.status = "Success"
             # job.dicom_set = dicom_set
             job.case.status = Case.CaseStatus.READY
@@ -406,6 +417,7 @@ def process_job_error(job_id, error_description):
     except Exception as e:
         logger.exception(f"ProcessingJob with id {job_id} does not exist.")
         return False
+    move_files(Path(job.case.case_location), Path(settings.ERROR_FOLDER))
     job.case.status = Case.CaseStatus.ERROR
     job.case.save()
     job.status = "Fail"
