@@ -1,10 +1,15 @@
 # Standard Python includes
+from loguru import logger
 import numpy as np
 import sys, time, os
 from pathlib import Path
+from enum import Enum
 
 # Imports for loading, saving and manipulating DICOMs
 import SimpleITK as sitk
+
+class ErrorCodes(Enum):
+    INPUT_PATH_DOES_NOT_EXIST = 1
 
 
 class MRA:
@@ -22,12 +27,16 @@ class MRA:
         print("N SLICES: ", vars["GRAVIS_NUM_BOTTOM_SLICES"])
         self.__n_slices = int(vars["GRAVIS_NUM_BOTTOM_SLICES"])
         self.__min_intensity_index = 0
+        self.__images = []
+        self.__subtracted_images = []
+        self.__processed_images = []
+        self.__tags_to_save_dict = {}
 
-    def load_grasp_files(self):
+    def __load_grasp_files(self) -> int:
 
         if not Path(self.__input_dir_name).exists():
-            print(f"load_grasp_files() IN path does not exist {self.__input_dir_name}")
-            sys.exit(1)
+            logger.exception(f"Input Path {self.__input_dir_name} does not exist")
+            return ErrorCodes.INPUT_PATH_DOES_NOT_EXIST
 
         data_directory = os.path.dirname(self.__input_dir_name)
 
@@ -51,8 +60,6 @@ class MRA:
         reader.MetaDataDictionaryArrayUpdateOn()
         reader.LoadPrivateTagsOn()
 
-        tags_to_save_dict = {}
-
         patient_tags_to_copy = [
             "0008|0020",  # Study Date
             "0008|0030",  # Study Time
@@ -66,7 +73,6 @@ class MRA:
         ]
 
         t = 0
-        images = []
         # Use the functional interface to read the image series.
         for series_ID in series_IDs[0:5]:
             print("AAA ", series_ID)
@@ -88,19 +94,18 @@ class MRA:
                 ("0020|0012", f"{t:04d}"),  # Acquisition Number
             ]
 
-            tags_to_save_dict[t] = series_tag_values
+            self.__tags_to_save_dict[t] = series_tag_values
 
-            images.append(image)
+            self.__images.append(image)
             t += 1
 
-        return (images, tags_to_save_dict)
 
-    def get_time_index_of_minimum_intensities(self, images):
+    def __get_time_index_of_minimum_intensities(self):
 
         intensities = []
-        print("self.__n_slices ", self.__n_slices, len(images))
+        print("self.__n_slices ", self.__n_slices, len(self.__images))
         n_slices = self.__n_slices
-        for image in images:
+        for image in self.__images:
             vol_n = sitk.GetArrayFromImage(image[:, :, :n_slices])
             intensity = vol_n.sum()
             intensities.append(intensity)
@@ -109,20 +114,18 @@ class MRA:
         self.__min_intensity_index = intensities.index(min_intensity_value) - 2
         print("min_intensity_index ", self.__min_intensity_index)
 
-    def subtract_images(self, images):
 
-        n = len(images)
-        subtracted_images = []
+    def __subtract_images(self):
+
+        n = len(self.__images)
         for i in range(self.__min_intensity_index + 1, n):
-            subtracted_image = images[i] - images[self.__min_intensity_index]
+            subtracted_image = self.__images[i] - self.__images[self.__min_intensity_index]
             subtracted_image = sitk.Cast(subtracted_image, sitk.sitkFloat32)
-            subtracted_images.append(subtracted_image)
+            self.__subtracted_images.append(subtracted_image)
 
-        return subtracted_images
 
-    def create_projections(self, subtracted_images):
+    def __create_projections(self):
 
-        processed_images = []
         projection = {
             "sum": sitk.SumProjection,
             "mean": sitk.MeanProjection,
@@ -141,8 +144,8 @@ class MRA:
         rotation_angles = np.linspace(
             0.0, max_angle, int(max_angle_degree / self.__angle_step)
         )
-        print("subtracted_images ", len(subtracted_images))
-        for image in subtracted_images:
+        print("subtracted_images ", len(self.__subtracted_images))
+        for image in self.__subtracted_images:
 
             rotation_center = image.TransformContinuousIndexToPhysicalPoint(
                 [(index - 1) / 2.0 for index in image.GetSize()]
@@ -210,12 +213,11 @@ class MRA:
                 slice_volume = sitk.JoinSeries(extracted_image)
                 slice_volume.SetOrigin((min_bounds + max_bounds) / 2)
                 proj_images.append(slice_volume)
-            processed_images.append(proj_images)
+            self.__processed_images.append(proj_images)
 
-        return processed_images
 
-    def save_processed_images(
-        self, type, output_dir_name, processed_images, tags_to_save_dict
+    def __save_processed_images(
+        self, type, output_dir_name, processed_images
     ):
         print("save_processed_images called")
         if not os.path.exists(output_dir_name):
@@ -225,20 +227,21 @@ class MRA:
             print("Directory ", output_dir_name, " already exists")
 
         writer = sitk.ImageFileWriter()
-        writer.KeepOriginalImageUIDOn()
+        writer.KeepOriginalImageUIDOn() 
 
         print("BBB ", len(processed_images))
 
         # Different times
         t = self.__min_intensity_index
         for images in processed_images:
-            series_tag_values = tags_to_save_dict[t]
+            series_tag_values = self.__tags_to_save_dict[t]
 
             modification_date = time.strftime("%Y%m%d")
             modification_time = time.strftime("%H%M%S")
             seriesID = (
-                "1.2.826.0.1.3680043.2.1125."
+                "1.2.276.0.7230010.3.1.3."
                 + modification_date
+                + ".1"
                 + modification_time
                 + f".{t:03d}"
             )
@@ -343,30 +346,29 @@ class MRA:
                     i += 1
             t += 1
 
+
     def calculateMIPs(self):
 
         # n_slices = 20
         # angle_step = 10
         # full_rotation_flag = False
 
-        images, tags_to_save_dict = self.load_grasp_files()
+        self.__load_grasp_files()
 
-        self.get_time_index_of_minimum_intensities(images)
+        self.__get_time_index_of_minimum_intensities()
 
-        subtracted_images = self.subtract_images(images)
+        self.__subtract_images()
 
-        processed_images = self.create_projections(subtracted_images)
-        print("will call save subtracted images")
-        self.save_processed_images(
+        self.__create_projections()
+
+        self.__save_processed_images(
             "sub",
             self.__output_dir_name_sub,
-            subtracted_images,
-            tags_to_save_dict,
+            self.__subtracted_images,
         )
-        print("will call save processed images")
-        self.save_processed_images(
+
+        self.__save_processed_images(
             "mip",
             self.__output_dir_name_mip,
-            processed_images,
-            tags_to_save_dict,
+            self.__processed_images,
         )
