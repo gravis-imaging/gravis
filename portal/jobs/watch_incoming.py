@@ -376,7 +376,7 @@ def do_docker_job(job_id):
                 origin="Processed",
                 type="SUB",
                 case=job.case,
-                processing_job_id = job,
+                processing_job_id = job_id,
             )
             dicom_set_sub.save()
             dicom_set_mip = DICOMSet(
@@ -384,7 +384,7 @@ def do_docker_job(job_id):
                 origin="Processed",
                 type="MIP",
                 case=job.case,
-                processing_job_id = job,
+                processing_job_id = job_id,
             )
             dicom_set_mip.save()
             register_instanceess_success, error = register_dicom_instances(output_folder + "/sub", dicom_set_sub)
