@@ -11,18 +11,39 @@ import docker
 
 from django.conf import settings
 import django_rq
+from django.utils import timezone
 
 from portal.models import Case, DICOMInstance, DICOMSet, ProcessingJob
 from common.generate_folder_name import generate_folder_name
-from common.constants import gravis_names, gravis_folder_names
+from common.constants import GravisNames, GravisFolderNames, DockerReturnCodes
 import common.helper as helper
+import common.config as config
 
 # logging.basicConfig(filename='watch_incoming.log', filemode='a', format='%(name)s - %(levelname)s - %(message)s')
 # logger = logging.getLogger(__name__)
 
-def register_dicom_instances(case_path: str, dicom_set) -> Tuple[bool, str]:
+# TODO move to a separate file
+def register_dicom_set(
+    set_path: str, case, origin, type, job_id=None
+) -> Tuple[bool, str]:
+
+    # Register DICOM Set
+    print("set_path ", set_path)
+    try:
+        dicom_set = DICOMSet(
+            set_location=str(set_path),
+            origin=origin,
+            type=type,
+            case=case,
+            processing_job_id=job_id,
+        )
+        dicom_set.save()
+    except Exception as e:
+        logger.exception(f"Cannot create a db table for incoming data set {set_path}")
+        return (False, e)
+
     # Register DICOM Instances
-    for dcm in Path(case_path).glob("**/*.dcm"):
+    for dcm in Path(set_path).glob("**/*.dcm"):
         if not dcm.is_file():
             continue
         try:
@@ -34,7 +55,7 @@ def register_dicom_instances(case_path: str, dicom_set) -> Tuple[bool, str]:
             return (False, e)
         try:
             instance = DICOMInstance.from_dataset(ds)
-            instance.instance_location = str(dcm.relative_to(Path(case_path)))
+            instance.instance_location = str(dcm.relative_to(Path(set_path)))
             instance.dicom_set = dicom_set
             instance.save()
         except Exception as e:
@@ -44,139 +65,13 @@ def register_dicom_instances(case_path: str, dicom_set) -> Tuple[bool, str]:
             return (False, e)
     return (True, "")
 
-def process_folder(incoming_case: Path):
-    # Move from incoming to cases
-    logger.info(f"Processing {incoming_case}")
-
-    cases = Path(settings.CASES_FOLDER)
-    dest_folder_name = generate_folder_name()
-    new_folder = cases / dest_folder_name
-    error_folder = Path(settings.ERROR_FOLDER) / dest_folder_name
-    input_dest_folder = new_folder / gravis_folder_names.INPUT
-    processed_dest_folder = new_folder / gravis_folder_names.PROCESSED
-    findings_dest_folder = new_folder / gravis_folder_names.FINDINGS
-    complete_file_path = Path(incoming_case) / gravis_names.COMPLETE
-    lock_file_path = Path(incoming_case) / gravis_names.LOCK
-    if lock_file_path.exists():
-        # Series is locked, so another instance might be working on it
-        return True
-
-    # Create lock file in the incoming folder and prevent other instances from working on this series
-    try:
-        lock = helper.FileLock(lock_file_path)
-    except:
-        # Can't create lock file, so something must be seriously wrong
-        logger.exception(
-            f"Unable to create lock file {gravis_names.LOCK} in {incoming_case}"
-        )
-        return False
-
-    # Read study.jon from the incoming folder.
-    json_name = "study.json"
-    incoming_json_file = Path(incoming_case / json_name)
-    try:
-        with open(incoming_json_file, "r") as myfile:
-            d = myfile.read()
-        payload = json.loads(d)
-    except Exception:
-        logger.exception(f"Unable to read {json_name} in {incoming_case}")
-        move_files(incoming_case, error_folder)
-        return False
-
-    # Register Case and check that all required fields are in json
-    try:
-        new_case = Case(
-            patient_name=payload["patient_name"],
-            mrn=payload["mrn"],
-            acc=payload["acc"],
-            case_type=payload["case_type"],
-            exam_time=payload["exam_time"],
-            receive_time=payload["receive_time"],
-            twix_id=payload["twix_id"],
-            case_location=str(new_folder),
-            settings=payload["settings"],
-            incoming_payload=payload,
-        )  # Case(data_location="./data/cases/[UID]")
-        new_case.save()
-    except Exception as e:
-        logger.exception(f"Cannot process incoming data set {incoming_case}")
-        logger.exception(
-            f"Please check that all fields in json file {incoming_json_file} are valid"
-        )
-        move_files(incoming_case, error_folder)
-        return False
-
-    # Register DICOM Set
-    try:
-        dicom_set = DICOMSet(
-            set_location=str(input_dest_folder),
-            origin="Incoming",
-            case=new_case,
-        )
-        dicom_set.save()
-    except Exception as e:
-        logger.exception(
-            f"Cannot create a db table for incoming data set {incoming_case}"
-        )
-        move_files(incoming_case, error_folder)
-        # Delete associated case from db
-        new_case.delete()
-        return False
-
-    register_instanceess_success = register_dicom_instances(str(incoming_case), dicom_set)[0]
-    if not register_instanceess_success:
-        move_files(incoming_case, error_folder)
-        # Delete associated case from db
-        new_case.delete()
-        return False
-    
-    # Create directories for further processing.
-    try:
-        input_dest_folder.mkdir(parents=True, exist_ok=False)
-        processed_dest_folder.mkdir(parents=True, exist_ok=False)
-        findings_dest_folder.mkdir(parents=True, exist_ok=False)
-    except Exception as e:
-        logger.exception(
-            f"Cannot create one of the processing folders for {incoming_case}"
-        )
-        new_case.delete()
-        return False
-
-    # Move files
-    if not move_files(incoming_case, input_dest_folder):
-        new_case.delete()
-        return False
-
-    try:
-        lock.free()
-    except Exception:
-        logger.exception(
-            f"Unable to remove lock file {lock_file_path}" in {incoming_case}
-        )  # handle_error
-        return False
-
-    try:
-        # Delete .complete and empty folder from incoming
-        os.unlink(complete_file_path)
-        os.rmdir(incoming_case)
-    except Exception as e:
-        logger.exception(f"Exception during deleting empty folder: {incoming_case}")
-        return False
-
-    new_case.status = Case.CaseStatus.QUEUED
-    new_case.save()
-    print(new_case.status)
-
-    logger.info(f"Done Processing {incoming_case}")
-    return True
-
 
 def move_files(source_folder: Path, destination_folder: Path):
     try:
-        destination_folder.mkdir(parents=True, exist_ok=True)
+        # destination_folder.mkdir(parents=True, exist_ok=True)
         files_to_copy = source_folder.glob("**/*")
-        lock_file_path = Path(source_folder) / gravis_names.LOCK
-        complete_file_path = Path(source_folder) / gravis_names.COMPLETE
+        lock_file_path = Path(source_folder) / GravisNames.LOCK
+        complete_file_path = Path(source_folder) / GravisNames.COMPLETE
         for file_path in files_to_copy:
             if file_path == lock_file_path or file_path == complete_file_path:
                 continue
@@ -193,18 +88,160 @@ def move_files(source_folder: Path, destination_folder: Path):
     return True
 
 
+def load_json(incoming_case, new_folder, error_folder) -> Case:
+    json_name = "study.json"
+    incoming_json_file = Path(incoming_case / json_name)
+    try:
+        if incoming_json_file.exists():
+            with open(incoming_json_file, "r") as myfile:
+                d = myfile.read()
+            payload = json.loads(d)
+        else:
+            payload = {}
+    except Exception:
+        logger.exception(f"Unable to read {json_name} in {incoming_case}.")
+        payload = {}
+
+    try:
+        case_status = Case.CaseStatus.PROCESSING
+        case_location = str(new_folder)
+        study_keys = ["patient_name", "mrn", "acc", "case_type", "exam_time", "twix_id"]
+        # TODO check that values for these fields are valid. If not set status to ERROR
+        for key in study_keys:
+            if key not in payload:
+                case_status = Case.CaseStatus.ERROR
+                case_location = str(error_folder)
+        new_case = Case(
+            patient_name=payload.get("patient_name", ""),
+            mrn=payload.get("mrn", ""),
+            acc=payload.get("acc", ""),
+            case_type=payload.get("case_type", ""),
+            exam_time=payload.get("exam_time", "1900-01-01 00:00"),
+            receive_time=payload.get("receive_time", "1900-01-01 00:00"),
+            twix_id=payload.get("twix_id", ""),
+            case_location=case_location,
+            settings=payload.get("settings", ""),
+            incoming_payload=payload,
+            status=case_status,
+        )  # Case(data_location="./data/cases)[UID]")
+        new_case.save()
+    except Exception as e:
+        logger.exception(f"Cannot create case for {error_folder}. Error: {e}")
+        move_files(incoming_case, error_folder)
+        return None
+    return new_case
+
+
+def process_folder(incoming_case: Path):
+    # Move from incoming to cases
+    logger.info(f"Processing {incoming_case}")
+
+    cases = Path(settings.CASES_FOLDER)
+    dest_folder_name = generate_folder_name()
+    new_folder = cases / dest_folder_name
+    error_folder = Path(settings.ERROR_FOLDER) / dest_folder_name
+    input_dest_folder = new_folder / GravisFolderNames.INPUT
+    processed_dest_folder = new_folder / GravisFolderNames.PROCESSED
+    findings_dest_folder = new_folder / GravisFolderNames.FINDINGS
+    complete_file_path = Path(incoming_case) / GravisNames.COMPLETE
+    lock_file_path = Path(incoming_case) / GravisNames.LOCK
+    if lock_file_path.exists():
+        # Series is locked, so another instance might be working on it
+        return True
+
+    # Create lock file in the incoming folder and prevent other instances from working on this series
+    try:
+        lock = helper.FileLock(lock_file_path)
+    except:
+        # Can't create lock file, so something must be seriously wrong
+        logger.exception(
+            f"Unable to create lock file {GravisNames.LOCK} in {incoming_case}"
+        )
+        return False
+
+    try:
+        error_folder.mkdir(parents=True, exist_ok=False)
+    except Exception as e:
+        logger.exception(f"Cannot create error folder for {incoming_case}")
+        return False
+
+    new_case = load_json(incoming_case, new_folder, error_folder)
+    if new_case is None or new_case.status == Case.CaseStatus.ERROR:
+        return False
+
+    # Create directories for further processing.
+    try:
+        input_dest_folder.mkdir(parents=True, exist_ok=False)
+        processed_dest_folder.mkdir(parents=True, exist_ok=False)
+        findings_dest_folder.mkdir(parents=True, exist_ok=False)
+    except Exception as e:
+        logger.exception(
+            f"Cannot create one of the processing folders for {incoming_case}"
+        )
+        move_files(incoming_case, error_folder)
+        new_case.status = Case.CaseStatus.ERROR
+        new_case.save()
+        return False
+
+    # Move files
+    if not move_files(incoming_case, input_dest_folder):
+        new_case.delete()
+        return False
+
+    register_dicom_set_success = register_dicom_set(
+        str(input_dest_folder), new_case, "Incoming", "ORI"
+    )[0]
+    if not register_dicom_set_success:
+        move_files(input_dest_folder, error_folder)
+        # Delete associated case from db
+        new_case.delete()
+        return False
+
+    try:
+        lock.free()
+    except Exception:
+        logger.exception(
+            f"Unable to remove lock file {lock_file_path}" in {incoming_case}
+        )  # handle_error
+        return False
+
+    try:
+        # Delete .complete and empty folder from incoming
+        os.unlink(complete_file_path)
+        os.rmdir(incoming_case)
+        os.rmdir(error_folder)
+    except Exception as e:
+        logger.exception(
+            f"Exception during deleting empty folder: {incoming_case} or {error_folder}"
+        )
+        return False
+
+    new_case.status = Case.CaseStatus.QUEUED
+    new_case.save()
+    print(new_case.status)
+    logger.info(f"Done Processing {incoming_case}")
+    return True
+
+
 def scan_incoming_folder():
-    incoming = Path(settings.INCOMING_FOLDER)
-    f = gravis_names.COMPLETE
+    # TODO: check if it exists, add more checks in general
+    f = GravisNames.COMPLETE
 
-    folder_paths = [
-        Path(d)
-        for d in os.scandir(incoming)
-        if d.is_dir() and Path(os.path.join(d, f)).exists()
-    ]
+    try:
+        incoming = Path(settings.INCOMING_FOLDER)
+        if incoming.exists():
+            folder_paths = [
+                Path(d)
+                for d in os.scandir(incoming)
+                if d.is_dir() and Path(os.path.join(d, f)).exists()
+            ]
 
-    for incoming_case in list(folder_paths):
-        process_folder(incoming_case)
+        for incoming_case in list(folder_paths):
+            process_folder(incoming_case)
+    except Exception as e:
+        logger.exception(
+            f"Problem processing incoming folder {str(incoming)}. Error: {e}."
+        )
 
 
 def report_success(job, connection, result, *args, **kwargs):
@@ -261,7 +298,7 @@ def trigger_queued_cases():
 
 
 def do_docker_job(job_id):
-
+    # TODO move docker stuff in a separate file.
     # Run the container and handle errors of running the container
     processing_success = True
 
@@ -294,6 +331,7 @@ def do_docker_job(job_id):
             GRAVIS_ANGLE_STEP=10,
             GRAVIS_MIP_FULL_ROTATION=False,
             GRAVIS_NUM_BOTTOM_SLICES=20,
+            DOCKER_RETURN_CODES=DockerReturnCodes.toDict(),
         )
 
         Path(output_folder).mkdir(parents=True, exist_ok=False)
@@ -338,7 +376,7 @@ def do_docker_job(job_id):
             # Check if the processing was successful (i.e., container returned exit code 0)
             exit_code = docker_result.get("StatusCode")
             if exit_code != 0:
-                error_description = f"Error while running container {docker_tag} - exit code {exit_code}"
+                error_description = f"Error while running container {docker_tag} - exit code {exit_code}. Value {DockerReturnCodes(exit_code).name}."
                 process_job_error(job_id, error_description)
                 logger.error(error_description)  # handle_error
                 processing_success = False
@@ -369,32 +407,21 @@ def do_docker_job(job_id):
             processing_success = False
 
     if processing_success:
+        # TODO figure out sub/mip from dicom tags
         job.complete = True
         try:
-            dicom_set_sub = DICOMSet(
-                set_location=output_folder + "/sub",
-                origin="Processed",
-                type="SUB",
-                case=job.case,
-                processing_job_id = job_id,
+            register_dicom_set_success, error = register_dicom_set(
+                output_folder + "/sub", job.case, "Processed", "SUB", job_id
             )
-            dicom_set_sub.save()
-            dicom_set_mip = DICOMSet(
-                set_location=output_folder + "/mip",
-                origin="Processed",
-                type="MIP",
-                case=job.case,
-                processing_job_id = job_id,
-            )
-            dicom_set_mip.save()
-            register_instanceess_success, error = register_dicom_instances(output_folder + "/sub", dicom_set_sub)
-            if not register_instanceess_success:
-                process_job_error(job_id, error)                
+            if not register_dicom_set_success:
+                process_job_error(job_id, error)
                 return False
-            register_instanceess_success, error = register_dicom_instances(output_folder + "/mip", dicom_set_mip)    
-            if not register_instanceess_success:
-                process_job_error(job_id, error)  
-                return False    
+            register_dicom_set_success, error = register_dicom_set(
+                output_folder + "/mip", job.case, "Processed", "MIP", job_id
+            )
+            if not register_dicom_set_success:
+                process_job_error(job_id, error)
+                return False
             job.status = "Success"
             # job.dicom_set = dicom_set
             job.case.status = Case.CaseStatus.READY
@@ -417,7 +444,9 @@ def process_job_error(job_id, error_description):
     except Exception as e:
         logger.exception(f"ProcessingJob with id {job_id} does not exist.")
         return False
-    move_files(Path(job.case.case_location), Path(settings.ERROR_FOLDER))
+    folder_name = os.path.basename(os.path.dirname(job.case.case_location))
+    print("ERROR FOLDER!!!: ", folder_name)
+    move_files(Path(job.case.case_location), Path(settings.ERROR_FOLDER) / folder_name)
     job.case.status = Case.CaseStatus.ERROR
     job.case.save()
     job.status = "Fail"
@@ -430,8 +459,12 @@ def watch():
         sleep(settings.INCOMING_SCAN_INTERVAL)
         try:
             scan_incoming_folder()
-            trigger_queued_cases()
         except:
             logger.error("Failure in incoming")
+
+        try:
+            trigger_queued_cases()
+        except:
+            logger.error("Error in queuing.")
 
     # get_queue("default").enqueue_in(timedelta(seconds=2), watch)

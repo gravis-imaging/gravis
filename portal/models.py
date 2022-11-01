@@ -2,7 +2,7 @@ from time import time
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
-from pydicom import Dataset, valuerep 
+from pydicom import Dataset, valuerep
 from datetime import datetime
 
 
@@ -27,26 +27,41 @@ class Case(models.Model):
         VIEWING = "VIEW", "Viewing"
         COMPLETE = "COMP", "Complete"
         ARCHIVED = "ARCH", "Archived"
-        ERROR = "ERR", "Error" # initial db registration, copying to input, json check failure
+        ERROR = (
+            "ERR",
+            "Error",
+        )  # initial db registration, copying to input, json check failure
 
-    patient_name = models.CharField(max_length=100, blank=False, null=False)
-    mrn = models.CharField(max_length=100, blank=False, null=False)
-    acc = models.CharField(max_length=100, blank=False, null=False)
+    patient_name = models.CharField(max_length=100, blank=True, null=True)
+    mrn = models.CharField(max_length=100, blank=True, null=True)
+    acc = models.CharField(max_length=100, blank=True, null=True)
     case_type = models.CharField(
-        max_length=4, choices=CaseType.choices, default=CaseType.MRA
+        max_length=4, choices=CaseType.choices, blank=True, null=True
     )
-    exam_time = models.DateTimeField(blank=False, null=False)
+    exam_time = models.DateTimeField(blank=True, null=True)
     receive_time = models.DateTimeField(default=timezone.now, blank=False)
     status = models.CharField(
         max_length=4, choices=CaseStatus.choices, default=CaseStatus.RECEIVED
     )
     num_spokes = models.CharField(max_length=1000, default="", blank=True, null=True)
-    twix_id = models.CharField(max_length=1000, blank=False, null=False)
+    twix_id = models.CharField(max_length=1000, blank=True, null=True)
     case_location = models.CharField(max_length=10000, blank=False, null=False)
-    settings = models.JSONField(null=True) # use presets, smoothing, num_angles etc
-    incoming_payload = models.JSONField(null=False)
-    last_read_by = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True, related_name='last_read_by')
-    viewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True, related_name='viewed_by')
+    settings = models.JSONField(null=True)  # use presets, smoothing, num_angles etc
+    incoming_payload = models.JSONField(blank=False, null=False)
+    last_read_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        default=None,
+        null=True,
+        related_name="last_read_by",
+    )
+    viewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        default=None,
+        null=True,
+        related_name="viewed_by",
+    )
 
     class Meta:
         db_table = "gravis_case"
@@ -66,9 +81,7 @@ class ProcessingJob(models.Model):
     status = models.CharField(
         max_length=100, blank=True, null=True
     )  # pending, processing, success, fail, description
-    error_description = models.CharField(
-        max_length=1000, blank=True, null=True
-    )
+    error_description = models.CharField(max_length=1000, blank=True, null=True)
     json_result = models.JSONField(null=True)
     parameters = models.JSONField(null=True)
     dicom_set = models.ForeignKey("DICOMSet", on_delete=models.CASCADE, null=True)
@@ -105,7 +118,11 @@ class DICOMSet(models.Model):
     )  # MIP, Subtraction, Onco
     case = models.ForeignKey(Case, on_delete=models.CASCADE, related_name="dicom_sets")
     processing_job = models.ForeignKey(
-        ProcessingJob, on_delete=models.SET_NULL, default=None, null=True, related_name="result_sets"
+        ProcessingJob,
+        on_delete=models.SET_NULL,
+        default=None,
+        null=True,
+        related_name="result_sets",
     )  # null if incoming, otherwise outcome of a processing step
 
     class Meta:
@@ -137,9 +154,13 @@ class DICOMInstance(models.Model):
 
     @classmethod
     def from_dataset(cls, ds: Dataset):
-        series_dt = datetime.combine(valuerep.DA(ds.SeriesDate), valuerep.TM(ds.SeriesTime))
-        study_dt = datetime.combine(valuerep.DA(ds.StudyDate), valuerep.TM(ds.StudyTime))
-        delta = (series_dt - study_dt)
+        series_dt = datetime.combine(
+            valuerep.DA(ds.SeriesDate), valuerep.TM(ds.SeriesTime)
+        )
+        study_dt = datetime.combine(
+            valuerep.DA(ds.StudyDate), valuerep.TM(ds.StudyTime)
+        )
+        delta = series_dt - study_dt
 
         return DICOMInstance(
             study_uid=ds.StudyInstanceUID,
@@ -148,9 +169,10 @@ class DICOMInstance(models.Model):
             acquisition_number=ds.get("AcquisitionNumber"),
             series_number=ds.get("InstanceNumber"),
             slice_location=ds.get("SliceLocation"),
-            acquisition_seconds = delta.total_seconds(),
+            acquisition_seconds=delta.total_seconds(),
             json_metadata=ds.to_json(),
         )
+
     class Meta:
         db_table = "gravis_dicom_instance"
         constraints = [
@@ -160,9 +182,10 @@ class DICOMInstance(models.Model):
             )
         ]
         indexes = [
-            models.Index(fields=['series_uid', 'acquisition_number']),
-            models.Index(fields=['study_uid', 'series_number']),
-        ]    
+            models.Index(fields=["series_uid", "acquisition_number"]),
+            models.Index(fields=["study_uid", "series_number"]),
+        ]
+
 
 # class CaseHistory(models.Model):
 #     """
@@ -172,7 +195,4 @@ class DICOMInstance(models.Model):
 #     action_time
 #     reader
 #     case
-#     action 
-
-
-
+#     action

@@ -3,22 +3,14 @@ from loguru import logger
 import numpy as np
 import sys, time, os
 from pathlib import Path
-from enum import Enum
 
 # Imports for loading, saving and manipulating DICOMs
 import SimpleITK as sitk
 
+import json
+import ast
 
-class ReturnCodes(Enum):
-    NO_ERRORS = 0
-    INPUT_PATH_DOES_NOT_EXIST = 1
-    NO_DICOMS_EXIST = 2
-    DICOM_READING_ERROR = 3
-    CANNOT_CALCULATE_INTENSITY_INDEX = 4
-    INTENSITY_INDEX_SHOULD_BE_LESS_THAN_NUM_VOLUMES = 5
-    ERROR_CALCULATING_SUBTRACTED_IMAGES = 6
-    ERROR_CALCULATING_PROJECTIONS = 7
-    ERROR_SAVING_FILES = 8
+from enum import Enum
 
 
 class MRA:
@@ -33,6 +25,7 @@ class MRA:
         self.__angle_step = int(vars["GRAVIS_ANGLE_STEP"])
         self.__full_rotation_flag = bool(vars["GRAVIS_MIP_FULL_ROTATION"])
         self.__n_slices = int(vars["GRAVIS_NUM_BOTTOM_SLICES"])
+        self.__return_codes = Enum('ReturnCodes', ast.literal_eval(vars["DOCKER_RETURN_CODES"]))
         self.__min_intensity_index = 0
         self.__images = []
         self.__subtracted_images = []
@@ -43,7 +36,7 @@ class MRA:
 
         if not Path(self.__input_dir_name).exists():
             logger.exception(f"Input Path {self.__input_dir_name} does not exist")
-            return ReturnCodes.INPUT_PATH_DOES_NOT_EXIST
+            return self.__return_codes.INPUT_PATH_DOES_NOT_EXIST
 
         data_directory = os.path.dirname(self.__input_dir_name)
 
@@ -57,7 +50,7 @@ class MRA:
                 + data_directory
                 + '" does not contain a DICOM series.'
             )
-            return ReturnCodes.NO_DICOMS_EXIST
+            return self.__return_codes.NO_DICOMS_EXIST
 
         try:
             # Configure the reader to load all of the DICOM tags (public+private):
@@ -112,9 +105,9 @@ class MRA:
                 t += 1
         except Exception as e:
             logger.exception(e, f"Problem reading DICOM files from {data_directory}.")
-            return ReturnCodes.DICOM_READING_ERROR
+            return self.__return_codes.DICOM_READING_ERROR
 
-        return ReturnCodes.NO_ERRORS
+        return self.__return_codes.NO_ERRORS
 
     def __get_time_index_of_minimum_intensities(self):
 
@@ -129,13 +122,13 @@ class MRA:
             min_intensity_value = min(intensities)
             if min_intensity_value == len(self.__images) - 1:
                 logger.exception("Error while calculating minimum intensity index.")
-                return ReturnCodes.INTENSITY_INDEX_SHOULD_BE_LESS_THAN_NUM_VOLUMES
+                return self.__return_codes.INTENSITY_INDEX_SHOULD_BE_LESS_THAN_NUM_VOLUMES
             self.__min_intensity_index = intensities.index(min_intensity_value) - 2
             print("min_intensity_index ", self.__min_intensity_index)
         except Exception as e:
             logger.exception(e, "Error while calculating minimum intensity index.")
-            return ReturnCodes.CANNOT_CALCULATE_INTENSITY_INDEX
-        return ReturnCodes.NO_ERRORS
+            return self.__return_codes.CANNOT_CALCULATE_INTENSITY_INDEX
+        return self.__return_codes.NO_ERRORS
 
     def __subtract_images(self):
 
@@ -149,8 +142,8 @@ class MRA:
                 self.__subtracted_images.append(subtracted_image)
         except Exception as e:
             logger.exception(e, "Error while subtracting images.")
-            return ReturnCodes.ERROR_CALCULATING_SUBTRACTED_IMAGES
-        return ReturnCodes.NO_ERRORS
+            return self.__return_codes.ERROR_CALCULATING_SUBTRACTED_IMAGES
+        return self.__return_codes.NO_ERRORS
 
     def __create_projections(self):
 
@@ -245,8 +238,8 @@ class MRA:
                 self.__processed_images.append(proj_images)
         except Exception as e:
             logger.exception(e, "Error calculating projections.")
-            return ReturnCodes.ERROR_CALCULATING_PROJECTIONS
-        return ReturnCodes.NO_ERRORS
+            return self.__return_codes.ERROR_CALCULATING_PROJECTIONS
+        return self.__return_codes.NO_ERRORS
 
     def __save_processed_images(self, type, output_dir_name, processed_images):
         try:
@@ -375,8 +368,8 @@ class MRA:
                 t += 1
         except Exception as e:
             logger.exception(e, f"Error saving files in {output_dir_name}.")
-            return ReturnCodes.ERROR_SAVING_FILES
-        return ReturnCodes.NO_ERRORS
+            return self.__return_codes.ERROR_SAVING_FILES
+        return self.__return_codes.NO_ERRORS
 
     def calculateMIPs(self):
 
@@ -384,20 +377,22 @@ class MRA:
         # angle_step = 10
         # full_rotation_flag = False
 
+        print("RETURN CODES ", self.__return_codes, self.__return_codes.NO_ERRORS)
+
         ret_value = self.__load_grasp_files()
-        if ret_value != ReturnCodes.NO_ERRORS:
+        if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
 
         ret_value = self.__get_time_index_of_minimum_intensities()
-        if ret_value != ReturnCodes.NO_ERRORS:
+        if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
 
         ret_value = self.__subtract_images()
-        if ret_value != ReturnCodes.NO_ERRORS:
+        if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
 
         ret_value = self.__create_projections()
-        if ret_value != ReturnCodes.NO_ERRORS:
+        if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
 
         ret_value = self.__save_processed_images(
@@ -405,7 +400,7 @@ class MRA:
             self.__output_dir_name_sub,
             self.__subtracted_images,
         )
-        if ret_value != ReturnCodes.NO_ERRORS:
+        if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
 
         ret_value = self.__save_processed_images(
@@ -413,7 +408,7 @@ class MRA:
             self.__output_dir_name_mip,
             self.__processed_images,
         )
-        if ret_value != ReturnCodes.NO_ERRORS:
+        if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
 
-        return ReturnCodes.NO_ERRORS
+        return self.__return_codes.NO_ERRORS
