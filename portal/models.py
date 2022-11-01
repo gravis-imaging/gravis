@@ -84,9 +84,9 @@ class ProcessingJob(models.Model):
     error_description = models.CharField(max_length=1000, blank=True, null=True)
     json_result = models.JSONField(null=True)
     parameters = models.JSONField(null=True)
-    dicom_set = models.ForeignKey("DICOMSet", on_delete=models.CASCADE, null=True)
-    case = models.ForeignKey(Case, on_delete=models.CASCADE)
-    docker_image = models.CharField(max_length=100, blank=False, null=False)
+    dicom_set = models.ForeignKey("DICOMSet", on_delete=models.CASCADE, null=True, blank=True)
+    case = models.ForeignKey(Case, on_delete=models.CASCADE, null=True, blank=True)
+    docker_image = models.CharField(max_length=100, blank=True, null=True)
     rq_id = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
