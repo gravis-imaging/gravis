@@ -1,4 +1,5 @@
 # import logging
+from unittest.mock import NonCallableMagicMock
 from loguru import logger
 from pathlib import Path
 import shutil
@@ -16,11 +17,13 @@ from django.utils import timezone
 from portal.models import Case, DICOMInstance, DICOMSet, ProcessingJob
 from common.generate_folder_name import generate_folder_name
 from common.constants import GravisNames, GravisFolderNames, DockerReturnCodes
+
 import common.helper as helper
 import common.config as config
 
 # logging.basicConfig(filename='watch_incoming.log', filemode='a', format='%(name)s - %(levelname)s - %(message)s')
 # logger = logging.getLogger(__name__)
+
 
 # TODO move to a separate file
 def register_dicom_set(
@@ -82,13 +85,13 @@ def move_files(source_folder: Path, destination_folder: Path):
 
     except Exception as e:
         logger.exception(
-            f"Exception during copying files from {source_folder} to {destination_folder}"
+            f"Exception {e} during copying files from {source_folder} to {destination_folder}"
         )
         return False
     return True
 
 
-def load_json(incoming_case, new_folder, error_folder) -> Case:
+def load_json(incoming_case, new_folder, error_folder) -> Tuple[bool, Case]:
     json_name = "study.json"
     incoming_json_file = Path(incoming_case / json_name)
     try:
@@ -105,12 +108,6 @@ def load_json(incoming_case, new_folder, error_folder) -> Case:
     try:
         case_status = Case.CaseStatus.PROCESSING
         case_location = str(new_folder)
-        study_keys = ["patient_name", "mrn", "acc", "case_type", "exam_time", "twix_id"]
-        # TODO check that values for these fields are valid. If not set status to ERROR
-        for key in study_keys:
-            if key not in payload:
-                case_status = Case.CaseStatus.ERROR
-                case_location = str(error_folder)
         new_case = Case(
             patient_name=payload.get("patient_name", ""),
             mrn=payload.get("mrn", ""),
@@ -125,11 +122,40 @@ def load_json(incoming_case, new_folder, error_folder) -> Case:
             status=case_status,
         )  # Case(data_location="./data/cases)[UID]")
         new_case.save()
+        study_keys = ["patient_name", "mrn", "acc", "case_type", "exam_time", "twix_id"]
+        # TODO check that values for these fields are valid. If not set status to ERROR/.
+        for key in study_keys:
+            if key not in payload:
+                return False, new_case
     except Exception as e:
-        logger.exception(f"Cannot create case for {error_folder}. Error: {e}")
-        move_files(incoming_case, error_folder)
-        return None
-    return new_case
+        logger.exception(f"Cannot create case for {error_folder}. Exception: {e}")
+        return False, None
+    return True, new_case
+
+
+def process_error_folder(
+    case: Case,
+    incoming_folder: Path,
+    error_folder: Path,
+    lock: Path,
+    complete_file_path: Path,
+):
+
+    move_files(incoming_folder, error_folder)
+    if not case is None:
+        case.status = Case.CaseStatus.ERROR
+        case.case_location = str(error_folder)
+        case.save()
+    try:
+        lock.free()
+        os.unlink(complete_file_path)
+        os.rmdir(incoming_folder)
+        # os.rmdir(error_folder)
+    except Exception as e:
+        logger.exception(
+            f"Exception {e} during cleaning stage after moving {incoming_folder} to the {error_folder} folder."
+        )
+    logger.error(f"Done Processing {incoming_folder} with error.")
 
 
 def process_folder(incoming_case: Path):
@@ -165,8 +191,11 @@ def process_folder(incoming_case: Path):
         logger.exception(f"Cannot create error folder for {incoming_case}")
         return False
 
-    new_case = load_json(incoming_case, new_folder, error_folder)
-    if new_case is None or new_case.status == Case.CaseStatus.ERROR:
+    status, new_case = load_json(incoming_case, new_folder, error_folder)
+    if not status:
+        process_error_folder(
+            new_case, incoming_case, error_folder, lock, complete_file_path
+        )
         return False
 
     # Create directories for further processing.
@@ -178,23 +207,28 @@ def process_folder(incoming_case: Path):
         logger.exception(
             f"Cannot create one of the processing folders for {incoming_case}"
         )
-        move_files(incoming_case, error_folder)
-        new_case.status = Case.CaseStatus.ERROR
-        new_case.save()
+        process_error_folder(
+            new_case, incoming_case, error_folder, lock, complete_file_path
+        )
         return False
 
     # Move files
     if not move_files(incoming_case, input_dest_folder):
-        new_case.delete()
+        # new_case.delete()
+        process_error_folder(
+            new_case, incoming_case, error_folder, lock, complete_file_path
+        )
         return False
 
     register_dicom_set_success = register_dicom_set(
         str(input_dest_folder), new_case, "Incoming", "ORI"
     )[0]
     if not register_dicom_set_success:
-        move_files(input_dest_folder, error_folder)
+        process_error_folder(
+            new_case, incoming_case, error_folder, lock, complete_file_path
+        )
         # Delete associated case from db
-        new_case.delete()
+        # new_case.delete()
         return False
 
     try:
@@ -203,6 +237,9 @@ def process_folder(incoming_case: Path):
         logger.exception(
             f"Unable to remove lock file {lock_file_path}" in {incoming_case}
         )  # handle_error
+        # new_case.status = Case.CaseStatus.ERROR
+        # new_case.case_location = str(error_folder)
+        # new_case.save()
         return False
 
     try:
@@ -214,6 +251,9 @@ def process_folder(incoming_case: Path):
         logger.exception(
             f"Exception during deleting empty folder: {incoming_case} or {error_folder}"
         )
+        # new_case.status = Case.CaseStatus.ERROR
+        # new_case.case_location = str(error_folder)
+        # new_case.save()
         return False
 
     new_case.status = Case.CaseStatus.QUEUED
@@ -235,6 +275,8 @@ def scan_incoming_folder():
                 for d in os.scandir(incoming)
                 if d.is_dir() and Path(os.path.join(d, f)).exists()
             ]
+        else:
+            logger.exception(f"Incoming folder {incoming} does not exist.")
 
         for incoming_case in list(folder_paths):
             process_folder(incoming_case)
