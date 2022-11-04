@@ -73,7 +73,7 @@ class WorkJobView(View):
             parameters=json_in["parameters"])
 
         job.save()
-        django_rq.enqueue(do_job,args=(self.__class__,job.id),job_timeout=60*100)
+        django_rq.enqueue(do_job,args=(self.__class__,job.id),job_timeout=60*60*4)
         return JsonResponse(dict(id=job.id))
 
     @classmethod
@@ -213,6 +213,30 @@ class VView:
     viewHoriz: npt.ArrayLike = None
     transformed_axes: npt.ArrayLike = None
     dicom_set: DICOMSet = None
+
+
+def generate_multiframe(cine):
+    out_pixels = None
+    out_ds = None
+    dicoms = sorted(list(cine.glob("frame.*.dcm")), key=lambda x:int(x.name.split('.')[1]))
+    # if (cine / "multiframe.dcm").exists():
+    #     return
+    for n, dcm in enumerate(dicoms):
+        print(n,dcm)
+        ds = pydicom.dcmread(dcm)
+        if not out_ds:
+            out_ds = ds
+            out_ds.NumberOfFrames = len(dicoms)
+            out_pixels = bytearray(b"\0"*(len(out_ds.PixelData) * out_ds.NumberOfFrames))
+            frame_size = len(out_ds.PixelData)
+        # out_pixels += ds.PixelData
+        out_pixels[n*frame_size:(n+1)*frame_size] = ds.PixelData
+    out_ds.PixelData = bytes(out_pixels)
+
+    for dcm in dicoms:
+        Path(dcm).unlink()
+
+    return out_ds
 class TestJob(WorkJobView):
     type = "CINE"
 
@@ -250,10 +274,11 @@ class TestJob(WorkJobView):
 
         series_uids = {k.series_uid for k in instances}
         split_by_series = [ sorted([k for k in instances if k.series_uid == uid],key = lambda x:x.slice_location,reverse=True) for uid in series_uids]
-        files_by_series = [ [ Path(i.dicom_set.set_location) / i.instance_location for i in k] for k in split_by_series ]
+        files_by_series = [ [ Path(i.dicom_set.set_location) / i.instance_location for i in k] for k in sorted(split_by_series,key=lambda x:x[0].acquisition_seconds) ]
         
+        random_name = str(uuid.uuid4())
         for v in views:
-            location = Path(job.case.case_location) / "processed" / (v.name+"-"+str(uuid.uuid4()))
+            location = Path(job.case.case_location) / "processed" / (v.name+"-"+random_name)
             location.mkdir()
             v.dicom_set = DICOMSet(set_location = location,
                 type = f"CINE/{v.name}",
@@ -273,13 +298,14 @@ class TestJob(WorkJobView):
                 t_array = array.transpose(*v.transformed_axes)
                 new_study_uid = pydicom.uid.generate_uid()
                 new_series_uid = pydicom.uid.generate_uid()
-                for index in range(0,t_array.shape[0],1):
+                for index in range(t_array.shape[0]//2 - 5,t_array.shape[0]//2 + 5,1):
                     index_folder = Path(v.dicom_set.set_location) / str(index)
                     index_folder.mkdir(exist_ok=True)
                     frame = t_array[index,:,:] 
                     if sum(v.normal) < 0: 
                         # We're viewing from the "other" side, so the view needs to be flipped. By convention we flip horizontally
                         frame = np.flip(frame,1)
+
 
                     ds = ds_base.copy()
                     ds.PixelData = frame.tobytes()
@@ -300,10 +326,19 @@ class TestJob(WorkJobView):
                     new_file = index_folder / f"frame.{i}.dcm"
                     print(new_file)
                     ds.save_as(new_file)
-                    new_instance = DICOMInstance.from_dataset(ds)
-                    new_instance.dicom_set = v.dicom_set
-                    new_instance.instance_location = str(new_file.relative_to(v.dicom_set.set_location))
-                    new_instance.save()
+                    # new_instance = DICOMInstance.from_dataset(ds)
+                    # new_instance.dicom_set = v.dicom_set
+                    # new_instance.instance_location = str(new_file.relative_to(v.dicom_set.set_location))
+                    # new_instance.save()
+
+        for v in views:
+            for cine in sorted(list(Path(v.dicom_set.set_location).iterdir()),key=lambda x:int(x.name)):
+                ds = generate_multiframe(cine)
+                ds.save_as(cine / "multiframe.dcm")
+                new_instance = DICOMInstance.from_dataset(ds)
+                new_instance.dicom_set = v.dicom_set
+                new_instance.instance_location = str((cine / "multiframe.dcm").relative_to(v.dicom_set.set_location))
+                new_instance.save()
 
         return ({},[v.dicom_set for v in views])
         # num_slices = len(files_by_series[0])

@@ -332,18 +332,22 @@ class GraspViewer {
         await this.setVolumeByImageIds(imageIds, series_uid, true);
     }
     async setPreview(idx, l) {
-        idx = parseInt(idx)
-        let [lower, upper] = this.viewports[0].getDefaultActor().actor.getProperty().getRGBTransferFunction(0).getRange()
+        try {
+            idx = parseInt(idx)
+            let [lower, upper] = this.viewports[0].getDefaultActor().actor.getProperty().getRGBTransferFunction(0).getRange()
 
-        for (var v of this.previewViewports) {
-            // let voi = {lower: 0, upper: 1229+idx}
-            //             let k = v.getDefaultActor().actor.getMapper().getInputData().getPointData().getScalars().getRange()
-            await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / l))
-            // v.setVOI({lower:0, upper:1229+(3497-1229)*(idx/v.getImageIds().length)})
-            // console.log("Stack VOI range.", v.voiRange.lower, v.voiRange.upper);
-            // console.log("Viewport VOI range.", lower, upper);
-            v.setVOI({lower:0, upper: v._getImageDataMetadata(v.csImage).imagePixelModule.windowCenter*2})
+            for (var v of this.previewViewports) {
+                // let voi = {lower: 0, upper: 1229+idx}
+                //             let k = v.getDefaultActor().actor.getMapper().getInputData().getPointData().getScalars().getRange()
+                await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / l))
+                // v.setVOI({lower:0, upper:1229+(3497-1229)*(idx/v.getImageIds().length)})
+                // console.log("Stack VOI range.", v.voiRange.lower, v.voiRange.upper);
+                // console.log("Viewport VOI range.", lower, upper);
+                v.setVOI({lower:0, upper: v._getImageDataMetadata(v.csImage).imagePixelModule.windowCenter*2})
 
+            }
+        } catch (e) {
+            console.error(e);
         }
         // console.log("VOI", lower,upper)
         
@@ -381,7 +385,11 @@ class GraspViewer {
         this.viewports.map((v, n)=> {
             v.element.addEventListener("wheel", debounce(500, async (evt) => {
                 // console.log(v.getCamera().position)
-                await this.updatePreview(case_id, n)
+                try {
+                    await this.updatePreview(case_id, n)
+                } catch (e) {
+                    console.error(e);
+                }
             //    console.log({position: evt.detail.camera.position, focalPoint:evt.detail.camera.focalPoint, viewPlaneNormal: evt.detail.camera.viewPlaneNormal} );
             }));
             v.element.addEventListener("CORNERSTONE_PRE_STACK_NEW_IMAGE", (evt) => {console.log(evt)})
@@ -389,7 +397,11 @@ class GraspViewer {
 
         await this.setVolumeBySeries(study_uid, graspVolumeInfo[0]["series_uid"], case_id),
         this.volume.load(()=>{ console.log("Volume loaded")})
-        await this.updatePreview(case_id)
+        try {
+            await this.updatePreview(case_id)
+        } catch (e) {
+            console.error(e);
+        }
 
         console.log("Study switched");
         return graspVolumeInfo
@@ -419,19 +431,19 @@ class GraspViewer {
         var info = await (await fetch(`/api/grasp/preview/${case_id}/${view}/${val}`, {
             method: 'GET',   credentials: 'same-origin'
         })).json() 
-        
-        var urls = []
-        for ( var instance of info ) {
-            urls.push("wadouri:" + 
-            "/wado/" +case_id+
-            '/studies/' +
-            instance.study_uid +
-            '/series/' +
-            instance.series_uid +
-            '/instances/' +
-            instance.instance_uid +
-            '/frames/1')
-        };
+        console.log("Preview info:", info)
+        var urls = info
+        // for ( var instance of info ) {
+        //     urls.push("wadouri:" + 
+        //     "/wado/" +case_id+
+        //     '/studies/' +
+        //     instance.study_uid +
+        //     '/series/' +
+        //     instance.series_uid +
+        //     '/instances/' +
+        //     instance.instance_uid +
+        //     '/frames/1')
+        // };
 
         
         // var result = await doJob("cine", case_id, {"index":index, normal: cam.viewPlaneNormal, viewUp: cam.viewUp})
