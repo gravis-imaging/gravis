@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import json
 from pathlib import Path
+import time
 from typing import Any
 import uuid
 from dcmannotate import DicomVolume
@@ -242,6 +243,9 @@ class TestJob(WorkJobView):
 
     @classmethod
     def do_job(cls, job: ProcessingJob):
+        num_frames = 0
+        start_time = time.time() 
+
         instances = job.dicom_set.instances.all()
         im_orientation_pt = np.asarray(json.loads(instances[0].json_metadata)["00200037"]["Value"]).reshape((2,3))
         im_orientation_mat = np.rint(np.vstack((im_orientation_pt,[np.cross(*im_orientation_pt)])))
@@ -287,57 +291,47 @@ class TestJob(WorkJobView):
             v.dicom_set.save()
             # output_folder = Path(new_set.set_location)
 
-        for i in range(0,len(files_by_series), 1):
-            series = files_by_series[i]
-            print(f"{i} / {len(files_by_series)}")
-            ds_base = pydicom.dcmread(series[0])
-            array = np.asarray([pydicom.dcmread(d).pixel_array for d in series])  # array in [slice, row, column ] order
-            array = array.transpose(2,1,0)  # array in [column, row, slice] order
-            for v in views:
-                print(f"Axis {v.name}, {v.transformed_axes}")
-                t_array = array.transpose(*v.transformed_axes)
-                new_study_uid = pydicom.uid.generate_uid()
-                new_series_uid = pydicom.uid.generate_uid()
-                for index in range(t_array.shape[0]//2 - 5,t_array.shape[0]//2 + 5,1):
-                    index_folder = Path(v.dicom_set.set_location) / str(index)
-                    index_folder.mkdir(exist_ok=True)
-                    frame = t_array[index,:,:] 
-                    if sum(v.normal) < 0: 
-                        # We're viewing from the "other" side, so the view needs to be flipped. By convention we flip horizontally
-                        frame = np.flip(frame,1)
-
-
-                    ds = ds_base.copy()
-                    ds.PixelData = frame.tobytes()
-                    ds.StudyInstanceUID = new_study_uid
-                    ds.SeriesInstanceUID = new_series_uid
-                    ds.SOPInstanceUID = pydicom.uid.generate_uid()
-                    ds.ImageOrientationPatient = [ *v.viewUp, *v.viewHoriz ]
-                    ds.ImageType = ["DERIVED", "SECONDARY", f"CINE/{v.name}"]
-                    del ds.ImagePositionPatient
-                    ds.Rows = frame.shape[0]
-                    ds.Columns = frame.shape[1]
-                    ds.SliceLocation = str(index)+".0"
-                    ds.InstanceNumber = str(index)
-                    min_ = np.min(frame)
-                    max_ = np.max(frame)
-                    ds.WindowCenter = (max_+min_)/2
-                    ds.WindowWidth = (max_-min_)
-                    new_file = index_folder / f"frame.{i}.dcm"
-                    print(new_file)
-                    ds.save_as(new_file)
-                    # new_instance = DICOMInstance.from_dataset(ds)
-                    # new_instance.dicom_set = v.dicom_set
-                    # new_instance.instance_location = str(new_file.relative_to(v.dicom_set.set_location))
-                    # new_instance.save()
+        volume = None
+        prototype_ds = None
+        for i, files in enumerate(files_by_series):
+            for j, file in enumerate(files):
+                dcm = pydicom.dcmread(file)
+                array = dcm.pixel_array # [ row, column ] order
+                if volume is None:
+                    volume = np.empty_like(array,shape=(len(files_by_series), *array.shape[::-1], len(files)))
+                    # [ time, column, row, slice ] order
+                    prototype_ds = dcm
+                    print(volume.shape)
+                volume[i,:,:,j] = array.T
+        assert volume is not None
 
         for v in views:
-            for cine in sorted(list(Path(v.dicom_set.set_location).iterdir()),key=lambda x:int(x.name)):
-                ds = generate_multiframe(cine)
-                ds.save_as(cine / "multiframe.dcm")
+            new_study_uid = pydicom.uid.generate_uid()
+            new_series_uid = pydicom.uid.generate_uid()
+
+            t_array = volume.transpose(*(0,*[1+x for x in v.transformed_axes]))
+            # t_array is now in [ time, normal, rows, columns]
+            if sum(v.normal) < 0: 
+                # We're viewing from the "other" side, so the view needs to be flipped. By convention we flip horizontally
+                t_array = np.flip(t_array,3)
+            for i in range(t_array.shape[1]):
+                ds = prototype_ds.copy()
+                ds.NumberOfFrames = t_array.shape[0]
+                ds.Rows = t_array.shape[2]
+                ds.Columns = t_array.shape[3]
+                ds.PixelData = t_array[:,i,:,:].tobytes()
+                ds.SliceLocation = str(i)+".0"
+                ds.InstanceNumber = str(i)
+
+                ds.StudyInstanceUID = new_study_uid
+                ds.SeriesInstanceUID = new_series_uid
+                ds.SOPInstanceUID = pydicom.uid.generate_uid()
+
+                ds.save_as(Path(v.dicom_set.set_location) / f"multiframe.{i}.dcm")
+                print(Path(v.dicom_set.set_location) / f"multiframe.{i}.dcm")
                 new_instance = DICOMInstance.from_dataset(ds)
                 new_instance.dicom_set = v.dicom_set
-                new_instance.instance_location = str((cine / "multiframe.dcm").relative_to(v.dicom_set.set_location))
+                new_instance.instance_location = f"multiframe.{i}.dcm"
                 new_instance.save()
 
         return ({},[v.dicom_set for v in views])
