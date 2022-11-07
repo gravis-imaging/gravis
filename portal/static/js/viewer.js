@@ -343,7 +343,7 @@ class GraspViewer {
                 // v.setVOI({lower:0, upper:1229+(3497-1229)*(idx/v.getImageIds().length)})
                 // console.log("Stack VOI range.", v.voiRange.lower, v.voiRange.upper);
                 // console.log("Viewport VOI range.", lower, upper);
-                v.setVOI({lower:0, upper: v._getImageDataMetadata(v.csImage).imagePixelModule.windowCenter*2})
+                // v.setVOI({lower:0, upper: v._getImageDataMetadata(v.csImage).imagePixelModule.windowCenter*2})
 
             }
         } catch (e) {
@@ -383,7 +383,7 @@ class GraspViewer {
         
         
         this.viewports.map((v, n)=> {
-            v.element.addEventListener("wheel", debounce(500, async (evt) => {
+            v.element.addEventListener("wheel", debounce(250, async (evt) => {
                 // console.log(v.getCamera().position)
                 try {
                     await this.updatePreview(case_id, n)
