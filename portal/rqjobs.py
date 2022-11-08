@@ -49,14 +49,26 @@ class WorkJobView(View):
 
     def post(self, request, *args, **kwargs):
         json_in = json.loads(request.body)
+        print(json_in["parameters"])
 
         case = Case.objects.get(id=json_in["case"])
+        existing_q = ProcessingJob.objects.filter(dicom_set=case.dicom_sets.get(type="Incoming"),
+                case = case,
+                parameters=json_in["parameters"],
+                status = "SUCCESS")
+        print(existing_q.query)
+        existing = existing_q.first()
+        if existing:
+            print("Exists")
+            return JsonResponse(dict(id=existing.id))
+        print("Doesn't exist")
         job = ProcessingJob(
             status="CREATED", 
             category=self.type, 
             dicom_set=case.dicom_sets.get(type="Incoming"),
             case = case,
             parameters=json_in["parameters"])
+
         job.save()
         django_rq.enqueue(do_job,self.__class__,job.id)
         return JsonResponse(dict(id=job.id))
@@ -136,7 +148,7 @@ class CineJob(WorkJobView):
 
         series_uids = {k.series_uid for k in instances}
 
-        split_by_series = [ [k for k in instances if k.series_uid == uid] for uid in series_uids]
+        split_by_series = [ sorted([k for k in instances if k.series_uid == uid],key = lambda x:x.slice_location,reverse=True) for uid in series_uids]
         # files_by_series = {uid: [ Path(i.dicom_set.set_location) / i.instance_location for i in by_series[uid]] for uid in series_uids}
         files_by_series = [ [ Path(i.dicom_set.set_location) / i.instance_location for i in k] for k in split_by_series ]
         # print(files_by_series)
@@ -153,10 +165,12 @@ class CineJob(WorkJobView):
 
         new_study_uid = pydicom.uid.generate_uid()
         new_series_uid = pydicom.uid.generate_uid()
-        for i, series in enumerate(files_by_series[::]):
-            v = DicomVolume(series)
+        for i, series in enumerate(files_by_series[::15]):
+            print(f"{i} / {len(files_by_series)}")
+            # v = DicomVolume(series)
             # pixel_array is in row-major order
-            array = np.asarray([d.pixel_array for d in v]) 
+
+            array = np.asarray([pydicom.dcmread(d).pixel_array for d in series]) 
             # array in [slice, row, column ] order
             array = array.transpose(2,1,0) 
             # array in [column, row, slice] order
@@ -167,13 +181,17 @@ class CineJob(WorkJobView):
             if normal.sum() < 0: 
                 # We're viewing from the "other" side, so the view needs to be flipped. By convention we flip horizontally
                 frame = np.flip(frame,1)
-            ds = v[0].copy()
+            ds = pydicom.dcmread(series[0])
             ds.PixelData = frame.tobytes()
             ds.StudyInstanceUID = new_study_uid
             ds.SeriesInstanceUID = new_series_uid
             ds.SOPInstanceUID = pydicom.uid.generate_uid()
             ds.Rows = frame.shape[0]
             ds.Columns = frame.shape[1]
+            min_ = np.min(frame) 
+            max_ = np.max(frame)
+            ds.WindowCenter = (max_+min_)/2
+            ds.WindowWidth = (max_-min_)/2
             new_file = output_folder / f"frame.{i}.dcm"
             ds.save_as(new_file)
             

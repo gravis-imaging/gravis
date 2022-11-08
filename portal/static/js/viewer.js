@@ -1,6 +1,7 @@
 // import * as cornerstone_test from './static/cornerstone/bundle.js';
 // import { Cornerstone } from './static/cornerstone/bundle.js';
-// console.log(Cornerstone)
+// import * as cornerstone from '../../../../cornerstone3D-beta/packages/core'
+
 const SOP_INSTANCE_UID = '00080018';
 const STUDY_DATE = '00080020';
 const STUDY_TIME = '00080030';
@@ -9,7 +10,6 @@ const SERIES_TIME = '00080031';
 const SERIES_INSTANCE_UID = '0020000E'; 
 const STUDY_INSTANCE_UID = '0020000D';
 const SERIES_DESCRIPTION = '0008103E';
-
 
 function getMeta(data, val) {
     return data[val].Value[0]
@@ -71,16 +71,24 @@ const resizeObserver = new ResizeObserver(() => {
     }
   });
   
-
+function debounce(delay, callback) {
+    let timeout
+    return (...args) => {
+        clearTimeout(timeout)
+        timeout = setTimeout(() => {
+            callback(...args)
+        }, delay)
+    }
+}
 class GraspViewer {
-    constructor( el ) {
+    constructor( ...inp ) {
         return (async () => {
-            await this.initialize(el);
+            await this.initialize(...inp);
             return this;
           })();   
          }
     
-    createViewportGrid(n) {
+    createViewportGrid(n=4) {
         const viewportGrid = document.createElement('div');
         viewportGrid.style.display = 'flex';
         viewportGrid.style.flexDirection = 'row';
@@ -95,94 +103,56 @@ class GraspViewer {
             viewportGrid.appendChild(el);
             elements.push(el)
             resizeObserver.observe(el);
-    
-            el.addEventListener(cornerstone.Enums.Events.CAMERA_MODIFIED, (evt) => {
-                console.log(evt.detail.camera.position)
-            //    console.log({position: evt.detail.camera.position, focalPoint:evt.detail.camera.focalPoint, viewPlaneNormal: evt.detail.camera.viewPlaneNormal} );
-            });
         }
         return [viewportGrid, elements];
     }
-    
-    async initialize( wrapper ) {
+    createViewports( prefix, list, parent, background = [0,0,0] ) {
+        const [viewportGrid, viewportElements] = this.createViewportGrid(4)
+        parent.appendChild(viewportGrid);
+        // element.classList.add("grid-fill")
+        // parent.appendChild(element);    
+        var viewportInput = list.map(([viewportId, orientation],n) => {
+            return {
+                viewportId: prefix + "_" + viewportId,
+                type: orientation ? cornerstone.Enums.ViewportType.ORTHOGRAPHIC : cornerstone.Enums.ViewportType.STACK,
+                element: viewportElements[n],
+                defaultOptions: {
+                    orientation,
+                    background
+                },
+            }});
+        return [ viewportInput, viewportInput.map((c)=>c.viewportId) ]
+    }
+    async initialize( main, preview ) {
         const { RenderingEngine, Types, Enums, volumeLoader, CONSTANTS, setVolumesForViewports} = window.cornerstone; 
         const { ViewportType } = Enums;
-        const { ORIENTATION } = CONSTANTS;
-        
-        const element = document.createElement('div');
-        element.id = 'cornerstone-element';
-        const [viewportGrid, viewportElements] = this.createViewportGrid(4)
 
-        // console.log(wrapper, viewportGrid, viewportElements);
-        wrapper.appendChild(element);
-        element.appendChild(viewportGrid);
-    
         await cornerstone.helpers.initDemo(); 
-    
         // Instantiate a rendering engine
         const renderingEngineId = 'gravisRenderEngine';
         this.renderingEngine = new RenderingEngine(renderingEngineId);    
-        // Create a stack viewport
-        const viewportInput = [
-            {
-              viewportId: "VIEW_AX",
-              type: ViewportType.ORTHOGRAPHIC,
-              element: viewportElements[0],
-              defaultOptions: {
-    
-                orientation: ORIENTATION.AXIAL,
-                            // { sliceNormal: [0, 0, 1],
-                            // viewUp: [0, -1, 0], }
-    
-                background: [0, 0, 0],
-              },
-            },
-            {
-              viewportId: "VIEW_SAG",
-              type: ViewportType.ORTHOGRAPHIC,
-              element: viewportElements[1],
-              defaultOptions: {
-                orientation: ORIENTATION.SAGITTAL,
-                            //     sliceNormal:[1, 0, 0],
-                            //      viewUp: [0, 0, 1],
-                background: [0, 0, 0],
-              },
-            },
-            {
-              viewportId: "VIEW_COR",
-              type: ViewportType.ORTHOGRAPHIC,
-              element: viewportElements[2],
-              defaultOptions: {
-                orientation: ORIENTATION.CORONAL,
-                background:[0, 0, 0],
-              },
-            },
-            {
-                viewportId: "VIEW_CINE",
-                type: ViewportType.STACK,
-                element: viewportElements[3],
-                defaultOptions: {
-                //   orientation: ORIENTATION.SAGITTAL,
-                  background: [0, 0, 0],
-                },
-              },  
-          ];
-        this.viewportIds = []
-        for (var v of viewportInput) {
-            this.viewportIds.push(v.viewportId);
-        }
-        this.renderingEngine.setViewports(viewportInput)
 
-        this.viewports = []
-        for (var id of this.viewportIds) {
-            this.viewports.push(this.renderingEngine.getViewport(id))
-        }
+        const { ORIENTATION } = cornerstone.CONSTANTS;
 
+        const preview_info = [["AX"],["SAG"],["COR"]]
+        const [ previewViewports, previewViewportIds ] = this.createViewports("PREVIEW",preview_info, preview, [0.5,.5,.5])
+        const view_info = [["AX",ORIENTATION.AXIAL],["SAG",ORIENTATION.SAGITTAL],["COR",ORIENTATION.CORONAL],["CINE"]]
+        const [ viewViewports, viewportIds ] = this.createViewports("VIEW", view_info, main)
+
+        console.log(previewViewports, viewViewports);
+
+        this.renderingEngine.setViewports([...previewViewports, ...viewViewports])
+
+        this.viewportIds = viewportIds
+        this.previewViewportIds = previewViewportIds
+
+        this.viewports = viewportIds.map((c)=>this.renderingEngine.getViewport(c))
+        this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c))
         // renderingEngine.enableElement(viewportInput);
         cornerstone.tools.synchronizers.createCameraPositionSynchronizer("SYNC_CAMERAS");
     
         this.createTools()
-        this.renderingEngine.renderViewports(this.viewportIds);
+        this.renderingEngine.renderViewports([...this.viewportIds, ...this.previewViewports]);
     }
 
 
@@ -287,17 +257,12 @@ class GraspViewer {
         // const volumeName = series_uid; // Id of the volume less loader prefix
         const volumeLoaderScheme = 'cornerstoneStreamingImageVolume'; // Loader id which defines which volume loader to use
         const volumeId = `${volumeLoaderScheme}:${volumeName}`; // VolumeId with loader id + volume id
-        // const viewport = (
-        //     renderingEngine.getViewport('GRASP_VIEW')
-        // );
-
-        
         let cams = []
+
         for (var viewport of this.viewports.slice(0,3) ) {
-            // viewport = this.renderingEngine.getViewport(v)
             cams.push({viewport, cam:viewport.getCamera(), thickness:viewport.getSlabThickness()})
         }
-        // let cams = viewport.getCamera()
+        console.log("Caching volume...")
         this.volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, {
             imageIds,
         });
@@ -305,13 +270,12 @@ class GraspViewer {
         // TODO: this is meant to "snap" the direction onto the nearest axes
         // It seems to work but does it always?
         this.volume.imageData.setDirection(this.volume.direction.map(Math.round))
-        this.volume.load();
-        
+
         await cornerstone.setVolumesForViewports( 
             this.renderingEngine,
             [{volumeId},],
             this.viewportIds.slice(0,3)
-        );
+        );      
 
         if ( keepCamera ) {
             for (var c of cams) {
@@ -347,20 +311,18 @@ class GraspViewer {
             // synchronizer.add({ renderingEngineId: "gravisRenderEngine", viewportId:"VIEW_MIP" });
 
         }
-        this.renderingEngine.renderViewports(this.viewportIds)
+        // console.log("Volume starts loading");
+        // const loading_finished = new Promise((resolve) => {
+        //     this.volume.load( (e) => { console.log("Volume finished loading",e); resolve() });
+        // });
+
+        // await this.volume.load();
+        this.renderingEngine.renderViewports(this.viewportIds);
+        // return loading_finished
     }
-    // async setVolumeBySeries(study_uid, series_uid, keepCamera=true) {
-    //     // Get Cornerstone imageIds and fetch metadata into RAM
-    //     var { imageIds, metadata } = await cacheMetadata(
-    //         { studyInstanceUID: study_uid,
-    //         seriesInstanceUID: series_uid },
-    //         '/wado',
-    //     );
-    //     await this.setVolumeByImageIds(imageIds, series_uid, keepCamera);
-    // }
 
     async setVolumeBySeries(study_uid, series_uid, case_id) {
-        console.log("Caching metadata", study_uid, series_uid)
+        console.log("Set volume by series", study_uid, series_uid)
         var { imageIds, metadata } = await cacheMetadata(
             { studyInstanceUID: study_uid,
                 seriesInstanceUID: series_uid  },
@@ -368,60 +330,72 @@ class GraspViewer {
         );
         await this.setVolumeByImageIds(imageIds, series_uid, true);
     }
-    async setVolumeByStudy(study_uid, case_id, keepCamera=true) {
+    async setPreview(idx, l) {
+        idx = parseInt(idx)
+        let [lower, upper] = this.viewports[0].getDefaultActor().actor.getProperty().getRGBTransferFunction(0).getRange()
 
+        for (var v of this.previewViewports) {
+            // let voi = {lower: 0, upper: 1229+idx}
+            //             let k = v.getDefaultActor().actor.getMapper().getInputData().getPointData().getScalars().getRange()
+            await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / l))
+            // v.setVOI({lower:0, upper:1229+(3497-1229)*(idx/v.getImageIds().length)})
+            console.log("Stack VOI range.", v.voiRange.lower, v.voiRange.upper);
+            console.log("Viewport VOI range.", lower, upper);
+            v.setVOI({lower:0, upper: v._getImageDataMetadata(v.csImage).imagePixelModule.windowCenter*2})
+
+        }
+        // console.log("VOI", lower,upper)
+        
+    }
+
+    async updatePreview(case_id, n=null, idx=0) {
+        console.log("Updating previews...")
+        let update = [n]
+        if (n==null){
+            update = [0, 1, 2]
+        }
+        await Promise.all(update.map(async (n)=> {
+            await this.renderCineFromViewport(n,case_id, this.previewViewports[n]) 
+            // await this.previewViewports[n].setImageIdIndex(idx)
+            // this.previewViewports[n].setVOI()
+        }))
+    }
+    async switchSeries(study_uid, series_uid, case_id) {
+        await this.setVolumeBySeries(study_uid, series_uid, case_id);
+        await new Promise((resolve) => {
+            this.volume.load( (e) => { console.log("Volume finished loading",e); resolve() });
+        });
+    }
+    async switchStudy(study_uid, case_id, keepCamera=true) {
         var graspVolumeInfo = await (await fetch(`/api/grasp/data/${case_id}/${study_uid}`, {
             method: 'GET',   credentials: 'same-origin'
         })).json()
-
-        var { imageIds, metadata } = await cacheMetadata(
-            { seriesInstanceUID: graspVolumeInfo[0]["series_uid"],
-              studyInstanceUID: study_uid },
-            '/wado/'+case_id,
-        );
-
-        // console.log(result);
-
-        // console.log("Cached metadata")
-        // var seriesByTime = {}
-        // const studyTime = parseDicomTime(getMeta(metadata[0],STUDY_DATE),getMeta(metadata[0],STUDY_TIME))
-        // console.log("Study time", studyTime)
-        // for (var k of metadata){
-        //     const seriesTime = parseDicomTime(getMeta(k,SERIES_DATE),getMeta(k,SERIES_TIME))
-        //     const time = seriesTime - studyTime
-    
-        //     if (seriesByTime[time] == undefined ){
-        //         seriesByTime[time] = []
-        //     }
-        //     seriesByTime[time].push(k)
-        // }
-        // var volumesList = Object.entries(seriesByTime).map((k)=>{return {time:parseFloat(k[0]), seriesList:k[1]}})
-        // volumesList.sort((k,v)=>(k.time-v.time))
-    
-        // var studyImageIds = []
-        // for ( var v of volumesList ) {
-        //     imageIds = []
-        //     for (var s of v.seriesList) {
-        //         imageIds.push(getImageId(s,'/wado/'+case_id))
-        //     }
-        //     var series_uid = getMeta(v.seriesList[0],SERIES_INSTANCE_UID);
-        //     var series_description = getMeta(v.seriesList[0],SERIES_DESCRIPTION);
-        //     var time = v.time/1000.0;
-        //     studyImageIds.push({imageIds, series_uid, series_description, time})
-        // }
-        // console.log(studyImageIds)
         document.getElementById("volume-picker").setAttribute("min",0)
         document.getElementById("volume-picker").setAttribute("max",graspVolumeInfo.length-1)
         document.getElementById("volume-picker").setAttribute("value",0)
+
         
-        await this.setVolumeByImageIds(imageIds, imageIds[0].series_uid, keepCamera);
+        
+        this.viewports.map((v, n)=> {
+            v.element.addEventListener("wheel", debounce(1000, (evt) => {
+                // console.log(v.getCamera().position)
+                this.updatePreview(case_id, n)
+            //    console.log({position: evt.detail.camera.position, focalPoint:evt.detail.camera.focalPoint, viewPlaneNormal: evt.detail.camera.viewPlaneNormal} );
+            }));
+        });
+
+        await this.setVolumeBySeries(study_uid, graspVolumeInfo[0]["series_uid"], case_id),
+        this.volume.load(()=>{ console.log("Volume loaded")})
+        await this.updatePreview(case_id)
+
+        console.log("Study switched");
         return graspVolumeInfo
     }
     // async setGraspVolume(seriesInfo) {
     //     await this.setVolumeByImageIds(seriesInfo.imageIds,seriesInfo.series_uid)
     // }
 
-    async renderCineFromViewport(n, case_id) {
+    async renderCineFromViewport(n, case_id, dest_viewport=null) {
         var viewport = this.viewports[n];
         var cam = viewport.getCamera()
     
@@ -429,16 +403,29 @@ class GraspViewer {
         var volume = cornerstone.cache.getVolume(volumeId)
         var index = cornerstone.utilities.transformWorldToIndex(volume.imageData, cam.focalPoint)
         
-        // console.log(volume)
-        // console.log(volume.metadata.SeriesInstanceUID)
-        // console.log(viewport)
-        // console.log(cam)
-        // console.log(volumeId)
-        // console.log(index, cam.viewPlaneNormal)
-        // job_id = {id: 1}
-        var job_id = await startJob("cine", case_id, {"index":index, normal: cam.viewPlaneNormal, viewUp: cam.viewUp})
-        // console.log(job_id)
-        return job_id
+        var result = await doJob("cine", case_id, {"index":index, normal: cam.viewPlaneNormal, viewUp: cam.viewUp})
+        var urls = getJobInstances(result, case_id)
+
+        dest_viewport = dest_viewport? dest_viewport : this.viewports[3]
+        // dest_viewport.setProperties( { voiRange: viewport.getProperties().voiRange });
+        await dest_viewport.setStack(urls);
+
+        let [lower, upper] = viewport.getDefaultActor().actor.getProperty().getRGBTransferFunction(0).getRange()
+        console.log("VOI", lower,upper)
+        dest_viewport.setVOI({lower, upper})
+
+        // const actorEntry = viewport.getActor(volumeId);
+        // volumeActor = actorEntry.actor as Types.VolumeActor;
+        // rgbTransferFunction = volumeActor.getProperty().getRGBTransferFunction(0);
+        // viewportsContainingVolumeUID =
+        //   utilities.getVolumeViewportsContainingVolumeId(
+        //     volumeId,
+        //     renderingEngine.id
+        //   );
+        // [lower, upper] = rgbTransferFunction.getRange();
+  
+
+        cornerstone.tools.utilities.stackPrefetch.enable(dest_viewport.element);
         // const response = await fetch()
     }
     
@@ -492,12 +479,25 @@ function getCookie(name) {
 
 const csrftoken = getCookie('csrftoken');
 
+async function doJob(type, case_, params) {
+    const id = await startJob(type, case_, params);
+    console.log(`Do Job`,id);
+    for (let i=0;i<100;i++) {
+        result = await getJob(type,id)
+        if ( result["status"] == "SUCCESS" ) {
+            break
+        }
+        await sleep(100);
+    }
+    return result;
+}
+
 async function startJob(type, case_, params) {
     var body = {
         case: case_,
         parameters: params,
     };
-    var result = (await fetch(`/job/${type}`, {
+    var result = await (await fetch(`/job/${type}`, {
         method: 'POST', 
         credentials: 'same-origin',        
         headers: {
@@ -506,11 +506,11 @@ async function startJob(type, case_, params) {
         },
         body: JSON.stringify(body),
     })).json()
-    return result
+    return result.id
 }
 
-async function getJob(job, info) {
-    var result = await (await fetch(`/job/${job}?${new URLSearchParams(info)}`, {
+async function getJob(job, id) {
+    var result = await (await fetch(`/job/${job}?id=${id}`, { //${new URLSearchParams({id})
         method: 'GET',   credentials: 'same-origin'
     })).json()
     return result
@@ -519,15 +519,7 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function getJobInstances(job, info, case_id) {
-    console.log("getJobInstances", job, info, case_id);
-    for (let i=0;i<100;i++) {
-        result = await getJob(job,info)
-        if ( result["status"] == "SUCCESS" ) {
-            break
-        }
-        await sleep(1000);
-    }
+function getJobInstances(result, case_id) {
     var urls = []
     for ( var instance of result["dicom_sets"][0] ) {
         urls.push("wadouri:" + 
@@ -540,11 +532,6 @@ async function getJobInstances(job, info, case_id) {
         instance.instance_uid +
         '/frames/1')
     };
-    const renderingEngine = window.cornerstone.getRenderingEngine(
-        'gravisRenderEngine'
-    );
-    var viewport = renderingEngine.getViewport("VIEW_CINE");
-    await viewport.setStack(urls);
     return urls;
 }
 
