@@ -94,14 +94,6 @@ class CineJob(WorkJobView):
         viewHoriz = np.cross(normal,viewUp)
         # axis = np.argmax(np.abs(normal))
 
-        # if axis == 0:
-        #     index = job.parameters["index"][2]
-        # elif axis == 1:
-        #     index = job.parameters["index"][0]
-        # elif axis == 2:
-        #     index = job.parameters["index"][1]
-        # index = job.parameters["index"][axis]
-
         # The index is in volume-space, but the normal is in world-space.
         # This tries to transform the normal into volume space...
 
@@ -161,7 +153,7 @@ class CineJob(WorkJobView):
 
         new_study_uid = pydicom.uid.generate_uid()
         new_series_uid = pydicom.uid.generate_uid()
-        for i, series in enumerate(files_by_series[::10]):
+        for i, series in enumerate(files_by_series[::]):
             v = DicomVolume(series)
             # pixel_array is in row-major order
             array = np.asarray([d.pixel_array for d in v]) 

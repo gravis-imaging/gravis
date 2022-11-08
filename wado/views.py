@@ -8,13 +8,6 @@ from django.shortcuts import render
 from django.conf import settings
 
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import authenticate, login, logout
-from django.shortcuts import redirect
-from django.contrib.auth.forms import AuthenticationForm
-from django.contrib import messages
-from django.db import connections
-from django.views.decorators.cache import cache_page
-from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 

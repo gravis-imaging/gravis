@@ -359,50 +359,67 @@ class GraspViewer {
     //     await this.setVolumeByImageIds(imageIds, series_uid, keepCamera);
     // }
 
-    async setVolumeByStudy(study_uid, case_id, keepCamera=true) {
-        console.log("Caching metadata")
+    async setVolumeBySeries(study_uid, series_uid, case_id) {
+        console.log("Caching metadata", study_uid, series_uid)
         var { imageIds, metadata } = await cacheMetadata(
-            { studyInstanceUID: study_uid },
+            { studyInstanceUID: study_uid,
+                seriesInstanceUID: series_uid  },
             '/wado/'+case_id,
         );
-        console.log("Cached metadata")
-        var seriesByTime = {}
-        const studyTime = parseDicomTime(getMeta(metadata[0],STUDY_DATE),getMeta(metadata[0],STUDY_TIME))
-        console.log("Study time", studyTime)
-        for (var k of metadata){
-            const seriesTime = parseDicomTime(getMeta(k,SERIES_DATE),getMeta(k,SERIES_TIME))
-            const time = seriesTime - studyTime
+        await this.setVolumeByImageIds(imageIds, series_uid, true);
+    }
+    async setVolumeByStudy(study_uid, case_id, keepCamera=true) {
+
+        var graspVolumeInfo = await (await fetch(`/api/grasp/data/${case_id}/${study_uid}`, {
+            method: 'GET',   credentials: 'same-origin'
+        })).json()
+
+        var { imageIds, metadata } = await cacheMetadata(
+            { seriesInstanceUID: graspVolumeInfo[0]["series_uid"],
+              studyInstanceUID: study_uid },
+            '/wado/'+case_id,
+        );
+
+        // console.log(result);
+
+        // console.log("Cached metadata")
+        // var seriesByTime = {}
+        // const studyTime = parseDicomTime(getMeta(metadata[0],STUDY_DATE),getMeta(metadata[0],STUDY_TIME))
+        // console.log("Study time", studyTime)
+        // for (var k of metadata){
+        //     const seriesTime = parseDicomTime(getMeta(k,SERIES_DATE),getMeta(k,SERIES_TIME))
+        //     const time = seriesTime - studyTime
     
-            if (seriesByTime[time] == undefined ){
-                seriesByTime[time] = []
-            }
-            seriesByTime[time].push(k)
-        }
-        var volumesList = Object.entries(seriesByTime).map((k)=>{return {time:parseFloat(k[0]), seriesList:k[1]}})
-        volumesList.sort((k,v)=>(k.time-v.time))
+        //     if (seriesByTime[time] == undefined ){
+        //         seriesByTime[time] = []
+        //     }
+        //     seriesByTime[time].push(k)
+        // }
+        // var volumesList = Object.entries(seriesByTime).map((k)=>{return {time:parseFloat(k[0]), seriesList:k[1]}})
+        // volumesList.sort((k,v)=>(k.time-v.time))
     
-        var studyImageIds = []
-        for ( var v of volumesList ) {
-            imageIds = []
-            for (var s of v.seriesList) {
-                imageIds.push(getImageId(s,'/wado/'+case_id))
-            }
-            var series_uid = getMeta(v.seriesList[0],SERIES_INSTANCE_UID);
-            var series_description = getMeta(v.seriesList[0],SERIES_DESCRIPTION);
-            var time = v.time/1000.0;
-            studyImageIds.push({imageIds, series_uid, series_description, time})
-        }
-        console.log(studyImageIds)
+        // var studyImageIds = []
+        // for ( var v of volumesList ) {
+        //     imageIds = []
+        //     for (var s of v.seriesList) {
+        //         imageIds.push(getImageId(s,'/wado/'+case_id))
+        //     }
+        //     var series_uid = getMeta(v.seriesList[0],SERIES_INSTANCE_UID);
+        //     var series_description = getMeta(v.seriesList[0],SERIES_DESCRIPTION);
+        //     var time = v.time/1000.0;
+        //     studyImageIds.push({imageIds, series_uid, series_description, time})
+        // }
+        // console.log(studyImageIds)
         document.getElementById("volume-picker").setAttribute("min",0)
-        document.getElementById("volume-picker").setAttribute("max",studyImageIds.length-1)
+        document.getElementById("volume-picker").setAttribute("max",graspVolumeInfo.length-1)
         document.getElementById("volume-picker").setAttribute("value",0)
-    
-        await this.setVolumeByImageIds(studyImageIds[0].imageIds, studyImageIds[0].series_uid, keepCamera);
-        return studyImageIds
+        
+        await this.setVolumeByImageIds(imageIds, imageIds[0].series_uid, keepCamera);
+        return graspVolumeInfo
     }
-    async setGraspVolume(seriesInfo) {
-        await this.setVolumeByImageIds(seriesInfo.imageIds,seriesInfo.series_uid)
-    }
+    // async setGraspVolume(seriesInfo) {
+    //     await this.setVolumeByImageIds(seriesInfo.imageIds,seriesInfo.series_uid)
+    // }
 
     async renderCineFromViewport(n, case_id) {
         var viewport = this.viewports[n];
