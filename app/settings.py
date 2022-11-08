@@ -44,12 +44,10 @@ CASES_FOLDER = env("CASES_FOLDER")
 ERROR_FOLDER = env("ERROR_FOLDER")
 INCOMING_SCAN_INTERVAL = env("INCOMING_SCAN_INTERVAL")
 
-STATICFILES_DIRS = [
-    DATA_FOLDER,
-]
-
-MEDIA_URL = "/media/"
-
+MEDIA_URL = "media/"
+MEDIA_ROOT = DATA_FOLDER
+STATIC_URL = "static/"
+STATIC_ROOT = "/opt/gravis/staticfiles"
 ALLOWED_HOSTS = ["*"]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -68,10 +66,9 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    # Cannot use staticfiles as we set headers on static responses via middleware
-    # "django.contrib.staticfiles",
-    "django_rq",
     "portal",
+    "django.contrib.staticfiles",
+    "django_rq",
 ]
 
 MIDDLEWARE = [
@@ -150,11 +147,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.0/howto/static-files/
-
-STATIC_URL = "static/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field

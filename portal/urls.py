@@ -5,6 +5,8 @@ from . import views, rqjobs, grasp_endpoints
 from django.conf import settings
 from django.conf.urls.static import static
 
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+
 urlpatterns = [
     path("", views.index, name="index"),
     # path("docker_job/", views.docker_job),
@@ -15,10 +17,10 @@ urlpatterns = [
     path("logout/", views.logout_request, name="logout"),
     path("config/", views.config, name="config"),
     path("user/", views.user, name="user"),
-    path("media/<path:path>", views.serve_file),
+    path("media/<path:path>", views.serve_media),
     path("api/grasp/data/<str:case>/<str:study>", grasp_endpoints.grasp_metadata),
     path("api/grasp/preview/<str:case>/<str:view>/<int:index>", grasp_endpoints.preview_data),
 
     *rqjobs.urls,
-    *static(settings.STATIC_URL, document_root="portal/static/"),
+    *staticfiles_urlpatterns()
 ]
