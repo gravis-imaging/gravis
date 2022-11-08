@@ -22,6 +22,7 @@ env = environ.Env(
     CASES_FOLDER=(str, "/opt/gravis/data/cases"),
     ERROR_FOLDER=(str, "/opt/gravis/data/error"),
     INCOMING_SCAN_INTERVAL=(int, 1),
+    DB_BACKEND=(str, "sqlite"),
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -108,12 +109,27 @@ WSGI_APPLICATION = "app.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
+DB_BACKEND = env("DB_BACKEND")
 
-DATABASES = {
-    "default": {
+BACKENDS = {
+    "postgres":  {
+        "ENGINE": "django.db.backends.postgresql",
+        "HOST": "localhost",
+        "USER": "gravis",
+        "DBNAME": "gravis",
+        "PASSWORD": "gravis",
+        "NAME": "gravis"
+    },
+    "sqlite": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
+        "OPTIONS": {
+            "timeout": 30,
+        }
     }
+}
+DATABASES = {
+    "default": BACKENDS[DB_BACKEND]
 }
 
 
