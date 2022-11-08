@@ -17,6 +17,8 @@ urlpatterns = [
     path("user/", views.user, name="user"),
     path("media/<path:path>", views.serve_file),
     path("api/grasp/data/<str:case>/<str:study>", grasp_endpoints.grasp_metadata),
+    path("api/grasp/preview/<str:case>/<str:view>/<int:index>", grasp_endpoints.preview_data),
+
     *rqjobs.urls,
     *static(settings.STATIC_URL, document_root="portal/static/"),
 ]

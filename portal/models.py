@@ -152,6 +152,9 @@ class DICOMInstance(models.Model):
         DICOMSet, on_delete=models.CASCADE, related_name="instances"
     )
 
+    def __str__(self):
+        return f"Series {self.series_number}; Slice {self.slice_location}; seconds: {self.acquisition_seconds}; acq_number: {self.acquisition_number}"
+
     @classmethod
     def from_dataset(cls, ds: Dataset):
         series_dt = datetime.combine(

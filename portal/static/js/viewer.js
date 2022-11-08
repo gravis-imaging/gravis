@@ -90,16 +90,17 @@ class GraspViewer {
     
     createViewportGrid(n=4) {
         const viewportGrid = document.createElement('div');
-        viewportGrid.style.display = 'flex';
-        viewportGrid.style.flexDirection = 'row';
-        viewportGrid.style.flexWrap = 'wrap';
+        viewportGrid.style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; height:100%";
+        // viewportGrid.style.display = 'flex';
+        // viewportGrid.style.flexDirection = 'row';
+        // viewportGrid.style.flexWrap = 'wrap';
         var elements = [];
-        let size = "500px"
+        let size = "50%"
         for (var i=0; i<n; i++) {
             var el = document.createElement('div');
-            el.style.width = size;
-            el.style.height = size;
-            el.style.flex = "0 0 50%";
+            // el.style.width = size;
+            // el.style.height = size;
+            // el.style.flex = "0 0 50%";
             viewportGrid.appendChild(el);
             elements.push(el)
             resizeObserver.observe(el);
@@ -339,8 +340,8 @@ class GraspViewer {
             //             let k = v.getDefaultActor().actor.getMapper().getInputData().getPointData().getScalars().getRange()
             await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / l))
             // v.setVOI({lower:0, upper:1229+(3497-1229)*(idx/v.getImageIds().length)})
-            console.log("Stack VOI range.", v.voiRange.lower, v.voiRange.upper);
-            console.log("Viewport VOI range.", lower, upper);
+            // console.log("Stack VOI range.", v.voiRange.lower, v.voiRange.upper);
+            // console.log("Viewport VOI range.", lower, upper);
             v.setVOI({lower:0, upper: v._getImageDataMetadata(v.csImage).imagePixelModule.windowCenter*2})
 
         }
@@ -355,6 +356,7 @@ class GraspViewer {
             update = [0, 1, 2]
         }
         await Promise.all(update.map(async (n)=> {
+            console.log(`Preview ${n}`)
             await this.renderCineFromViewport(n,case_id, this.previewViewports[n]) 
             // await this.previewViewports[n].setImageIdIndex(idx)
             // this.previewViewports[n].setVOI()
@@ -377,11 +379,12 @@ class GraspViewer {
         
         
         this.viewports.map((v, n)=> {
-            v.element.addEventListener("wheel", debounce(1000, (evt) => {
+            v.element.addEventListener("wheel", debounce(500, async (evt) => {
                 // console.log(v.getCamera().position)
-                this.updatePreview(case_id, n)
+                await this.updatePreview(case_id, n)
             //    console.log({position: evt.detail.camera.position, focalPoint:evt.detail.camera.focalPoint, viewPlaneNormal: evt.detail.camera.viewPlaneNormal} );
             }));
+            v.element.addEventListener("CORNERSTONE_PRE_STACK_NEW_IMAGE", (evt) => {console.log(evt)})
         });
 
         await this.setVolumeBySeries(study_uid, graspVolumeInfo[0]["series_uid"], case_id),
@@ -402,31 +405,45 @@ class GraspViewer {
         const volumeId = viewport.getActors()[0].uid;
         var volume = cornerstone.cache.getVolume(volumeId)
         var index = cornerstone.utilities.transformWorldToIndex(volume.imageData, cam.focalPoint)
+
+        if (cam.viewPlaneNormal[0] == 1) {
+            var view = "sag"
+            var val = index[2]
+        } else if  (cam.viewPlaneNormal[1] == 1) {
+            var view = "cor"
+            var val = index[0]
+        } else {
+            var view = "ax"
+            var val = index[1]
+        }
+        var info = await (await fetch(`/api/grasp/preview/${case_id}/${view}/${val}`, {
+            method: 'GET',   credentials: 'same-origin'
+        })).json() 
         
-        var result = await doJob("cine", case_id, {"index":index, normal: cam.viewPlaneNormal, viewUp: cam.viewUp})
-        var urls = getJobInstances(result, case_id)
+        var urls = []
+        for ( var instance of info ) {
+            urls.push("wadouri:" + 
+            "/wado/" +case_id+
+            '/studies/' +
+            instance.study_uid +
+            '/series/' +
+            instance.series_uid +
+            '/instances/' +
+            instance.instance_uid +
+            '/frames/1')
+        };
+
+        
+        // var result = await doJob("cine", case_id, {"index":index, normal: cam.viewPlaneNormal, viewUp: cam.viewUp})
+        // var urls = getJobInstances(result, case_id)
 
         dest_viewport = dest_viewport? dest_viewport : this.viewports[3]
-        // dest_viewport.setProperties( { voiRange: viewport.getProperties().voiRange });
-        await dest_viewport.setStack(urls);
-
+        // // dest_viewport.setProperties( { voiRange: viewport.getProperties().voiRange });
+        await dest_viewport.setStack(urls,dest_viewport.currentImageIdIndex);
+        console.log(cornerstone.requestPoolManager.getRequestPool().interaction)
         let [lower, upper] = viewport.getDefaultActor().actor.getProperty().getRGBTransferFunction(0).getRange()
-        console.log("VOI", lower,upper)
         dest_viewport.setVOI({lower, upper})
-
-        // const actorEntry = viewport.getActor(volumeId);
-        // volumeActor = actorEntry.actor as Types.VolumeActor;
-        // rgbTransferFunction = volumeActor.getProperty().getRGBTransferFunction(0);
-        // viewportsContainingVolumeUID =
-        //   utilities.getVolumeViewportsContainingVolumeId(
-        //     volumeId,
-        //     renderingEngine.id
-        //   );
-        // [lower, upper] = rgbTransferFunction.getRange();
-  
-
-        cornerstone.tools.utilities.stackPrefetch.enable(dest_viewport.element);
-        // const response = await fetch()
+        // cornerstone.tools.utilities.stackPrefetch.enable(dest_viewport.element);
     }
     
 }
