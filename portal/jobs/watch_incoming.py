@@ -339,6 +339,7 @@ def trigger_queued_cases():
 
 
 def watch():
+    logging.info("Incoming watcher booted.")
     while True:
         sleep(settings.INCOMING_SCAN_INTERVAL)
         try:
