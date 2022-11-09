@@ -150,7 +150,7 @@ class GraspViewer {
         this.viewports = viewportIds.map((c)=>this.renderingEngine.getViewport(c))
         this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c))
         // renderingEngine.enableElement(viewportInput);
-        cornerstone.tools.synchronizers.createCameraPositionSynchronizer("SYNC_CAMERAS");
+        cornerstone.tools.synchronizers.createVOISynchronizer("SYNC_CAMERAS");
     
         this.createTools()
         this.renderingEngine.renderViewports([...this.viewportIds, ...this.previewViewports]);
@@ -178,7 +178,7 @@ class GraspViewer {
         // Add tools to Cornerstone3D
         // cornerstoneTools.addTool(PanTool);
         // cornerstoneTools.addTool(WindowLevelTool);
-        const tools = [CrosshairsTool, EllipticalROITool, StackScrollMouseWheelTool, VolumeRotateMouseWheelTool]
+        const tools = [CrosshairsTool, EllipticalROITool, StackScrollMouseWheelTool, VolumeRotateMouseWheelTool, WindowLevelTool, PanTool]
         tools.map(cornerstoneTools.addTool)
     
         // Define a tool group, which defines how mouse events map to tool commands for
@@ -216,7 +216,7 @@ class GraspViewer {
         //     // filterActorUIDsToSetSlabThickness: [viewportId(4)]
         //   });
         
-        // toolGroup.addTool(WindowLevelTool.toolName, { volumeId } );
+        toolGroupA.addTool(WindowLevelTool.toolName );
         // toolGroup.addTool(PanTool.toolName,  { volumeId } );
         // toolGroup.addTool(ZoomTool.toolName,  { volumeId } );
         toolGroupB.addTool(StackScrollMouseWheelTool.toolName);
@@ -263,6 +263,12 @@ class GraspViewer {
         for (var viewport of this.viewports.slice(0,3) ) {
             cams.push({viewport, cam:viewport.getCamera(), thickness:viewport.getSlabThickness()})
         }
+        let voi = null
+        try {
+            voi = this.viewports[0].getDefaultActor().actor.getProperty().getRGBTransferFunction(0).getRange()
+        } catch {}
+        // dest_viewport.setVOI({lower, upper})
+
         console.log("Caching volume...")
         this.volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, {
             imageIds,
@@ -284,6 +290,9 @@ class GraspViewer {
                     c.viewport.setCamera( c.cam )
                 }
             }
+            if (voi) {
+                this.viewports[0].setProperties( { voiRange: {lower:voi[0], upper:voi[1]}})
+            }
         }
         // setVolumesForViewports(renderingEngine, [{ volumeId }], [viewportId]);
         // viewport.render();
@@ -292,13 +301,16 @@ class GraspViewer {
             // toolGroup.setToolActive(window.cornerstone.tools.CrosshairsTool.toolName, {
             //     bindings: [{ mouseButton: window.cornerstone.tools.Enums.MouseBindings.Primary }],
             // });
-            toolGroup.setToolActive(cornerstone.tools.EllipticalROITool.toolName, {
-                bindings: [
-                {
-                    mouseButton: cornerstone.tools.Enums.MouseBindings.Primary, // Left Click
-                },
-                ],
+            toolGroup.setToolActive(window.cornerstone.tools.WindowLevelTool.toolName, {
+                bindings: [{ mouseButton: window.cornerstone.tools.Enums.MouseBindings.Primary }],
             });
+            // toolGroup.setToolActive(cornerstone.tools.EllipticalROITool.toolName, {
+            //     bindings: [
+            //     {
+            //         mouseButton: cornerstone.tools.Enums.MouseBindings.Primary, // Left Click
+            //     },
+            //     ],
+            // });
             toolGroup.setToolActive(window.cornerstone.tools.StackScrollMouseWheelTool.toolName);
 
             const toolGroupB = window.cornerstone.tools.ToolGroupManager.getToolGroup(`STACK_TOOL_GROUP_ID_B`);
@@ -306,9 +318,8 @@ class GraspViewer {
 
             this.toolAlreadyActive = true;
 
-            // const synchronizer =
-            // cornerstone.tools.SynchronizerManager.getSynchronizer("SYNC_CAMERAS");
-            // synchronizer.add({ renderingEngineId: "gravisRenderEngine", viewportId:"VIEW_SAG" });
+            const synchronizer = cornerstone.tools.SynchronizerManager.getSynchronizer("SYNC_CAMERAS");
+            [...this.viewportIds].map(id => synchronizer.add({ renderingEngineId: "gravisRenderEngine", viewportId:id }))
             // synchronizer.add({ renderingEngineId: "gravisRenderEngine", viewportId:"VIEW_MIP" });
 
         }
@@ -339,6 +350,7 @@ class GraspViewer {
             for (var v of this.previewViewports) {
                 // let voi = {lower: 0, upper: 1229+idx}
                 //             let k = v.getDefaultActor().actor.getMapper().getInputData().getPointData().getScalars().getRange()
+                v.setVOI({lower, upper})
                 await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / l))
                 // v.setVOI({lower:0, upper:1229+(3497-1229)*(idx/v.getImageIds().length)})
                 // console.log("Stack VOI range.", v.voiRange.lower, v.voiRange.upper);
@@ -361,7 +373,10 @@ class GraspViewer {
         }
         await Promise.all(update.map(async (n)=> {
             console.log(`Preview ${n}`)
+            let [lower, upper] = this.viewports[0].getDefaultActor().actor.getProperty().getRGBTransferFunction(0).getRange()
+            this.previewViewports[n].setVOI({lower, upper})
             await this.renderCineFromViewport(n,case_id, this.previewViewports[n]) 
+            this.previewViewports[n].setVOI({lower, upper})
             // await this.previewViewports[n].setImageIdIndex(idx)
             // this.previewViewports[n].setVOI()
         }))
@@ -450,11 +465,12 @@ class GraspViewer {
         // var urls = getJobInstances(result, case_id)
 
         dest_viewport = dest_viewport? dest_viewport : this.viewports[3]
-        // // dest_viewport.setProperties( { voiRange: viewport.getProperties().voiRange });
-        await dest_viewport.setStack(urls,dest_viewport.currentImageIdIndex);
-        console.log(cornerstone.requestPoolManager.getRequestPool().interaction)
+        // dest_viewport.setProperties( { voiRange: viewport.getProperties().voiRange });
         let [lower, upper] = viewport.getDefaultActor().actor.getProperty().getRGBTransferFunction(0).getRange()
         dest_viewport.setVOI({lower, upper})
+        await dest_viewport.setStack(urls,dest_viewport.currentImageIdIndex);
+        // console.log(cornerstone.requestPoolManager.getRequestPool().interaction)
+
         // cornerstone.tools.utilities.stackPrefetch.enable(dest_viewport.element);
     }
     

@@ -57,7 +57,7 @@ on htmx:afterRequest
   </div>
 
   <div x-cloak id="grasp-view-outer" class="grid-container h-100" style="max-width: calc(100vh - 6rem); margin-right: auto; margin-left:auto;" >
-    <div x-show="loading" style="z-index:1;" class="pointer-events-none grid-fill">
+    <div x-show="loading" style="z-index:10;" class="pointer-events-none grid-fill">
       <div style="display: flex;justify-content: center;align-items: center; height:100%">Loading...</div>
     </div>
     <div x-init="await $nextTick(); viewer = await new GraspViewer($refs.viewer_main, $refs.viewer_preview ); window.viewer = viewer" class="grid-fill grid-container h-100">
