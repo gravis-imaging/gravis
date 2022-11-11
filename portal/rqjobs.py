@@ -58,7 +58,7 @@ class WorkJobView(View):
         existing_q = ProcessingJob.objects.filter(dicom_set=case.dicom_sets.get(origin="Incoming"),
                 case = case,
                 parameters=json_in["parameters"],
-                status = "SUCCESS")
+                status = "Success")
         print(existing_q.query)
         existing = existing_q.first()
         if existing:
@@ -93,7 +93,7 @@ class WorkJobView(View):
             d.processing_job = job
             d.save()
 
-        job.status = "SUCCESS"
+        job.status = "Success"
         job.save()
 
 

@@ -18,8 +18,9 @@ urlpatterns = [
     path("config/", views.config, name="config"),
     path("user/", views.user, name="user"),
     path("media/<path:path>", views.serve_media),
-    path("api/grasp/data/<str:case>/<str:study>", grasp_endpoints.grasp_metadata),
-    path("api/grasp/preview/<str:case>/<str:view>/<int:index>", grasp_endpoints.preview_data),
+    path("api/case/<str:case>/dicom_set/<str:source_set>/processed_results/<path:case_type>", grasp_endpoints.processed_results_urls),    
+    path("api/case/<str:case>/dicom_set/<str:dicom_set>/metadata", grasp_endpoints.case_metadata),
+    path("api/case/<str:case>/dicom_set/<str:dicom_set>/study/<str:study>/metadata", grasp_endpoints.case_metadata),
 
     *rqjobs.urls,
     *staticfiles_urlpatterns()

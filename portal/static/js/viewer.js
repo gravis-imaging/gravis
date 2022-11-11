@@ -319,7 +319,7 @@ class GraspViewer {
             this.toolAlreadyActive = true;
 
             const synchronizer = cornerstone.tools.SynchronizerManager.getSynchronizer("SYNC_CAMERAS");
-            [...this.viewportIds].map(id => synchronizer.add({ renderingEngineId: "gravisRenderEngine", viewportId:id }))
+            [...this.viewportIds.slice(0,3)].map(id => synchronizer.add({ renderingEngineId: "gravisRenderEngine", viewportId:id }))
             // synchronizer.add({ renderingEngineId: "gravisRenderEngine", viewportId:"VIEW_MIP" });
 
         }
@@ -333,13 +333,14 @@ class GraspViewer {
         // return loading_finished
     }
 
-    async setVolumeBySeries(study_uid, series_uid, case_id) {
-        console.log("Set volume by series", study_uid, series_uid)
+    async setVolumeBySeries(series_uid) {
+        console.log("Set volume by series", this.study_uid, series_uid)
         var { imageIds, metadata } = await cacheMetadata(
-            { studyInstanceUID: study_uid,
+            { studyInstanceUID: this.study_uid,
                 seriesInstanceUID: series_uid  },
-            '/wado/'+case_id,
+            '/wado/'+this.case_id,
         );
+        // console.log("Image IDs",imageIds)
         await this.setVolumeByImageIds(imageIds, series_uid, true);
     }
     async setPreview(idx, l) {
@@ -365,7 +366,7 @@ class GraspViewer {
         
     }
 
-    async updatePreview(case_id, n=null, idx=0) {
+    async updatePreview(n=null, idx=0) {
         console.log("Updating previews...")
         let update = [n]
         if (n==null){
@@ -375,20 +376,24 @@ class GraspViewer {
             console.log(`Preview ${n}`)
             let [lower, upper] = this.viewports[0].getDefaultActor().actor.getProperty().getRGBTransferFunction(0).getRange()
             this.previewViewports[n].setVOI({lower, upper})
-            await this.renderCineFromViewport(n,case_id, this.previewViewports[n]) 
+            await this.renderCineFromViewport(n, this.previewViewports[n]) 
             this.previewViewports[n].setVOI({lower, upper})
             // await this.previewViewports[n].setImageIdIndex(idx)
             // this.previewViewports[n].setVOI()
         }))
     }
-    async switchSeries(study_uid, series_uid, case_id) {
-        await this.setVolumeBySeries(study_uid, series_uid, case_id);
+    async switchSeries(series_uid, case_id) {
+        await this.setVolumeBySeries(series_uid);
         await new Promise((resolve) => {
             this.volume.load( (e) => { console.log("Volume finished loading",e); resolve() });
         });
     }
-    async switchStudy(study_uid, case_id, keepCamera=true) {
-        var graspVolumeInfo = await (await fetch(`/api/grasp/data/${case_id}/${study_uid}`, {
+    async switchStudy(info, case_id, keepCamera=true) {
+        var [study_uid, dicom_set] = info;
+        this.study_uid = study_uid;
+        this.dicom_set = dicom_set;
+        this.case_id = case_id
+        var graspVolumeInfo = await (await fetch(`/api/case/${case_id}/dicom_set/${dicom_set}/study/${study_uid}/metadata`, {
             method: 'GET',   credentials: 'same-origin'
         })).json()
         document.getElementById("volume-picker").setAttribute("min",0)
@@ -397,11 +402,11 @@ class GraspViewer {
 
         
         
-        this.viewports.map((v, n)=> {
+        this.viewports.slice(0,3).map((v, n)=> {
             v.element.addEventListener("wheel", debounce(250, async (evt) => {
                 // console.log(v.getCamera().position)
                 try {
-                    await this.updatePreview(case_id, n)
+                    await this.updatePreview(n)
                 } catch (e) {
                     console.error(e);
                 }
@@ -410,10 +415,10 @@ class GraspViewer {
             v.element.addEventListener("CORNERSTONE_PRE_STACK_NEW_IMAGE", (evt) => {console.log(evt)})
         });
 
-        await this.setVolumeBySeries(study_uid, graspVolumeInfo[0]["series_uid"], case_id),
+        await this.setVolumeBySeries(graspVolumeInfo[0]["series_uid"]),
         this.volume.load(()=>{ console.log("Volume loaded")})
         try {
-            await this.updatePreview(case_id)
+            await this.updatePreview()
         } catch (e) {
             console.error(e);
         }
@@ -425,7 +430,7 @@ class GraspViewer {
     //     await this.setVolumeByImageIds(seriesInfo.imageIds,seriesInfo.series_uid)
     // }
 
-    async renderCineFromViewport(n, case_id, dest_viewport=null) {
+    async renderCineFromViewport(n, dest_viewport=null) {
         var viewport = this.viewports[n];
         var cam = viewport.getCamera()
     
@@ -434,20 +439,21 @@ class GraspViewer {
         var index = cornerstone.utilities.transformWorldToIndex(volume.imageData, cam.focalPoint)
 
         if (cam.viewPlaneNormal[0] == 1) {
-            var view = "sag"
+            var view = "SAG"
             var val = index[2]
         } else if  (cam.viewPlaneNormal[1] == 1) {
-            var view = "cor"
+            var view = "COR"
             var val = index[0]
         } else {
-            var view = "ax"
+            var view = "AX"
             var val = index[1]
         }
-        var info = await (await fetch(`/api/grasp/preview/${case_id}/${view}/${val}`, {
+        var info = await (
+                await fetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/processed_results/CINE/${view}?series_number=${val}`, {
             method: 'GET',   credentials: 'same-origin'
         })).json() 
         console.log("Preview info:", info)
-        var urls = info
+        var urls = info.urls
         // for ( var instance of info ) {
         //     urls.push("wadouri:" + 
         //     "/wado/" +case_id+

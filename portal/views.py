@@ -96,14 +96,10 @@ def config(request):
 
 @login_required
 def viewer(request, case):
-    case = Case.objects.get(id=case)
-    dicom_set = case.dicom_sets.get(origin="Incoming")
-    instances = dicom_set.instances.all()
+    instances = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set__type=("ORI")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")
 
     context = {
-        # "series": set([(k.study_uid, k.series_uid) for k in instances]),
-        "studies": set([(k.study_uid,) for k in instances]),
-        "case": case,
+        "studies": [(k.study_uid,k.dicom_set.id, k.dicom_set.type) for k in instances],
+        "case": instances[0].dicom_set.case,
     }
-    # logging.info(context["series"])
     return render(request, "viewer.html", context)
