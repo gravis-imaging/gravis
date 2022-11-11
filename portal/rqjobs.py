@@ -4,7 +4,6 @@ from pathlib import Path
 import time
 from typing import Any
 import uuid
-from dcmannotate import DicomVolume
 from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import render
 from django.views import View
@@ -56,7 +55,7 @@ class WorkJobView(View):
         print(json_in["parameters"])
 
         case = Case.objects.get(id=json_in["case"])
-        existing_q = ProcessingJob.objects.filter(dicom_set=case.dicom_sets.get(type="Incoming"),
+        existing_q = ProcessingJob.objects.filter(dicom_set=case.dicom_sets.get(origin="Incoming"),
                 case = case,
                 parameters=json_in["parameters"],
                 status = "SUCCESS")
@@ -69,7 +68,7 @@ class WorkJobView(View):
         job = ProcessingJob(
             status="CREATED", 
             category=self.type, 
-            dicom_set=case.dicom_sets.get(type="Incoming"),
+            dicom_set=case.dicom_sets.get(origin="Incoming"),
             case = case,
             parameters=json_in["parameters"])
 
@@ -79,7 +78,7 @@ class WorkJobView(View):
 
     @classmethod
     def do_job(cls, job: ProcessingJob):
-        set = DICOMSet(case=job.case, processing_result = job)
+        set = DICOMSet(case=job.case, processing_job = job)
         set.save()
         return ({}, [set])
 
@@ -91,7 +90,7 @@ class WorkJobView(View):
         # job.result.save()
 
         for d in dicom_sets:
-            d.processing_result = job
+            d.processing_job = job
             d.save()
 
         job.status = "SUCCESS"
@@ -161,7 +160,7 @@ class CineJob(WorkJobView):
         new_set = DICOMSet(set_location = Path(job.case.case_location) / "processed" / str(uuid.uuid4()),
             type = "CINE",
             case = job.case,
-            processing_result = job)
+            processing_job = job)
         new_set.save()
         output_folder = Path(new_set.set_location)
         output_folder.mkdir()
@@ -287,7 +286,7 @@ class TestJob(WorkJobView):
             v.dicom_set = DICOMSet(set_location = location,
                 type = f"CINE/{v.name}",
                 case = job.case,
-                processing_result = job)
+                processing_job = job)
             v.dicom_set.save()
             # output_folder = Path(new_set.set_location)
 

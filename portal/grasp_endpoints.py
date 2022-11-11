@@ -24,7 +24,7 @@ def grasp_metadata(request, case, study):
 
 @login_required
 def preview_data(request, case, view, index):
-    instance = DICOMInstance.objects.get(slice_location=index, dicom_set__case=case, dicom_set__type=f"CINE/{view.upper()}",dicom_set__processing_job__status="SUCCESS",dicom_set__processing_job__dicom_set__type="Incoming")
+    instance = DICOMInstance.objects.get(slice_location=index, dicom_set__case=case, dicom_set__type=f"CINE/{view.upper()}",dicom_set__processing_job__status="SUCCESS",dicom_set__processing_job__dicom_set__origin="Incoming")
     loc = (Path(instance.dicom_set.set_location) / instance.instance_location).relative_to("/opt/gravis/data")
     result = ["wadouri:"+str(Path("/media") / loc) + f"?frame={n}" for n in range(instance.num_frames or 1)]
     return JsonResponse(result, safe=False)

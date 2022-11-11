@@ -58,6 +58,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8001",
     "http://127.0.0.1:9090",
     "https://127.0.0.1:4443",
+    "http://rmrlpdcdap001.nyumc.org:8000",
+    "https://rmrlpdcdap001.nyumc.org:4443"
 ]
 # Application definition
 
@@ -117,8 +119,6 @@ BACKENDS = {
         "HOST": "localhost",
         "USER": "gravis",
         "DBNAME": "gravis",
-        "PASSWORD": "gravis",
-        "NAME": "gravis"
     },
     "sqlite": {
         "ENGINE": "django.db.backends.sqlite3",

@@ -97,7 +97,7 @@ def config(request):
 @login_required
 def viewer(request, case):
     case = Case.objects.get(id=case)
-    dicom_set = case.dicom_sets.get(type="Incoming")
+    dicom_set = case.dicom_sets.get(origin="Incoming")
     instances = dicom_set.instances.all()
 
     context = {
