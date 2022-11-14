@@ -25,7 +25,7 @@ from django.views import static
 @login_required
 def retrieve_instance(request, study, series, instance, case, frame=1):
     if frame != 1:
-        return HttpResponse(status_code=500)
+        return HttpResponse(status=500)
     instance = DICOMInstance.objects.get(
         study_uid=study, series_uid=series, instance_uid=instance, dicom_set__case=case
     )

@@ -90,6 +90,9 @@ class ProcessingJob(models.Model):
     docker_image = models.CharField(max_length=100, blank=True, null=True)
     rq_id = models.CharField(max_length=100, blank=True, null=True)
 
+    def __str__(self):
+        return "; ".join([f"{x}: {getattr(self,x)}" for x in "category parameters status error_description".split()])
+
     class Meta:
         db_table = "gravis_processing_job"
         # constraints = [
@@ -172,7 +175,7 @@ class DICOMInstance(models.Model):
             series_uid=ds.SeriesInstanceUID,
             instance_uid=ds.SOPInstanceUID,
             acquisition_number=ds.get("AcquisitionNumber"),
-            series_number=ds.get("InstanceNumber"),
+            series_number=ds.get("SeriesNumber"),
             slice_location=ds.get("SliceLocation"),
             num_frames=ds.get("NumberOfFrames"),
             acquisition_seconds = delta.total_seconds(),

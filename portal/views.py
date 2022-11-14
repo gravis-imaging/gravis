@@ -24,7 +24,7 @@ def serve_media(request, path):
             # We're not running behind nginx so we are going to just serve the file ourselves.
             return serve(request, path, settings.MEDIA_ROOT)
         else:
-            return HttpResponse(status_code=500)
+            return HttpResponse(status=500)
 
     # Use nginx's implementation of "x-sendfile" to tell nginx to serve the actual file.
     # see: https://www.nginx.com/resources/wiki/start/topics/examples/x-accel/
