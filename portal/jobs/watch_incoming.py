@@ -253,6 +253,7 @@ def scan_incoming_folder():
                     # docker_image="gravis-processing",
                     # dicom_set=dicom_set,
                     category="CopyDICOMSet",
+                    parameters=dict(incoming_case=str(incoming_case)),
                     # case=case,
                     status="Pending",
                 )
