@@ -49,7 +49,9 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = DATA_FOLDER
 STATIC_URL = "static/"
 STATIC_ROOT = "/opt/gravis/staticfiles"
-ALLOWED_HOSTS = ["*"]
+
+ALLOWED_HOSTS = ["gravis"]
+USE_X_FORWARDED_HOST = True
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:9090",
@@ -58,8 +60,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8001",
     "http://127.0.0.1:9090",
     "https://127.0.0.1:4443",
-    "http://rmrlpdcdap001.nyumc.org:8000",
-    "https://rmrlpdcdap001.nyumc.org:4443"
+    "https://rmrlpdcdap001.nyumc.org"
 ]
 # Application definition
 
