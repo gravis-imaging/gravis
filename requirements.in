@@ -8,3 +8,5 @@ docker ~= 6.0.0
 pytest-django ~= 4.5.2
 loguru ~= 0.6.0 
 psycopg2-binary ~= 2.9.5
+fakeredis
+pyfakefs
