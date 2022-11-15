@@ -104,6 +104,24 @@ select,.select-wrapper::after {
     transition: none;
 }
 
+.browserbuttons button:disabled
+{
+    color: #e5dcdc;
+    background-color: transparent;
+}
+
+.browserbuttons button:focus
+{
+    color: #1266f1;
+    background-color: transparent;
+}
+
+/* 
+.browserbuttons button:active
+{
+    border: 2px solid yellow;
+} */
+
 .browserbuttons .btn-group, .browserbuttons .btn-group:hover {
     box-shadow: none;
 }
@@ -115,3 +133,12 @@ select,.select-wrapper::after {
 #casetable.table>:not(caption) > * > * {
     padding: 0.7rem 1.4rem !important;
 }
+
+.modal {
+    display: none;
+}
+
+.modal.is-open {
+    display: block;
+}
+  

@@ -40,16 +40,16 @@ on htmx:afterRequest
 </div>
 </div> {% endcomment %}
 
-
 <div x-data="{ viewer: null, current_study: null, current_time: 0, index: 0, loading: false, job_loading: null, case_id: {{case.id}} }">
   <div class="w-25">
     <div class="">
       <div class="select-wrapper">
-        <select autocomplete="off" class="form-control" name="series" id="series" value="" x-bind:disabled="viewer == null"
-          @change="loading=true; await $nextTick(); current_study = await viewer.setVolumeByStudy($event.target.value, case_id); current_time=current_study[0].time; loading=false;">
+        <!-- <select autocomplete="off" class="form-control" name="studies" id="studies" value="" x-bind:disabled="viewer == null" -->
+        <select id="studies" name="studies" autocomplete="off" class="form-control" value="" x-bind:disabled="viewer == null"        
+          @change="loading=true; await $nextTick(); current_study = await viewer.setVolumeByStudy($event.target.value, case_id); current_time=current_study[0].time; loading=false;"> 
           <option value="" selected disabled hidden>Select study...</option>
           {% for i in studies %}
-              <option value="{{i.0}}">{{ i.0 }}</option>
+              <option value="{{i}}">{{ i }}</option>
           {% endfor %}
         </select>
         <div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 0px;"></div><div class="form-notch-trailing"></div></div>

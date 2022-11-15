@@ -11,6 +11,7 @@ urlpatterns = [
     # path("work_test/", views.work_queue_test),
     # path("work_status/<int:id>/", views.work_status),
     path("viewer/<str:case>", views.viewer, name="viewer"),
+    path("remove/<int:case_id>", views.remove, name="remove"),
     path("login/", views.login_request, name="login"),
     path("logout/", views.logout_request, name="logout"),
     path("config/", views.config, name="config"),

@@ -2,6 +2,7 @@
 from unittest.mock import NonCallableMagicMock
 from loguru import logger
 from pathlib import Path
+import shutil
 from time import sleep
 import os, json
 from typing import Tuple
@@ -47,16 +48,18 @@ def load_json(incoming_case, new_folder, error_folder) -> Tuple[bool, Case]:
             exam_time=payload.get("exam_time", "1900-01-01 00:00"),
             receive_time=payload.get("receive_time", "1900-01-01 00:00"),
             twix_id=payload.get("twix_id", ""),
+            num_spokes=payload.get("num_spokes", ""),
             case_location=case_location,
             settings=payload.get("settings", ""),
             incoming_payload=payload,
             status=case_status,
         )  # Case(data_location="./data/cases)[UID]")
         new_case.save()
-        study_keys = ["patient_name", "mrn", "acc", "case_type", "exam_time", "twix_id"]
+        study_keys = ["patient_name", "mrn", "acc", "case_type", "exam_time", "twix_id", "num_spokes"]
         # TODO check that values for these fields are valid. If not set status to ERROR/.
         for key in study_keys:
             if key not in payload:
+                logger.exception(f"Field {key} is missing from study.json file.")
                 return False, new_case
     except Exception as e:
         logger.exception(f"Cannot create case for {error_folder}. Exception: {e}")
@@ -166,7 +169,7 @@ def process_folder(job_id: int, incoming_case: Path):
         return False
 
     register_dicom_set_success, error = dicom_set_utils.register(
-        str(input_dest_folder), new_case, "Incoming", "ORI"
+        str(input_dest_folder), new_case, "Incoming", job_id #"ORI"
     )
     if not register_dicom_set_success:
         process_error_folder(new_case, incoming_case, error_folder, lock)
@@ -222,7 +225,6 @@ def process_folder(job_id: int, incoming_case: Path):
 def scan_incoming_folder():
     # TODO: check if it exists, add more checks in general
     f = GravisNames.COMPLETE
-
     try:
         incoming = Path(settings.INCOMING_FOLDER)
         if incoming.exists():
@@ -235,7 +237,6 @@ def scan_incoming_folder():
             logger.exception(f"Incoming folder {incoming} does not exist.")
 
         for incoming_case in list(folder_paths):
-
             try:
                 # Delete .complete so the folder will not be included in another job
                 complete_file_path = Path(incoming_case) / f
@@ -337,6 +338,19 @@ def trigger_queued_cases():
                     f"Exception enqueueing a new processing job for {dicom_set.set_location} "
                 )
 
+def delete_cases():
+    try:
+        cases = Case.objects.filter(status="DEL")
+        cases_locations_to_delete = []
+        for case in cases:
+            print(f"Marked for deletion {case.id} {case.case_location}")
+            cases_locations_to_delete.append(case.case_location)
+        cases.delete()
+        for case_location in cases_locations_to_delete:
+            shutil.rmtree(case_location)
+        
+    except Exception as e:
+        print(e)
 
 def watch():
     while True:
@@ -350,5 +364,10 @@ def watch():
             trigger_queued_cases()
         except:
             logger.error("Error in queuing.")
+
+        try:
+            delete_cases()
+        except:
+            logger.error("Error in deleting.")
 
     # get_queue("default").enqueue_in(timedelta(seconds=2), watch)

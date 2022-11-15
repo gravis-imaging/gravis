@@ -71,11 +71,16 @@ def index(request):
                 "patient_name": object.patient_name,
                 "mrn": object.mrn,
                 "acc": object.acc,
+                "num_spokes": object.num_spokes,
                 "case_type": object.case_type,
                 "exam_time": object.exam_time.strftime("%Y-%m-%d %H:%M"),
                 "receive_time": object.receive_time.strftime("%Y-%m-%d %H:%M"),
                 "status": Case.CaseStatus(object.status).name.title(),
-                # "reader": str(object.reader),
+                "twix_id": object.twix_id,
+                "case_location": object.case_location,
+                "settings": object.settings,
+                "last_read_by_id": object.last_read_by.username if object.last_read_by_id else "",
+                "viewed_by_id": object.viewed_by.username if object.viewed_by_id else "",
             }
         )
 
@@ -97,14 +102,28 @@ def config(request):
 
 @login_required
 def viewer(request, case):
+    print("CASE: ", case)
     case = Case.objects.get(id=case)
-    dicom_set = case.dicom_sets.get(type="Incoming")
+    dicom_set = case.dicom_sets.get(origin="Incoming")
     instances = dicom_set.instances.all()
-
+    print(request.user)
+    case.viewed_by_id = request.user
+    case.last_read_by = request.user
+    case.status = Case.CaseStatus.VIEWING
+    case.save()
     context = {
         # "series": set([(k.study_uid, k.series_uid) for k in instances]),
-        "studies": set([(k.study_uid,) for k in instances]),
+        "studies": list(set([k.study_uid for k in instances])),
         "case": case,
     }
     # logging.info(context["series"])
     return render(request, "viewer.html", context)
+
+
+@login_required
+def remove(request, case_id):
+    print("CASE to delete: ", case_id)
+    case = Case.objects.get(id=case_id)
+    case.status = Case.CaseStatus.DELETE
+    case.save()
+    return HttpResponse(f"<html><body><span>Remove {case_id}</span></body></html>")

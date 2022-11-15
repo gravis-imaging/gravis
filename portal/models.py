@@ -31,6 +31,7 @@ class Case(models.Model):
             "ERR",
             "Error",
         )  # initial db registration, copying to input, json check failure
+        DELETE = "DEL", "Delete"
 
     patient_name = models.CharField(max_length=100, blank=True, null=True)
     mrn = models.CharField(max_length=100, blank=True, null=True)
@@ -43,7 +44,7 @@ class Case(models.Model):
     status = models.CharField(
         max_length=4, choices=CaseStatus.choices, default=CaseStatus.RECEIVED
     )
-    num_spokes = models.CharField(max_length=1000, default="", blank=True, null=True)
+    num_spokes = models.CharField(max_length=1000, default="", blank=False, null=False)
     twix_id = models.CharField(max_length=1000, blank=True, null=True)
     case_location = models.CharField(max_length=10000, blank=False, null=False)
     settings = models.JSONField(null=True)  # use presets, smoothing, num_angles etc

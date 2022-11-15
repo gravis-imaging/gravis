@@ -125,18 +125,22 @@ def do_docker_job(job_id):
         # TODO figure out sub/mip from dicom tags
         job.complete = True
         try:
-            register_dicom_set_success, error = dicom_set_utils.register(
-                output_folder + "/sub", job.case, "Processed", "SUB", job_id
-            )
-            if not register_dicom_set_success:
-                process_job_error(job_id, error)
-                return False
-            register_dicom_set_success, error = dicom_set_utils.register(
-                output_folder + "/mip", job.case, "Processed", "MIP", job_id
-            )
-            if not register_dicom_set_success:
-                process_job_error(job_id, error)
-                return False
+            subfolders = [ f.path for f in os.scandir(output_folder) if f.is_dir() ]
+            for folder in subfolders:
+                register_dicom_set_success, error = dicom_set_utils.register(
+                    folder, job.case, "Processed", job_id
+                )
+                if not register_dicom_set_success:
+                    process_job_error(job_id, error)
+                    return False
+
+
+            # register_dicom_set_success, error = dicom_set_utils.register(
+            #     output_folder + "/mip", job.case, "Processed", "MIP", job_id
+            # )
+            # if not register_dicom_set_success:
+            #     process_job_error(job_id, error)
+            #     return False
             job.status = "Success"
             # job.dicom_set = dicom_set
             job.case.status = Case.CaseStatus.READY
