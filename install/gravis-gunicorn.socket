@@ -1,0 +1,8 @@
+[Unit]
+Description=GRAVIS gunicorn socket
+
+[Socket]
+ListenStream=/run/gravis-gunicorn.sock
+
+[Install]
+WantedBy=sockets.target

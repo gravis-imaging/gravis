@@ -22,6 +22,7 @@ env = environ.Env(
     CASES_FOLDER=(str, "/opt/gravis/data/cases"),
     ERROR_FOLDER=(str, "/opt/gravis/data/error"),
     INCOMING_SCAN_INTERVAL=(int, 1),
+    DB_BACKEND=(str, "sqlite"),
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -44,19 +45,22 @@ CASES_FOLDER = env("CASES_FOLDER")
 ERROR_FOLDER = env("ERROR_FOLDER")
 INCOMING_SCAN_INTERVAL = env("INCOMING_SCAN_INTERVAL")
 
-STATICFILES_DIRS = [
-    DATA_FOLDER,
-]
+MEDIA_URL = "media/"
+MEDIA_ROOT = DATA_FOLDER
+STATIC_URL = "static/"
+STATIC_ROOT = "/opt/gravis/staticfiles"
 
-MEDIA_URL = "/media/"
-
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["gravis"]
+USE_X_FORWARDED_HOST = True
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:9090",
     "http://localhost:8001",
+    "https://localhost:4443",
     "http://127.0.0.1:8001",
     "http://127.0.0.1:9090",
+    "https://127.0.0.1:4443",
+    "https://rmrlpdcdap001.nyumc.org"
 ]
 # Application definition
 
@@ -66,10 +70,9 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    # Cannot use staticfiles as we set headers on static responses via middleware
-    # "django.contrib.staticfiles",
-    "django_rq",
     "portal",
+    "django.contrib.staticfiles",
+    "django_rq",
 ]
 
 MIDDLEWARE = [
@@ -109,12 +112,25 @@ WSGI_APPLICATION = "app.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
+DB_BACKEND = env("DB_BACKEND")
 
-DATABASES = {
-    "default": {
+BACKENDS = {
+    "postgres":  {
+        "ENGINE": "django.db.backends.postgresql",
+        "USER": "gravis",
+        "DBNAME": "gravis",
+        "NAME": "gravis"
+    },
+    "sqlite": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
+        "OPTIONS": {
+            "timeout": 30,
+        }
     }
+}
+DATABASES = {
+    "default": BACKENDS[DB_BACKEND]
 }
 
 
@@ -149,11 +165,6 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.0/howto/static-files/
-
-STATIC_URL = "static/"
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
@@ -180,4 +191,17 @@ RQ_QUEUES = {
     #     'PORT': 6379,
     #     'DB': 0,
     # }
+}
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
 }

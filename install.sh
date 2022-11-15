@@ -65,7 +65,7 @@ install_packages() {
   echo "## Installing Linux packages..."
   sudo apt-get --assume-yes update
   sudo apt-get --assume-yes install -y software-properties-common build-essential sqlite3 python3.10-dev python3.10-venv
-  sudo apt --assume-yes upgrade
+  # sudo apt --assume-yes upgrade
 }
 
 install_dependencies() {

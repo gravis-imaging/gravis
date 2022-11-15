@@ -1,0 +1,18 @@
+[Unit]
+Description=gunicorn daemon
+Requires=gravis-gunicorn.socket
+After=network.target
+
+[Service]
+User=gravis
+Group=gravis
+WorkingDirectory=/opt/gravis/app
+ExecStart=/opt/gravis/venv/bin/gunicorn \
+          --access-logfile - \
+          --workers 6 \
+	      --reload \
+          --bind unix:/run/gunicorn.sock \
+          app.wsgi
+
+[Install]
+WantedBy=multi-user.target

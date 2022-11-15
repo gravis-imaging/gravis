@@ -353,17 +353,18 @@ def delete_cases():
         print(e)
 
 def watch():
+    logger.info("Incoming watcher booted.")
     while True:
         sleep(settings.INCOMING_SCAN_INTERVAL)
         try:
             scan_incoming_folder()
         except:
-            logger.error("Failure in incoming")
+            logger.exception("Failure in incoming")
 
         try:
             trigger_queued_cases()
         except:
-            logger.error("Error in queuing.")
+            logger.exception("Error in queuing.")
 
         try:
             delete_cases()

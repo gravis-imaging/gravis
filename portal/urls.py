@@ -1,9 +1,11 @@
 from django.urls import path
 
-from . import views, rqjobs
+from . import views, rqjobs, grasp_endpoints
 
 from django.conf import settings
 from django.conf.urls.static import static
+
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 urlpatterns = [
     path("", views.index, name="index"),
@@ -16,7 +18,11 @@ urlpatterns = [
     path("logout/", views.logout_request, name="logout"),
     path("config/", views.config, name="config"),
     path("user/", views.user, name="user"),
-    path("media/<path:path>", views.serve_file),
+    path("media/<path:path>", views.serve_media),
+    path("api/case/<str:case>/dicom_set/<str:source_set>/processed_results/<path:case_type>", grasp_endpoints.processed_results_urls),    
+    path("api/case/<str:case>/dicom_set/<str:dicom_set>/metadata", grasp_endpoints.case_metadata),
+    path("api/case/<str:case>/dicom_set/<str:dicom_set>/study/<str:study>/metadata", grasp_endpoints.case_metadata),
+
     *rqjobs.urls,
-    *static(settings.STATIC_URL, document_root="portal/static/"),
+    *staticfiles_urlpatterns()
 ]

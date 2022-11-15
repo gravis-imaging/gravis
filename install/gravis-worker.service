@@ -1,0 +1,13 @@
+[Unit]
+Description=watcher
+Requires=redis.service
+After=network.target
+
+[Service]
+User=gravis
+Group=gravis
+WorkingDirectory=/opt/gravis/app
+ExecStart=/opt/gravis/venv/bin/python /opt/gravis/app/manage.py rqworker
+
+[Install]
+WantedBy=multi-user.target

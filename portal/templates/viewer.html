@@ -40,31 +40,31 @@ on htmx:afterRequest
 </div>
 </div> {% endcomment %}
 
-<div x-data="{ viewer: null, current_study: null, current_time: 0, index: 0, loading: false, job_loading: null, case_id: {{case.id}} }">
+<div x-data="{ viewer: null, study_id: null, previewing: false, switching: false, current_study: null, current_time: 0, index: 0, loading: false, job_loading: null, case_id: {{case.id}}, dicom_set: null }"  style="height:calc(100vh - 6rem)">
   <div class="w-25">
     <div class="">
       <div class="select-wrapper">
-        <!-- <select autocomplete="off" class="form-control" name="studies" id="studies" value="" x-bind:disabled="viewer == null" -->
-        <select id="studies" name="studies" autocomplete="off" class="form-control" value="" x-bind:disabled="viewer == null"        
-          @change="loading=true; await $nextTick(); current_study = await viewer.setVolumeByStudy($event.target.value, case_id); current_time=current_study[0].time; loading=false;"> 
+        <select id="studies" name="studies" autocomplete="off" class="form-control" value="" x-bind:disabled="viewer == null" 
+        @change="loading=true; await $nextTick(); current_study = await viewer.switchStudy($event.target.value.split(':::'), case_id); current_time=current_study[0].acquisition_seconds; study_id = viewer.study_uid; dicom_set=viewer.dicom_set; loading=false;">
           <option value="" selected disabled hidden>Select study...</option>
           {% for i in studies %}
-              <option value="{{i}}">{{ i }}</option>
+          <option value="{{i}}">{{ i }}</option>
           {% endfor %}
         </select>
         <div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 0px;"></div><div class="form-notch-trailing"></div></div>
       </div>
     </div>
   </div>
-
-  <div x-cloak id="grasp-view-outer" style="display:grid; grid-template-columns: 1fr; grid-template-rows: 1fr;">
-    <div x-show="loading" style="z-index:1; grid-area: 1 / 1 / 2 / 2;" class="pointer-events-none">
+  <div x-cloak id="grasp-view-outer" class="grid-container h-100" style="max-width: calc(100vh - 6rem); margin-right: auto; margin-left:auto;" >
+    <div x-show="loading" style="z-index:10;" class="pointer-events-none grid-fill">
       <div style="display: flex;justify-content: center;align-items: center; height:100%">Loading...</div>
     </div>
-    <div x-init="viewer = await new GraspViewer($el);" style="grid-area: 1 / 1 / 2 / 2;">
+    <div x-init="await $nextTick(); viewer = await new GraspViewer($refs.viewer_main, $refs.viewer_preview ); window.viewer = viewer" class="grid-fill grid-container h-100">
+      <div x-ref="viewer_preview" class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 1 : 0 }"></div>
+      <div x-ref="viewer_main"  class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 0 : 1 }"></div>
     </div>
 
-    <div x-show="!!current_study" class="pointer-events-none" style="z-index:1; grid-area: 1 / 1 / 2 / 2;">
+    <div x-show="!!current_study" class="pointer-events-none grid-fill" style="z-index:1;">
       <div style='display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; height:100%'>
 
         <template x-for="i in 3">
@@ -72,11 +72,18 @@ on htmx:afterRequest
             <button style="pointer-events: auto" class="btn-primary btn-large m-2" 
               x-text="viewer && viewer.viewportIds[i-1]" 
               x-bind:disabled="job_loading != null"
-              x-on:click="await $nextTick(); job_loading = await viewer.renderCineFromViewport(i-1, case_id); await getJobInstances('cine', job_loading, case_id); job_loading = null">
-                Click me
+              x-on:click="await $nextTick(); job_loading = true; try { await viewer.renderCineFromViewport(i-1, case_id);} finally { job_loading = null }">
               </button>
           </div>
         </template>
+        <div>
+          <button style="pointer-events: auto" class="btn-primary btn-large m-2" 
+          x-on:click="viewer.viewports[3].setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${dicom_set}/processed_results/MIP?acquisition_number=3`)).json()).urls)">MIP
+          </button>
+          <button style="pointer-events: auto" class="btn-primary btn-large m-2" 
+          x-on:click="viewer.viewports[3].setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${dicom_set}/processed_results/SUB?acquisition_number=3`)).json()).urls)">SUB
+          </button>
+        </div>
           <div>
             <div x-show="job_loading" style="height:100%;">
               <div style="display: flex;justify-content: center;align-items: center; height:100%; background-color:rgba(0, 0, 0, 0.5);">Loading...</div>
@@ -85,11 +92,16 @@ on htmx:afterRequest
       </div>
     </div> 
 
-    <div x-show="!!current_study" x-data="{ selected_time:0 }"> 
+    <div x-data="{ selected_time:0 }"> 
       <div style="display: flex;">
         <input id='volume-picker' type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
-          @input="index = $event.target.value; selected_time=current_study[index].time"
-          @change="await setGraspVolume(current_study[index]); current_time=selected_time;"></input>
+        @mouseUp="previewing = false"
+        @input="previewing = true; index = $event.target.value; selected_time=current_study[index].acquisition_seconds; viewer.setPreview(index,current_study.length);"
+        @change="switching = true; await viewer.switchSeries(current_study[index].series_uid, case_id); current_time=selected_time; switching = false;"
+        x-bind:disabled="!current_study || !!loading "
+          {% comment %} @input="" {% endcomment %}
+          {% comment %} @change="" {% endcomment %}
+          ></input>
         <label for='volume-picker' x-text="selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>
       </div>
     </div>

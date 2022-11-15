@@ -147,11 +147,15 @@ class DICOMInstance(models.Model):
     acquisition_number = models.IntegerField(null=True)
     series_number = models.IntegerField(null=True)
     slice_location = models.FloatField(null=True)
-
+    num_frames = models.IntegerField(null=True, default=1)
     json_metadata = models.JSONField(null=False)
     dicom_set = models.ForeignKey(
         DICOMSet, on_delete=models.CASCADE, related_name="instances"
     )
+
+    def __str__(self):
+        return "; ".join([f"{x}: {getattr(self,x)}" for x in "series_number slice_location acquisition_seconds acquisition_number num_frames".split()])
+        # return f"series_number {self.series_number}; slice_location {self.slice_location}; seconds: {self.acquisition_seconds}; acq_number: {self.acquisition_number}; num_frames: {self.num_frames}"
 
     @classmethod
     def from_dataset(cls, ds: Dataset):
@@ -170,8 +174,9 @@ class DICOMInstance(models.Model):
             acquisition_number=ds.get("AcquisitionNumber"),
             series_number=ds.get("InstanceNumber"),
             slice_location=ds.get("SliceLocation"),
-            acquisition_seconds=delta.total_seconds(),
-            json_metadata=ds.to_json(),
+            num_frames=ds.get("NumberOfFrames"),
+            acquisition_seconds = delta.total_seconds(),
+            json_metadata=ds.to_json(bulk_data_threshold=1024, bulk_data_element_handler=lambda _: ""),
         )
 
     class Meta:

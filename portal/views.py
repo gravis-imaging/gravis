@@ -1,7 +1,5 @@
 import logging
-import os, json
 
-from time import sleep
 from django.http import HttpResponse
 from django.conf import settings
 
@@ -10,19 +8,23 @@ from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import redirect, render
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
+from django.views.static import serve
 
 from .models import Case, DICOMInstance
 
 logger = logging.getLogger(__name__)
-from django.contrib.staticfiles import views as static_views
+# from django.contrib.staticfiles import views as static_views
 
 
 @login_required
-def serve_file(request, path):
+def serve_media(request, path):
     """Serve a file that should only be available to logged-in users."""
     if "localhost" in request.headers["Host"] or "127.0.0.1" in request.headers["Host"]:
-        # We're not running behind nginx so we are going to just serve the file ourselves.
-        return static_views.serve(request, path)
+        if settings.DEBUG:
+            # We're not running behind nginx so we are going to just serve the file ourselves.
+            return serve(request, path, settings.MEDIA_ROOT)
+        else:
+            return HttpResponse(status_code=500)
 
     # Use nginx's implementation of "x-sendfile" to tell nginx to serve the actual file.
     # see: https://www.nginx.com/resources/wiki/start/topics/examples/x-accel/
@@ -32,8 +34,6 @@ def serve_file(request, path):
 
 
 def login_request(request):
-    logger.debug("HELLO")
-
     if request.method == "POST":
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
@@ -61,7 +61,6 @@ def logout_request(request):
 
 @login_required
 def index(request):
-
     data = []
     objects = Case.objects.all()
     for object in objects:
@@ -102,21 +101,15 @@ def config(request):
 
 @login_required
 def viewer(request, case):
-    print("CASE: ", case)
     case = Case.objects.get(id=case)
-    dicom_set = case.dicom_sets.get(origin="Incoming")
-    instances = dicom_set.instances.all()
-    print(request.user)
-    case.viewed_by_id = request.user
-    case.last_read_by = request.user
-    case.status = Case.CaseStatus.VIEWING
-    case.save()
+    dicom_set = case.dicom_sets.get(type="Incoming")
+    instances = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set__type=("ORI")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")
+
     context = {
         # "series": set([(k.study_uid, k.series_uid) for k in instances]),
-        "studies": list(set([k.study_uid for k in instances])),
-        "case": case,
+        "studies": [(k.study_uid,k.dicom_set.id, k.dicom_set.type) for k in instances],
+        "case": instances[0].dicom_set.case,
     }
-    # logging.info(context["series"])
     return render(request, "viewer.html", context)
 
 
