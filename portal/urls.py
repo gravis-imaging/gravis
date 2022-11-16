@@ -7,6 +7,8 @@ from django.conf.urls.static import static
 
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
+from .rest import CaseView
+
 urlpatterns = [
     path("", views.index, name="index"),
     # path("docker_job/", views.docker_job),
@@ -18,6 +20,7 @@ urlpatterns = [
     path("logout/", views.logout_request, name="logout"),
     path("config/", views.config, name="config"),
     path("user/", views.user, name="user"),
+    path("cases/", CaseView()),
     path("media/<path:path>", views.serve_media),
     path("api/case/<str:case>/dicom_set/<str:source_set>/processed_results/<path:case_type>", grasp_endpoints.processed_results_urls),    
     path("api/case/<str:case>/dicom_set/<str:dicom_set>/metadata", grasp_endpoints.case_metadata),

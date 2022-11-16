@@ -102,13 +102,22 @@ def config(request):
 @login_required
 def viewer(request, case):
     case = Case.objects.get(id=case)
-    dicom_set = case.dicom_sets.get(type="Incoming")
-    instances = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set__type=("ORI")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")
-
+    # dicom_set = case.dicom_sets.get(origin="Incoming")
+    # instances = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set__type=("M")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")
+    case.viewed_by = request.user
+    case.last_read_by = request.user
+    case.status = Case.CaseStatus.VIEWING
+    case.save()
+    instances = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set__type=("M")).order_by("study_uid","dicom_set").values("study_uid","dicom_set_id","dicom_set__type","dicom_set__case").distinct()
+    import json
+   
+    for ins in instances:
+        print(json.dumps(ins))
     context = {
         # "series": set([(k.study_uid, k.series_uid) for k in instances]),
-        "studies": [(k.study_uid,k.dicom_set.id, k.dicom_set.type) for k in instances],
-        "case": instances[0].dicom_set.case,
+        # "studies": [(k.study_uid,k.dicom_set.id, k.dicom_set.type) for k in instances],
+        "studies": [(k['study_uid'],k['dicom_set_id'], k['dicom_set__type']) for k in instances],
+        "case": instances[0]['dicom_set__case'],
     }
     return render(request, "viewer.html", context)
 

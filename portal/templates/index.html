@@ -218,7 +218,23 @@
                         const row = case_data_table.row( {selected: true});
                         const case_id = row.data()[0];
                         const link = '/remove/'+case_id                        
-                        window.location.href = link
+                        // window.location.href = link
+                        // window.open(link)
+                        fetch('/cases/', {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': '{{ csrf_token }}',
+                            },
+                            body: JSON.stringify({ "case_id": case_id })
+                        })
+                        .then(response => response.json())
+                        .then(response => {
+                            window.alert(JSON.stringify(response));
+                            window.location.reload();
+                        })
+
                     }
                 },
                 {% endif %}
