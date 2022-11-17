@@ -45,6 +45,8 @@ pillow==9.2.0
     # via -r requirements.in
 pluggy==1.0.0
     # via pytest
+psycopg2-binary==2.9.5
+    # via -r requirements.in
 py==1.11.0
     # via pytest
 pydicom==2.3.0

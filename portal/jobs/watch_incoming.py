@@ -169,7 +169,7 @@ def process_folder(job_id: int, incoming_case: Path):
         return False
 
     register_dicom_set_success, error = dicom_set_utils.register(
-        str(input_dest_folder), new_case, "Incoming", job_id #"ORI"
+        str(input_dest_folder), new_case, "Incoming", job_id, "ORI"
     )
     if not register_dicom_set_success:
         process_error_folder(new_case, incoming_case, error_folder, lock)

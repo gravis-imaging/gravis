@@ -32,15 +32,11 @@
                         <i class="fas fa-images"></i>&nbsp;&nbsp;Viewing
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                          {% for item in cases %}
                           <li>
-                            <a class="dropdown-item" href="/viewer/Patient_ABC">Patient ABC</a>
+                            <a class="dropdown-item" href="/viewer/Patient_ABC">{{ item }}</a>
                           </li>
-                          <li>
-                            <a class="dropdown-item" href="/viewer/Patient_DEF">Patient DEF</a>
-                          </li>
-                          <li>
-                            <a class="dropdown-item" href="/viewer/Patient_XYZ">Patient XYZ</a>
-                          </li>
+                          {% endfor %}
                         </ul>
                     </li>
                     {% if user.is_staff %}

@@ -9,11 +9,9 @@ from portal.models import DICOMInstance, DICOMSet
 import pydicom
 
 
-def register(set_path: str, case, origin, job_id=None) -> Tuple[bool, str]:
+def register(set_path: str, case, origin, job_id=None, type="") -> Tuple[bool, str]:
 
-    # Register DICOM Set
-    print("set_path ", set_path)
-    
+    # Register DICOM Set    
     size = len(list(Path(set_path).glob("**/*.dcm")))
     if size < 1:
         return(False, f"No DICOM files found in {set_path}")
@@ -24,10 +22,8 @@ def register(set_path: str, case, origin, job_id=None) -> Tuple[bool, str]:
         ds = pydicom.dcmread(str(dcm), stop_before_pixels=True)
         print(ds.ImageType)
         size = len(ds.ImageType)
-        if size < 2:
-            return (False, "Not enough information in the Image Type tag.")
-        type = ds.ImageType[2]
-        print("AAA: ", type)
+        if type == "" and size > 2:
+            type = ds.ImageType[2]
     except Exception as e:
         logger.exception(
             f"Exception during dicom file reading. Cannot process incoming instance {str(dcm)}"

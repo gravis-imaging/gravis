@@ -37,12 +37,12 @@ class Case(models.Model):
     mrn = models.CharField(max_length=100, blank=True, null=True)
     acc = models.CharField(max_length=100, blank=True, null=True)
     case_type = models.CharField(
-        max_length=4, choices=CaseType.choices, blank=True, null=True
+        max_length=100, choices=CaseType.choices, blank=True, null=True
     )
     exam_time = models.DateTimeField(blank=True, null=True)
     receive_time = models.DateTimeField(default=timezone.now, blank=False)
     status = models.CharField(
-        max_length=4, choices=CaseStatus.choices, default=CaseStatus.RECEIVED
+        max_length=100, choices=CaseStatus.choices, default=CaseStatus.RECEIVED
     )
     num_spokes = models.CharField(max_length=1000, default="", blank=False, null=False)
     twix_id = models.CharField(max_length=1000, blank=True, null=True)
