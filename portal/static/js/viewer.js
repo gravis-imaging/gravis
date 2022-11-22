@@ -110,6 +110,7 @@ class GraspViewer {
     createViewports( prefix, list, parent, background = [0,0,0] ) {
         const [viewportGrid, viewportElements] = this.createViewportGrid(4)
         parent.appendChild(viewportGrid);
+
         // element.classList.add("grid-fill")
         // parent.appendChild(element);    
         var viewportInput = list.map(([viewportId, orientation],n) => {
@@ -127,7 +128,9 @@ class GraspViewer {
     async initialize( main, preview ) {
         const { RenderingEngine, Types, Enums, volumeLoader, CONSTANTS, setVolumesForViewports} = window.cornerstone; 
         const { ViewportType } = Enums;
-
+        // Force cornerstone to try to use GPU rendering even if it thinks the GPU is weak.
+        cornerstone.setUseCPURendering(false);
+        
         await cornerstone.helpers.initDemo(); 
         // Instantiate a rendering engine
         const renderingEngineId = 'gravisRenderEngine';
@@ -137,11 +140,9 @@ class GraspViewer {
 
         const preview_info = [["AX"],["SAG"],["COR"]]
         const [ previewViewports, previewViewportIds ] = this.createViewports("PREVIEW",preview_info, preview, [0.5,.5,.5])
+
         const view_info = [["AX",ORIENTATION.AXIAL],["SAG",ORIENTATION.SAGITTAL],["COR",ORIENTATION.CORONAL],["CINE"]]
         const [ viewViewports, viewportIds ] = this.createViewports("VIEW", view_info, main)
-
-        console.log(previewViewports, viewViewports);
-
         this.renderingEngine.setViewports([...previewViewports, ...viewViewports])
 
         this.viewportIds = viewportIds
@@ -154,6 +155,7 @@ class GraspViewer {
     
         this.createTools()
         this.renderingEngine.renderViewports([...this.viewportIds, ...this.previewViewports]);
+        this.chart = this.testChart()
     }
 
 
@@ -201,20 +203,20 @@ class GraspViewer {
             });
         
         var styles = cornerstone.tools.annotation.config.style.getDefaultToolStyles()
-        styles.global.color = "rgb(255,0,0)"
+        // styles.global.color = "rgb(255,0,0)"
         styles.global.lineWidth = "5"
         cornerstone.tools.annotation.config.style.setDefaultToolStyles(styles)
         toolGroupA.addTool(StackScrollMouseWheelTool.toolName );
     
     
         toolGroupB.addTool(StackScrollMouseWheelTool.toolName );
-        // toolGroupA.addTool(CrosshairsTool.toolName, {
-        //     getReferenceLineColor: (id) => { return ({"VIEW_AX": "rgb(255, 0, 0)","VIEW_SAG": "rgb(255, 255, 0)","VIEW_COR": "rgb(0, 255, 0)",})[id]},
-        //     // getReferenceLineControllable: (id)=> true,
-        //     // getReferenceLineDraggableRotatable: (id)=> true,
-        //     // getReferenceLineSlabThicknessControlsOn: (id)=> false,
-        //     // filterActorUIDsToSetSlabThickness: [viewportId(4)]
-        //   });
+        toolGroupA.addTool(CrosshairsTool.toolName, {
+            getReferenceLineColor: (id) => { return ({"VIEW_AX": "rgb(255, 255, 100)","VIEW_SAG": "rgb(100, 100, 255)","VIEW_COR": "rgb(255, 100, 100)",})[id]},
+            // getReferenceLineControllable: (id)=> true,
+            // getReferenceLineDraggableRotatable: (id)=> true,
+            // getReferenceLineSlabThicknessControlsOn: (id)=> false,
+            // filterActorUIDsToSetSlabThickness: [viewportId(4)]
+          });
         
         toolGroupA.addTool(WindowLevelTool.toolName );
         // toolGroup.addTool(PanTool.toolName,  { volumeId } );
@@ -232,9 +234,9 @@ class GraspViewer {
         // ],
         // });
     
-        // toolGroup.setToolActive(CrosshairsTool.toolName, {
-        //     bindings: [{ mouseButton: MouseBindings.Primary }],
-        // });
+        toolGroupA.setToolPassive(CrosshairsTool.toolName, {
+            // bindings: [{ mouseButton: MouseBindings.Secondary }],
+        });
         
         // toolGroup.setToolActive(PanTool.toolName, {
         // bindings: [
@@ -298,19 +300,19 @@ class GraspViewer {
         // viewport.render();
         if (!this.toolAlreadyActive) {
             const toolGroup = window.cornerstone.tools.ToolGroupManager.getToolGroup(`STACK_TOOL_GROUP_ID_A`);
-            // toolGroup.setToolActive(window.cornerstone.tools.CrosshairsTool.toolName, {
-            //     bindings: [{ mouseButton: window.cornerstone.tools.Enums.MouseBindings.Primary }],
-            // });
-            toolGroup.setToolActive(window.cornerstone.tools.WindowLevelTool.toolName, {
+            toolGroup.setToolActive(window.cornerstone.tools.CrosshairsTool.toolName, {
                 bindings: [{ mouseButton: window.cornerstone.tools.Enums.MouseBindings.Primary }],
             });
-            // toolGroup.setToolActive(cornerstone.tools.EllipticalROITool.toolName, {
-            //     bindings: [
-            //     {
-            //         mouseButton: cornerstone.tools.Enums.MouseBindings.Primary, // Left Click
-            //     },
-            //     ],
+            // toolGroup.setToolActive(window.cornerstone.tools.WindowLevelTool.toolName, {
+            //     bindings: [{ mouseButton: window.cornerstone.tools.Enums.MouseBindings.Primary }],
             // });
+            toolGroup.setToolPassive(cornerstone.tools.EllipticalROITool.toolName, {
+                bindings: [
+                {
+                    mouseButton: cornerstone.tools.Enums.MouseBindings.Primary, // Left Click
+                },
+                ],
+            });
             toolGroup.setToolActive(window.cornerstone.tools.StackScrollMouseWheelTool.toolName);
 
             const toolGroupB = window.cornerstone.tools.ToolGroupManager.getToolGroup(`STACK_TOOL_GROUP_ID_B`);
@@ -403,7 +405,7 @@ class GraspViewer {
         
         
         this.viewports.slice(0,3).map((v, n)=> {
-            v.element.addEventListener("wheel", debounce(250, async (evt) => {
+            v.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(250, async (evt) => {
                 // console.log(v.getCamera().position)
                 try {
                     await this.updatePreview(n)
@@ -412,7 +414,34 @@ class GraspViewer {
                 }
             //    console.log({position: evt.detail.camera.position, focalPoint:evt.detail.camera.focalPoint, viewPlaneNormal: evt.detail.camera.viewPlaneNormal} );
             }));
-            v.element.addEventListener("CORNERSTONE_PRE_STACK_NEW_IMAGE", (evt) => {console.log(evt)})
+            
+            v.element.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_RENDERED", debounce(100, async (evt) => {
+                console.log(this.viewportIds[n], evt.detail.viewportId)
+                let annotations = cornerstone.tools.annotation.state.getAnnotations(v.element,"EllipticalROI");
+                
+                let sliceIndex  = cornerstone.utilities.getImageSliceDataForVolumeViewport(v).imageIndex
+                var data = []
+                var labels = ["time",]
+                for (var annotation of annotations){
+                    data.push( {
+                        normal: annotation.metadata.viewPlaneNormal,
+                        view_up: annotation.metadata.viewUp,
+                        bounds: this.volume.imageData.getBounds(),
+                        ellipse: annotation.data.handles.points ////.map((x)=>cornerstone.utilities.transformWorldToIndex(this.volume.imageData, x))})
+                    })
+                    labels.push(`annotation${Math.random()}`)
+                    console.log(annotation);
+                }
+                console.log(annotations.map(x=> {
+                    let [ bottom, top, left, right ] = x.data.handles.points
+                    return { top, bottom, left, right }
+                }))
+                // console.log(data.map(x=>x.ellipse))
+                const timeseries = await doFetch("/api/case/1/dicom_set/1/timeseries", {annotations: data})
+                this.chart.updateOptions( { 'file':  timeseries["data"], labels: labels} );
+                    // console.log(indices);
+
+            }));
         });
 
         await this.setVolumeBySeries(graspVolumeInfo[0]["series_uid"]),
@@ -429,7 +458,57 @@ class GraspViewer {
     // async setGraspVolume(seriesInfo) {
     //     await this.setVolumeByImageIds(seriesInfo.imageIds,seriesInfo.series_uid)
     // }
+    addAnnotationToViewport(n) {
+        var viewport = this.viewports[n]
+        var cam = viewport.getCamera()
+        // console.log(viewport.sWidth,viewport.sHeight);
+        // var center = viewport.canvasToWorld([viewport.sWidth * 0.5, viewport.sHeight * 0.5]);
+        // console.log("Center", center)
 
+        var center_point = viewport.worldToCanvas(cam.focalPoint)
+        var points = [
+            [ center_point[0], center_point[1]-50 ], // top
+            [ center_point[0], center_point[1]+50 ], // bottom
+            [ center_point[0]-50, center_point[1] ], // left
+            [ center_point[0]+50, center_point[1] ], // right
+        ].map(viewport.canvasToWorld)
+
+        var template = {
+            highlighted:true,
+            invalidated:false,
+            isLocked: false,
+            isVisible: true,
+            metadata: {
+                toolName:"EllipticalROI","viewPlaneNormal":cam.viewPlaneNormal,"viewUp":cam.viewUp,"FrameOfReferenceUID":viewport.getFrameOfReferenceUID()
+            },
+            data: {
+                cachedStats:{},
+                label:"annotation",
+                handles: {
+                    textBox:{"hasMoved":false,"worldPosition":[0,0,0],"worldBoundingBox":{"topLeft":[0,0,0],"topRight":[0,0,0],"bottomLeft":[0,0,0],"bottomRight":[0,0,0]}},
+                    points: points,
+                    activeHandleIndex:null
+                },
+            },
+        }
+        cornerstone.tools.annotation.state.addAnnotation(viewport.element,template)
+        cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,[this.viewportIds[n]]) 
+    }
+    testChart() {
+        var data = []
+        for (var i = 10; i >= 0; i--) {
+            data.push([i, Math.random()]);
+          }
+    
+          var g = new Dygraph(document.getElementById("chart"), data,
+            {
+            // drawPoints: true,
+            // showRoller: true,
+            valueRange: [0.0, 1000],
+            labels: ['Time', 'Random']
+            });
+        return g;
+    }
     async renderCineFromViewport(n, dest_viewport=null) {
         var viewport = this.viewports[n];
         var cam = viewport.getCamera()
@@ -481,6 +560,8 @@ class GraspViewer {
     }
     
 }
+
+
 
 // var toolAlreadyActive = false;
 
@@ -543,6 +624,17 @@ async function doJob(type, case_, params) {
     return result;
 }
 
+async function doFetch(url, body) {
+    return await ( await fetch(url, {
+        method: 'POST', 
+        credentials: 'same-origin',        
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken,
+        },
+        body: JSON.stringify(body),
+    })).json()
+}
 async function startJob(type, case_, params) {
     var body = {
         case: case_,
@@ -587,6 +679,9 @@ function getJobInstances(result, case_id) {
 }
 
 window.onload = async function() {
+    window.addEventListener( "error", ( error ) => {
+        alert(`Unexpected error! \n\n ${error.message}`)
+    })
 }
 
 
