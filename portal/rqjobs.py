@@ -252,27 +252,30 @@ class TestJob(WorkJobView):
         ax_sagittal = [ 1, 0,  0 ]
         ax_coronal =  [ 0, 1,  0 ]
         ax_axial =    [ 0, 0, -1 ]
-        viewUp_sagittal = [0, 0, 1]
-        viewUp_coronal =  [0, 0, 1]
-        viewUp_axial =    [0, -1, 0]
+        viewUp_sagittal = [ 0,  0, 1 ]
+        viewUp_coronal =  [ 0,  0, 1 ]
+        viewUp_axial =    [ 0, -1, 0 ]
 
-        views = [VView(*x) for x in [[ax_sagittal, viewUp_sagittal, "SAG"], [ ax_coronal, viewUp_coronal, "COR"], [ax_axial, viewUp_axial, "AX"]]]
+        views = [VView(*x) for x in [[ ax_sagittal, viewUp_sagittal, "SAG" ],
+                                     [ ax_coronal,  viewUp_coronal,  "COR" ],
+                                     [ ax_axial,    viewUp_axial,    "AX"  ]
+                                     ]]
         # axis_numbers = []
         for v in views:
             print(v)
-            v.viewHoriz = np.cross(v.normal,v.viewUp)
-            transformed_normal = im_orientation_mat @ v.normal
-            normal_axis_number = np.abs(transformed_normal).argmax()
-            transformed_viewUp = im_orientation_mat @ v.viewUp
-            rows_axis_number = np.abs(transformed_viewUp).argmax()
+            v.viewHoriz         = np.cross(v.normal,v.viewUp)
+            transformed_normal  = im_orientation_mat @ v.normal
+            normal_axis_number  = np.abs(transformed_normal).argmax()
+            transformed_viewUp  = im_orientation_mat @ v.viewUp
+            rows_axis_number    = np.abs(transformed_viewUp).argmax()
             transformed_viewHoriz = im_orientation_mat @ v.viewHoriz
-            cols_axis_number = np.abs(transformed_viewHoriz).argmax()
-            v.transformed_axes = np.array([normal_axis_number, rows_axis_number, cols_axis_number])
+            cols_axis_number    = np.abs(transformed_viewHoriz).argmax()
+            v.transformed_axes  = np.array([normal_axis_number, rows_axis_number, cols_axis_number])
 
             print(f"---{v.name}---")
-            print("Normal",v.normal, transformed_normal.T, normal_axis_number)
-            print("Rows axis", v.viewUp, transformed_viewUp.T, rows_axis_number)
-            print("Cols axis", v.viewHoriz, transformed_viewHoriz.T, cols_axis_number)
+            print("Normal",     v.normal,       transformed_normal.T,       normal_axis_number)
+            print("Rows axis",  v.viewUp,       transformed_viewUp.T,       rows_axis_number)
+            print("Cols axis",  v.viewHoriz,    transformed_viewHoriz.T,    cols_axis_number)
             print(v.transformed_axes)
 
         series_uids = {k.series_uid for k in instances}
@@ -315,16 +318,16 @@ class TestJob(WorkJobView):
                 t_array = np.flip(t_array,3)
             for i in range(t_array.shape[1]):
                 ds = prototype_ds.copy()
-                ds.NumberOfFrames = t_array.shape[0]
-                ds.Rows = t_array.shape[2]
-                ds.Columns = t_array.shape[3]
-                ds.PixelData = t_array[:,i,:,:].tobytes()
-                ds.SliceLocation = str(i)+".0"
-                ds.InstanceNumber = str(i)
+                ds.NumberOfFrames   = t_array.shape[0]
+                ds.Rows             = t_array.shape[2]
+                ds.Columns          = t_array.shape[3]
+                ds.PixelData        = t_array[:,i,:,:].tobytes()
+                ds.SliceLocation    = str(i)+".0"
+                ds.InstanceNumber   = str(i)
 
-                ds.StudyInstanceUID = new_study_uid
+                ds.StudyInstanceUID  = new_study_uid
                 ds.SeriesInstanceUID = new_series_uid
-                ds.SOPInstanceUID = pydicom.uid.generate_uid()
+                ds.SOPInstanceUID    = pydicom.uid.generate_uid()
 
                 ds.save_as(Path(v.dicom_set.set_location) / f"multiframe.{i}.dcm")
                 print(Path(v.dicom_set.set_location) / f"multiframe.{i}.dcm")

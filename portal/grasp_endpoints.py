@@ -1,5 +1,7 @@
 import json
+import numpy
 from loguru import logger
+import pydicom
 import os
 from pathlib import Path
 from django.http import JsonResponse
@@ -39,6 +41,104 @@ def case_metadata(request, case, dicom_set, study=None):
     ]
     return JsonResponse(result, safe=False)
 
+@login_required
+def timeseries_data(request, case, source_set=None):
+    data = json.loads(request.body)
+    
+    # averages = numpy.zeros((120,1+len(data['annotations'])))
+    # averages[:,0] = numpy.asarray(range(120))
+    averages = []
+    averages.append(list(range(120)))
+    # case = Case.objects.get(id=int(case))
+    for i, annotation in enumerate(data['annotations']):
+        idx = numpy.abs(annotation['normal']).argmax()
+        orientation = ['SAG','COR','AX'][idx]
+        instances = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/{orientation}").latest('processing_job__created_at').instances
+        example_instance = instances.first()
+        # logger.info(annotation["ellipse"])
+        normal = numpy.asarray(annotation["normal"])
+        viewUp = numpy.asarray(annotation["view_up"])
+        viewLeft = numpy.cross(normal,viewUp)
+        # logger.info(f"normal {normal:}")
+        logger.info(f"up {viewUp:}")
+        logger.info(f"left {viewLeft:}")
+
+        flipX = False
+        flipY = False
+        if sum(viewUp) > 0:
+            flipY = True
+        if sum(viewLeft) > 0:
+            flipX = True        
+        logger.info(f"flip X: {flipX}  Y:{flipY}")
+        handles = numpy.asarray(annotation["ellipse"])
+        bounds = numpy.asarray(annotation["bounds"])
+        bounds = bounds.reshape(3,2)
+        # logger.info(f"viewUp {annotation['view_up']}"),
+        
+        logger.info(f"bounds {bounds}"),
+        # bounds_shifted = bounds[:,:] - bounds[:,0][:,None]
+        dims_size = bounds[:,1] - bounds[:,0]
+        
+        handles_relative = (handles[:,:] - bounds[:,0]) / dims_size
+        # logger.info(f"handles_relative: {handles_relative}")
+        logger.info(f"handles_relative: {handles_relative}")
+
+        # logger.info(f"dims_size {dims_size}"),
+        # logger.info(f"handles {handles}")
+        slice_number = round(handles_relative[0][idx] * instances.count() - 0.5)
+        handles_relative = numpy.delete(handles_relative,idx,1)
+        if flipX:
+            handles_relative[:,0] = 1.0 - handles_relative[:,0]
+        if flipY:
+            handles_relative[:,1] = 1.0 - handles_relative[:,1]
+
+        instance = instances.filter(slice_location=slice_number).get()
+        ds = pydicom.dcmread( Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location )
+        
+        handles_absolute = numpy.rint(handles_relative[:,:] * [ds.Columns, ds.Rows] - 0.5)
+        # logger.info(f"handles_abs {handles_absolute}")
+        center = numpy.rint((handles_absolute[0] + handles_absolute[1])/2)
+        # logger.info(f"{handles_absolute[0] } + {handles_absolute[1] } = center {center}, {idx}")
+
+        # center = numpy.delete(center,idx)
+        # center_2 = numpy.zeros(center.shape)
+        # center[:] = center[:] - bounds[:,0]
+        
+        logger.info(f"center {center}")
+        subarray = ds.pixel_array[:,int(center[1]),int(center[0])]
+        # avgs = numpy.mean(subarray, (1,2)).flatten()
+        averages.append(subarray.tolist())
+        # center_px = numpy.delete(center,idx)
+        # logger.info(f"center_px {center_px.round()}")
+        # logger.info(f"Orientation: {orientation}")
+        # logger.info(handles)
+        # # A really silly way to work out what the slice location is.
+        # slice_index = numpy.abs(numpy.diff(annotation["ellipse"],n=3,axis=0)).argmin()
+        # slice_location = annotation["ellipse"][0][slice_index]
+        # logger.info(numpy.asarray(annotation["ellipse"]))
+        # extent = numpy.delete(numpy.asarray(annotation["ellipse"]), slice_index,axis=1)
+
+        # logger.info(slice_location)
+        # logger.info(extent)
+
+        # top = extent[0,0]
+        # bottom = extent[1,0]
+        # left = extent[2,1]
+        # right = extent[3,1]
+        # logger.info(", ".join(map(str,[top,bottom,left,right])))
+        # instance = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/{orientation}").latest('processing_job__created_at').instances.filter(slice_location=slice_location).get()
+        # ds = pydicom.dcmread( Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location )
+        # subarray = ds.pixel_array[:,top:bottom,min(left,right):max(left,right)]
+        # avgs = numpy.mean(subarray, (1,2)).flatten()
+        # averages.append(avgs.tolist())
+        # print(avgs)
+    # logger.info(numpy.asarray(averages))
+    # logger.info(data)
+    # def gen_data(x):
+    #     return (x,) +( random.random(),) * len(data['annotations'])
+
+
+    return JsonResponse(dict(data=numpy.asarray(averages).T.tolist()))
 
 @login_required
 def processed_results_urls(request, case, case_type, source_set=None):
