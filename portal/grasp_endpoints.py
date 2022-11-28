@@ -1,4 +1,5 @@
 import json
+import math
 import numpy
 from loguru import logger
 import pydicom
@@ -48,7 +49,9 @@ def timeseries_data(request, case, source_set=None):
     # averages = numpy.zeros((120,1+len(data['annotations'])))
     # averages[:,0] = numpy.asarray(range(120))
     averages = []
-    averages.append(list(range(120)))
+    
+    acquisition_seconds = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set=1).values("acquisition_seconds").distinct("acquisition_seconds")
+    averages.append(sorted(list((k['acquisition_seconds'] for k in acquisition_seconds))))
     # case = Case.objects.get(id=int(case))
     for i, annotation in enumerate(data['annotations']):
         idx = numpy.abs(annotation['normal']).argmax()
@@ -72,19 +75,15 @@ def timeseries_data(request, case, source_set=None):
         logger.info(f"flip X: {flipX}  Y:{flipY}")
         handles = numpy.asarray(annotation["ellipse"])
         bounds = numpy.asarray(annotation["bounds"])
-        bounds = bounds.reshape(3,2)
+        bounds = bounds.reshape(3,2) # reshape into three min/max pairs
+
         # logger.info(f"viewUp {annotation['view_up']}"),
         
         logger.info(f"bounds {bounds}"),
-        # bounds_shifted = bounds[:,:] - bounds[:,0][:,None]
         dims_size = bounds[:,1] - bounds[:,0]
-        
+        # normalize coordinates to between 0 and 1
         handles_relative = (handles[:,:] - bounds[:,0]) / dims_size
-        # logger.info(f"handles_relative: {handles_relative}")
-        logger.info(f"handles_relative: {handles_relative}")
-
-        # logger.info(f"dims_size {dims_size}"),
-        # logger.info(f"handles {handles}")
+        # 
         slice_number = round(handles_relative[0][idx] * instances.count() - 0.5)
         handles_relative = numpy.delete(handles_relative,idx,1)
         if flipX:
@@ -95,48 +94,38 @@ def timeseries_data(request, case, source_set=None):
         instance = instances.filter(slice_location=slice_number).get()
         ds = pydicom.dcmread( Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location )
         
-        handles_absolute = numpy.rint(handles_relative[:,:] * [ds.Columns, ds.Rows] - 0.5)
-        # logger.info(f"handles_abs {handles_absolute}")
-        center = numpy.rint((handles_absolute[0] + handles_absolute[1])/2)
+        # Calculate pixel locations of handles
+        handles_absolute = numpy.rint(handles_relative[:,:] * [ds.Columns, ds.Rows] - 0.5).astype(int)
+        [[_, top], [_, bottom], [left,_], [right,_ ]] = handles_absolute
+
+        center = numpy.rint((handles_absolute[0] + handles_absolute[1])/2.0)
         # logger.info(f"{handles_absolute[0] } + {handles_absolute[1] } = center {center}, {idx}")
+              
+        # logger.info(f"handles_absolute {handles_absolute}")
+        # logger.info(f"top {top} bottom {bottom} left {left} right {right}")
+        # logger.info(f"center {center}")
+        # # avgs = numpy.mean(subarray, (1,2)).flatten()
 
-        # center = numpy.delete(center,idx)
-        # center_2 = numpy.zeros(center.shape)
-        # center[:] = center[:] - bounds[:,0]
         
-        logger.info(f"center {center}")
-        subarray = ds.pixel_array[:,int(center[1]),int(center[0])]
-        # avgs = numpy.mean(subarray, (1,2)).flatten()
-        averages.append(subarray.tolist())
-        # center_px = numpy.delete(center,idx)
-        # logger.info(f"center_px {center_px.round()}")
-        # logger.info(f"Orientation: {orientation}")
-        # logger.info(handles)
-        # # A really silly way to work out what the slice location is.
-        # slice_index = numpy.abs(numpy.diff(annotation["ellipse"],n=3,axis=0)).argmin()
-        # slice_location = annotation["ellipse"][0][slice_index]
-        # logger.info(numpy.asarray(annotation["ellipse"]))
-        # extent = numpy.delete(numpy.asarray(annotation["ellipse"]), slice_index,axis=1)
+        if min(top,bottom) < 0 or max(top,bottom) > ds.pixel_array.shape[1] or \
+            min(left, right) < 0 or max(left,right) > ds.pixel_array.shape[2]:
+            averages.append([None] * ds.pixel_array.shape[0])
+            continue
+        # Pull out the rectangle described by the handles
+        subarray = ds.pixel_array[:,top:bottom,left:right]
 
-        # logger.info(slice_location)
-        # logger.info(extent)
-
-        # top = extent[0,0]
-        # bottom = extent[1,0]
-        # left = extent[2,1]
-        # right = extent[3,1]
-        # logger.info(", ".join(map(str,[top,bottom,left,right])))
-        # instance = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/{orientation}").latest('processing_job__created_at').instances.filter(slice_location=slice_location).get()
-        # ds = pydicom.dcmread( Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location )
-        # subarray = ds.pixel_array[:,top:bottom,min(left,right):max(left,right)]
-        # avgs = numpy.mean(subarray, (1,2)).flatten()
-        # averages.append(avgs.tolist())
-        # print(avgs)
-    # logger.info(numpy.asarray(averages))
-    # logger.info(data)
-    # def gen_data(x):
-    #     return (x,) +( random.random(),) * len(data['annotations'])
-
+        def masked(in_array):
+            # Not an entirely accurate ellipse especially for small ones
+            ry, rx = map(lambda x: (x-1)/2.0,in_array.shape[1:3])
+            y,x = numpy.ogrid[-ry: ry+1, -rx: rx+1]
+            mask = (x / rx)**2+(y / ry)**2 > 1 
+            v = in_array.view(numpy.ma.MaskedArray)
+            v.mask = mask
+            return v
+        
+        # Average over time
+        avgs = numpy.ma.mean(masked(subarray), (1,2)).flatten()
+        averages.append(avgs.tolist())
 
     return JsonResponse(dict(data=numpy.asarray(averages).T.tolist()))
 

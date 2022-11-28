@@ -12,7 +12,16 @@ h2 {
 .hidden {
     display:none !important;
 }
-
+.dygraph-axis-label {
+    color: white !important;
+}
+.dygraph-legend {
+    color: white !important;
+    background-color: black !important;
+}
+.dygraph-legend > span {
+    display: block;
+}
 .right-viewport {
     right: .5rem;
 }

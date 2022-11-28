@@ -12,7 +12,7 @@ import pydicom
 def register(set_path: str, case, origin, type, job_id=None) -> Tuple[bool, str]:
 
     # Register DICOM Set
-    print("set_path ", set_path)
+    logger.info(f"set_path {set_path}")
     try:
         dicom_set = DICOMSet(
             set_location=str(set_path),

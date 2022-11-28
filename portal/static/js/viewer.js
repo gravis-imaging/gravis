@@ -139,7 +139,7 @@ class GraspViewer {
         const { ORIENTATION } = cornerstone.CONSTANTS;
 
         const preview_info = [["AX"],["SAG"],["COR"]]
-        const [ previewViewports, previewViewportIds ] = this.createViewports("PREVIEW",preview_info, preview, [0.5,.5,.5])
+        const [ previewViewports, previewViewportIds ] = this.createViewports("PREVIEW",preview_info, preview)
 
         const view_info = [["AX",ORIENTATION.AXIAL],["SAG",ORIENTATION.SAGITTAL],["COR",ORIENTATION.CORONAL],["CINE"]]
         const [ viewViewports, viewportIds ] = this.createViewports("VIEW", view_info, main)
@@ -204,17 +204,15 @@ class GraspViewer {
         
         var styles = cornerstone.tools.annotation.config.style.getDefaultToolStyles()
         // styles.global.color = "rgb(255,0,0)"
-        styles.global.lineWidth = "5"
+        styles.global.lineWidth = "1"
         cornerstone.tools.annotation.config.style.setDefaultToolStyles(styles)
         toolGroupA.addTool(StackScrollMouseWheelTool.toolName );
-    
-    
         toolGroupB.addTool(StackScrollMouseWheelTool.toolName );
         toolGroupA.addTool(CrosshairsTool.toolName, {
             getReferenceLineColor: (id) => { return ({"VIEW_AX": "rgb(255, 255, 100)","VIEW_SAG": "rgb(100, 100, 255)","VIEW_COR": "rgb(255, 100, 100)",})[id]},
             // getReferenceLineControllable: (id)=> true,
-            // getReferenceLineDraggableRotatable: (id)=> true,
-            // getReferenceLineSlabThicknessControlsOn: (id)=> false,
+            // getReferenceLineDraggableRotatable: (id)=> false,
+            getReferenceLineSlabThicknessControlsOn: (id)=> false,
             // filterActorUIDsToSetSlabThickness: [viewportId(4)]
           });
         
@@ -415,35 +413,9 @@ class GraspViewer {
             //    console.log({position: evt.detail.camera.position, focalPoint:evt.detail.camera.focalPoint, viewPlaneNormal: evt.detail.camera.viewPlaneNormal} );
             }));
             
-            v.element.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_RENDERED", debounce(100, async (evt) => {
-                console.log(this.viewportIds[n], evt.detail.viewportId)
-                let annotations = cornerstone.tools.annotation.state.getAnnotations(v.element,"EllipticalROI");
-                
-                let sliceIndex  = cornerstone.utilities.getImageSliceDataForVolumeViewport(v).imageIndex
-                var data = []
-                var labels = ["time",]
-                for (var annotation of annotations){
-                    data.push( {
-                        normal: annotation.metadata.viewPlaneNormal,
-                        view_up: annotation.metadata.viewUp,
-                        bounds: this.volume.imageData.getBounds(),
-                        ellipse: annotation.data.handles.points ////.map((x)=>cornerstone.utilities.transformWorldToIndex(this.volume.imageData, x))})
-                    })
-                    labels.push(`annotation${Math.random()}`)
-                    console.log(annotation);
-                }
-                console.log(annotations.map(x=> {
-                    let [ bottom, top, left, right ] = x.data.handles.points
-                    return { top, bottom, left, right }
-                }))
-                // console.log(data.map(x=>x.ellipse))
-                const timeseries = await doFetch("/api/case/1/dicom_set/1/timeseries", {annotations: data})
-                this.chart.updateOptions( { 'file':  timeseries["data"], labels: labels} );
-                    // console.log(indices);
-
-            }));
+            v.element.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_RENDERED", debounce(100, (evt) => this.updateChart(v)));
         });
-
+                
         await this.setVolumeBySeries(graspVolumeInfo[0]["series_uid"]),
         this.volume.load(()=>{ console.log("Volume loaded")})
         try {
@@ -455,15 +427,45 @@ class GraspViewer {
         console.log("Study switched");
         return graspVolumeInfo
     }
+    async updateChart(v) {
+        let annotations = cornerstone.tools.annotation.state.getAnnotations(v.element,"EllipticalROI");
+        if (! annotations ) {
+            this.chart.updateOptions( {file: [] });
+            return;
+        }
+                let sliceIndex  = cornerstone.utilities.getImageSliceDataForVolumeViewport(v).imageIndex
+                var data = []
+                var labels = ["time",]
+        
+        var seriesOptions = {}
+                for (var annotation of annotations){
+                    data.push( {
+                        normal: annotation.metadata.viewPlaneNormal,
+                        view_up: annotation.metadata.viewUp,
+                        bounds: this.volume.imageData.getBounds(),
+                        ellipse: annotation.data.handles.points ////.map((x)=>cornerstone.utilities.transformWorldToIndex(this.volume.imageData, x))})
+                    })
+            labels.push(annotation.data.label)
+            seriesOptions[annotation.data.label] = { color: annotation.chartColor }
+            // console.log(annotation);
+                }
+        
+                try {
+                    const timeseries = await doFetch("/api/case/1/dicom_set/1/timeseries", {annotations: data})
+            const options = { 'file':  timeseries["data"], labels: labels, series: seriesOptions} 
+            this.chart.updateOptions( options );
+            console.log(options)
+        } catch (e) {
+            console.warn(e)
+                    return
+                }
+    }
     // async setGraspVolume(seriesInfo) {
     //     await this.setVolumeByImageIds(seriesInfo.imageIds,seriesInfo.series_uid)
     // }
-    addAnnotationToViewport(n) {
-        var viewport = this.viewports[n]
+    addAnnotationToViewport(viewport_n, idx) {
+        var viewport = this.viewports[viewport_n]
         var cam = viewport.getCamera()
-        // console.log(viewport.sWidth,viewport.sHeight);
-        // var center = viewport.canvasToWorld([viewport.sWidth * 0.5, viewport.sHeight * 0.5]);
-        // console.log("Center", center)
 
         var center_point = viewport.worldToCanvas(cam.focalPoint)
         var points = [
@@ -474,16 +476,18 @@ class GraspViewer {
         ].map(viewport.canvasToWorld)
 
         var template = {
+            chartColor: `rgb(${HSLToRGB(idx*(360/1.618033988),50,50).join(",")})`,
             highlighted:true,
             invalidated:false,
             isLocked: false,
             isVisible: true,
+            annotationUID: cornerstone.utilities.uuidv4(),
             metadata: {
                 toolName:"EllipticalROI","viewPlaneNormal":cam.viewPlaneNormal,"viewUp":cam.viewUp,"FrameOfReferenceUID":viewport.getFrameOfReferenceUID()
             },
             data: {
                 cachedStats:{},
-                label:"annotation",
+                label:`Annotation ${idx}`,
                 handles: {
                     textBox:{"hasMoved":false,"worldPosition":[0,0,0],"worldBoundingBox":{"topLeft":[0,0,0],"topRight":[0,0,0],"bottomLeft":[0,0,0],"bottomRight":[0,0,0]}},
                     points: points,
@@ -492,20 +496,42 @@ class GraspViewer {
             },
         }
         cornerstone.tools.annotation.state.addAnnotation(viewport.element,template)
-        cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,[this.viewportIds[n]]) 
+        cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,[this.viewportIds[viewport_n]]) 
+        return { uid: template.annotationUID, label: template.data.label, viewport: viewport, idx: idx, cam: viewport.getCamera() }
+    }
+    async deleteAnnotation(annotation_info) {
+        cornerstone.tools.annotation.state.removeAnnotation(annotation_info.uid, annotation_info.viewport.element)
+        cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,[annotation_info.viewport.id]) 
+        await this.updateChart(annotation_info.viewport)        
+        // let labels = this.chart.getLabels()
+        // let idx = labels.findIndex((a) => a === annotation_info.label)
+        // let data = this.chart.rawData_.slice()
+        // data.splice(idx,idx+1)
+        // labels.splice(idx,idx+1)
+
+        // this.chart.updateOptions( { file:  data, labels: labels} );
+    }
+    goToAnnotation(annotation_info) {
+        annotation_info.viewport.setCamera(annotation_info.cam);
+        this.renderingEngine.renderViewports([annotation_info.viewport.id]);
     }
     testChart() {
-        var data = []
-        for (var i = 10; i >= 0; i--) {
-            data.push([i, Math.random()]);
+        var g = new Dygraph(document.getElementById("chart"), [],
+        {
+            legend: 'always',
+            // valueRange: [0.0, 1000],
+            gridLineColor: 'white',
+            hideOverlayOnMouseOut: false,
+            labels: ['seconds', 'Random'],
+            axes: {
+                x: {
+                    axisLabelFormatter: function(x) {
+                        if (parseFloat(x))
+                          return `${parseFloat(x)}s`;
+                        return ''
           }
-    
-          var g = new Dygraph(document.getElementById("chart"), data,
-            {
-            // drawPoints: true,
-            // showRoller: true,
-            valueRange: [0.0, 1000],
-            labels: ['Time', 'Random']
+                  }
+            }
             });
         return g;
     }
@@ -625,7 +651,7 @@ async function doJob(type, case_, params) {
 }
 
 async function doFetch(url, body) {
-    return await ( await fetch(url, {
+    var raw_result = await fetch(url, {
         method: 'POST', 
         credentials: 'same-origin',        
         headers: {
@@ -633,14 +659,22 @@ async function doFetch(url, body) {
             'X-CSRFToken': csrftoken,
         },
         body: JSON.stringify(body),
-    })).json()
+    })
+    text = await raw_result.text();
+    
+    try {
+        return JSON.parse(text)
+    } catch (e) {
+        console.warn(text);
+        throw e
+    }
 }
 async function startJob(type, case_, params) {
     var body = {
         case: case_,
         parameters: params,
     };
-    var result = await (await fetch(`/job/${type}`, {
+    var raw_result = await fetch(`/job/${type}`, {
         method: 'POST', 
         credentials: 'same-origin',        
         headers: {
@@ -648,8 +682,14 @@ async function startJob(type, case_, params) {
             'X-CSRFToken': csrftoken,
         },
         body: JSON.stringify(body),
-    })).json()
-    return result.id
+    })
+    try {
+        return await raw_result.json()
+    } catch (e) {
+        console.warn(raw_result)
+        throw e
+    }
+    
 }
 
 async function getJob(job, id) {
@@ -685,3 +725,12 @@ window.onload = async function() {
 }
 
 
+function HSLToRGB (h, s, l) {
+    s /= 100;
+    l /= 100;
+    const k = n => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = n =>
+      l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    return [255 * f(0), 255 * f(8), 255 * f(4)];
+  };
