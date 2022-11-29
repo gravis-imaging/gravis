@@ -169,7 +169,7 @@ class GraspViewer {
             ZoomTool,
             ToolGroupManager,
             CrosshairsTool,
-            EllipticalROITool,
+            GravisROITool,
             Enums: csToolsEnums,
         } = cornerstoneTools;
         const { MouseBindings } = csToolsEnums;
@@ -180,7 +180,7 @@ class GraspViewer {
         // Add tools to Cornerstone3D
         // cornerstoneTools.addTool(PanTool);
         // cornerstoneTools.addTool(WindowLevelTool);
-        const tools = [CrosshairsTool, EllipticalROITool, StackScrollMouseWheelTool, VolumeRotateMouseWheelTool, WindowLevelTool, PanTool]
+        const tools = [CrosshairsTool, GravisROITool, StackScrollMouseWheelTool, VolumeRotateMouseWheelTool, WindowLevelTool, PanTool]
         tools.map(cornerstoneTools.addTool)
     
         // Define a tool group, which defines how mouse events map to tool commands for
@@ -197,7 +197,7 @@ class GraspViewer {
         // toolGroup.addTool(WindowLevelTool.toolName );
         // toolGroup.addTool(PanTool.toolName );
     
-        toolGroupA.addTool(EllipticalROITool.toolName,
+        toolGroupA.addTool(GravisROITool.toolName,
             {
                 centerPointRadius: 1,
             });
@@ -211,7 +211,7 @@ class GraspViewer {
         toolGroupA.addTool(CrosshairsTool.toolName, {
             getReferenceLineColor: (id) => { return ({"VIEW_AX": "rgb(255, 255, 100)","VIEW_SAG": "rgb(100, 100, 255)","VIEW_COR": "rgb(255, 100, 100)",})[id]},
             // getReferenceLineControllable: (id)=> true,
-            // getReferenceLineDraggableRotatable: (id)=> false,
+            getReferenceLineRotatable: (id)=> false,
             getReferenceLineSlabThicknessControlsOn: (id)=> false,
             // filterActorUIDsToSetSlabThickness: [viewportId(4)]
           });
@@ -304,7 +304,7 @@ class GraspViewer {
             // toolGroup.setToolActive(window.cornerstone.tools.WindowLevelTool.toolName, {
             //     bindings: [{ mouseButton: window.cornerstone.tools.Enums.MouseBindings.Primary }],
             // });
-            toolGroup.setToolPassive(cornerstone.tools.EllipticalROITool.toolName, {
+            toolGroup.setToolPassive(cornerstone.tools.GravisROITool.toolName, {
                 bindings: [
                 {
                     mouseButton: cornerstone.tools.Enums.MouseBindings.Primary, // Left Click
@@ -428,37 +428,37 @@ class GraspViewer {
         return graspVolumeInfo
     }
     async updateChart(v) {
-        let annotations = cornerstone.tools.annotation.state.getAnnotations(v.element,"EllipticalROI");
+        let annotations = cornerstone.tools.annotation.state.getAnnotations(v.element,"GravisROI");
         if (! annotations ) {
             this.chart.updateOptions( {file: [] });
             return;
         }
-                let sliceIndex  = cornerstone.utilities.getImageSliceDataForVolumeViewport(v).imageIndex
-                var data = []
-                var labels = ["time",]
+        let sliceIndex  = cornerstone.utilities.getImageSliceDataForVolumeViewport(v).imageIndex
+        var data = []
+        var labels = ["time",]
         
         var seriesOptions = {}
-                for (var annotation of annotations){
-                    data.push( {
-                        normal: annotation.metadata.viewPlaneNormal,
-                        view_up: annotation.metadata.viewUp,
-                        bounds: this.volume.imageData.getBounds(),
-                        ellipse: annotation.data.handles.points ////.map((x)=>cornerstone.utilities.transformWorldToIndex(this.volume.imageData, x))})
-                    })
-            labels.push(annotation.data.label)
-            seriesOptions[annotation.data.label] = { color: annotation.chartColor }
-            // console.log(annotation);
-                }
-        
-                try {
-                    const timeseries = await doFetch("/api/case/1/dicom_set/1/timeseries", {annotations: data})
+        for (var annotation of annotations){
+            data.push( {
+                normal: annotation.metadata.viewPlaneNormal,
+                view_up: annotation.metadata.viewUp,
+                bounds: this.volume.imageData.getBounds(),
+                ellipse: annotation.data.handles.points ////.map((x)=>cornerstone.utilities.transformWorldToIndex(this.volume.imageData, x))})
+            })
+             labels.push(annotation.data.label)
+             seriesOptions[annotation.data.label] = { color: annotation.chartColor }
+    // console.log(annotation);
+        }
+
+        try {
+            const timeseries = await doFetch("/api/case/1/dicom_set/1/timeseries", {annotations: data})
             const options = { 'file':  timeseries["data"], labels: labels, series: seriesOptions} 
             this.chart.updateOptions( options );
             console.log(options)
         } catch (e) {
             console.warn(e)
-                    return
-                }
+            return
+        }
     }
     // async setGraspVolume(seriesInfo) {
     //     await this.setVolumeByImageIds(seriesInfo.imageIds,seriesInfo.series_uid)
@@ -483,7 +483,7 @@ class GraspViewer {
             isVisible: true,
             annotationUID: cornerstone.utilities.uuidv4(),
             metadata: {
-                toolName:"EllipticalROI","viewPlaneNormal":cam.viewPlaneNormal,"viewUp":cam.viewUp,"FrameOfReferenceUID":viewport.getFrameOfReferenceUID()
+                toolName:"GravisROI","viewPlaneNormal":cam.viewPlaneNormal,"viewUp":cam.viewUp,"FrameOfReferenceUID":viewport.getFrameOfReferenceUID()
             },
             data: {
                 cachedStats:{},

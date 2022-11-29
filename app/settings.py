@@ -50,7 +50,7 @@ MEDIA_ROOT = DATA_FOLDER
 STATIC_URL = "static/"
 STATIC_ROOT = "/opt/gravis/staticfiles"
 
-ALLOWED_HOSTS = ["gravis", "127.0.0.1"]
+ALLOWED_HOSTS = ["gravis", "127.0.0.1", "localhost"]
 USE_X_FORWARDED_HOST = True
 
 CSRF_TRUSTED_ORIGINS = [
