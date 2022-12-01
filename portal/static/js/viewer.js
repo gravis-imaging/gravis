@@ -1,7 +1,3 @@
-// import * as cornerstone_test from './static/cornerstone/bundle.js';
-// import { Cornerstone } from './static/cornerstone/bundle.js';
-// import * as cornerstone from '../../../../cornerstone3D-beta/packages/core'
-
 const SOP_INSTANCE_UID = '00080018';
 const STUDY_DATE = '00080020';
 const STUDY_TIME = '00080030';
@@ -81,12 +77,130 @@ function debounce(delay, callback) {
     }
 }
 class GraspViewer {
+    renderingEngine;
+    viewportIds = [];
+    previewViewportIds = [];
+
+    viewports = [];
+    previewViewports = [];
+
+    chart;
+    toolsAlreadyActive = false;
+
+    dicom_set;
+    case_id;
+    study_uid;
+    volume; 
+
+    annotations = {};
+
     constructor( ...inp ) {
         return (async () => {
             await this.initialize(...inp);
             return this;
           })();   
          }
+    
+    getState() {
+        if (!this.viewports[0].getDefaultActor()) {
+            return
+        }
+        const cameras = this.viewports.map(v=>v.getCamera())
+        const voi = this.getVolumeVOI(this.viewports[0])
+        const annotations = cornerstone.tools.annotation.state.getAnnotations(this.viewports[0].element,"GravisROI");
+        return { cameras, voi, annotations };
+    }
+    saveState() {
+        if (!this.case_id) return;
+        console.info("Saving state.")
+        const state = this.getState()
+        if (state)
+            localStorage.setItem(this.case_id, JSON.stringify(state));
+    }
+    loadState() {
+        var state;
+        state = JSON.parse(localStorage.getItem(this.case_id));
+        if (!state) {
+            return;
+        }
+        console.info("Loading state.");
+        state.cameras.map((c,n)=> {
+            this.viewports[n].setCamera(c);
+        })
+        if ( state.voi ) {
+            const [ lower, upper ] = state.voi;
+            this.viewports[0].setProperties( { voiRange: {lower,upper}})
+        }
+        if ( state.annotations ) {
+            const annotationState = cornerstone.tools.annotation.state;
+            let old_annotations = []
+            for (let v of this.viewports.slice(0,3)) {
+                old_annotations = annotationState.getAnnotations(v.element,"GravisROI");
+                if (!old_annotations) continue;
+                for (let a of old_annotations) {
+                    annotationState.removeAnnotation(a.annotationUID, v.element)
+                }
+            }
+            for (var a of Object.keys(this.annotations)) {
+                delete this.annotations[a];
+            }
+            for (var a of state.annotations) {
+                this.annotations[a.annotationUID] = { uid: a.annotationUID, label: a.data.label, ...a.metadata }
+                annotationState.addAnnotation(this.viewports[0].element,a)
+            }
+        }
+        this.renderingEngine.renderViewports(this.viewportIds);
+        console.log(state);
+    }
+
+    backgroundSaveState(){ 
+        const saveStateSoon = () => {
+            requestIdleCallback(this.saveState.bind(this));
+        }
+        document.addEventListener('visibilitychange', ((event) => { 
+            if (document.visibilityState === 'hidden') {
+                this.saveState();
+            } else if (document.visibilityState === 'visible') {
+                this.loadState();
+            }
+        }).bind(this));
+        return setInterval(saveStateSoon.bind(this), 1000);
+    }
+
+    async initialize( main, preview ) {
+            const { RenderingEngine, Types, Enums, volumeLoader, CONSTANTS, setVolumesForViewports} = window.cornerstone; 
+            const { ViewportType } = Enums;
+            // Force cornerstone to try to use GPU rendering even if it thinks the GPU is weak.
+            cornerstone.setUseCPURendering(false);
+            
+            await cornerstone.helpers.initDemo(); 
+            // Instantiate a rendering engine
+            const renderingEngineId = 'gravisRenderEngine';
+            this.renderingEngine = new RenderingEngine(renderingEngineId);    
+    
+            const { ORIENTATION } = cornerstone.CONSTANTS;
+    
+            const preview_info = [["AX"],["SAG"],["COR"]]
+            const [ previewViewports, previewViewportIds ] = this.createViewports("PREVIEW",preview_info, preview)
+    
+            const view_info = [["AX",ORIENTATION.AXIAL],["SAG",ORIENTATION.SAGITTAL],["COR",ORIENTATION.CORONAL],["CINE"]]
+            const [ viewViewports, viewportIds ] = this.createViewports("VIEW", view_info, main)
+            this.renderingEngine.setViewports([...previewViewports, ...viewViewports])
+    
+            this.viewportIds = viewportIds
+            this.previewViewportIds = previewViewportIds
+    
+            this.viewports = viewportIds.map((c)=>this.renderingEngine.getViewport(c))
+            this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c))
+            // renderingEngine.enableElement(viewportInput);
+            cornerstone.tools.synchronizers.createVOISynchronizer("SYNC_CAMERAS");
+        
+            this.createTools();
+            this.renderingEngine.renderViewports([...this.viewportIds, ...this.previewViewports]);
+            this.chart = this.testChart();
+            this.backgroundSaveState();
+        }
+    
     
     createViewportGrid(n=4) {
         const viewportGrid = document.createElement('div');
@@ -125,134 +239,103 @@ class GraspViewer {
             }});
         return [ viewportInput, viewportInput.map((c)=>c.viewportId) ]
     }
-    async initialize( main, preview ) {
-        const { RenderingEngine, Types, Enums, volumeLoader, CONSTANTS, setVolumesForViewports} = window.cornerstone; 
-        const { ViewportType } = Enums;
-        // Force cornerstone to try to use GPU rendering even if it thinks the GPU is weak.
-        cornerstone.setUseCPURendering(false);
-        
-        await cornerstone.helpers.initDemo(); 
-        // Instantiate a rendering engine
-        const renderingEngineId = 'gravisRenderEngine';
-        this.renderingEngine = new RenderingEngine(renderingEngineId);    
-
-        const { ORIENTATION } = cornerstone.CONSTANTS;
-
-        const preview_info = [["AX"],["SAG"],["COR"]]
-        const [ previewViewports, previewViewportIds ] = this.createViewports("PREVIEW",preview_info, preview)
-
-        const view_info = [["AX",ORIENTATION.AXIAL],["SAG",ORIENTATION.SAGITTAL],["COR",ORIENTATION.CORONAL],["CINE"]]
-        const [ viewViewports, viewportIds ] = this.createViewports("VIEW", view_info, main)
-        this.renderingEngine.setViewports([...previewViewports, ...viewViewports])
-
-        this.viewportIds = viewportIds
-        this.previewViewportIds = previewViewportIds
-
-        this.viewports = viewportIds.map((c)=>this.renderingEngine.getViewport(c))
-        this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c))
-        // renderingEngine.enableElement(viewportInput);
-        cornerstone.tools.synchronizers.createVOISynchronizer("SYNC_CAMERAS");
-    
-        this.createTools()
-        this.renderingEngine.renderViewports([...this.viewportIds, ...this.previewViewports]);
-        this.chart = this.testChart()
-    }
-
 
     createTools() {
         const cornerstoneTools = window.cornerstone.tools;
         const {
             PanTool,
+            ZoomTool,
             WindowLevelTool,
             StackScrollMouseWheelTool,
             VolumeRotateMouseWheelTool,
-            ZoomTool,
+
             ToolGroupManager,
             CrosshairsTool,
             GravisROITool,
             Enums: csToolsEnums,
         } = cornerstoneTools;
         const { MouseBindings } = csToolsEnums;
-    
-        const toolGroupIdA = `STACK_TOOL_GROUP_ID_A`;
-        const toolGroupIdB = `STACK_TOOL_GROUP_ID_B`;
-    
-        // Add tools to Cornerstone3D
-        // cornerstoneTools.addTool(PanTool);
-        // cornerstoneTools.addTool(WindowLevelTool);
-        const tools = [CrosshairsTool, GravisROITool, StackScrollMouseWheelTool, VolumeRotateMouseWheelTool, WindowLevelTool, PanTool]
+        const tools = [CrosshairsTool, GravisROITool, StackScrollMouseWheelTool, VolumeRotateMouseWheelTool, WindowLevelTool, PanTool, ZoomTool]
         tools.map(cornerstoneTools.addTool)
     
+        this.viewports.map(v=>v.element.oncontextmenu = e=>e.preventDefault())
         // Define a tool group, which defines how mouse events map to tool commands for
         // Any viewport using the group
-        const toolGroupA = ToolGroupManager.createToolGroup(toolGroupIdA);
-    
-        for (var viewport of this.viewportIds) {
-            toolGroupA.addViewport(viewport, "gravisRenderEngine");
+        const toolGroupMain = ToolGroupManager.createToolGroup(`STACK_TOOL_GROUP_MAIN`);
+        const toolGroupAux = ToolGroupManager.createToolGroup(`STACK_TOOL_GROUP_AUX`);
+
+        const allGroupTools = [ StackScrollMouseWheelTool.toolName, WindowLevelTool.toolName, PanTool.toolName, ZoomTool.toolName ]
+        for (var viewport of this.viewportIds.slice(0,3)) {
+            toolGroupMain.addViewport(viewport, "gravisRenderEngine");
         }
-    
-        const toolGroupB = ToolGroupManager.createToolGroup(toolGroupIdB);
-        // toolGroupB.addViewport("VIEW_MIP", "gravisRenderEngine");
-        // Add tools to the tool group
-        // toolGroup.addTool(WindowLevelTool.toolName );
-        // toolGroup.addTool(PanTool.toolName );
-    
-        toolGroupA.addTool(GravisROITool.toolName,
+
+        toolGroupAux.addViewport(this.viewportIds[3], "gravisRenderEngine");
+        allGroupTools.map( tool => [toolGroupMain, toolGroupAux].map(group => group.addTool(tool)))
+
+        toolGroupMain.addTool(GravisROITool.toolName,
             {
                 centerPointRadius: 1,
             });
         
         var styles = cornerstone.tools.annotation.config.style.getDefaultToolStyles()
-        // styles.global.color = "rgb(255,0,0)"
         styles.global.lineWidth = "1"
         cornerstone.tools.annotation.config.style.setDefaultToolStyles(styles)
-        toolGroupA.addTool(StackScrollMouseWheelTool.toolName );
-        toolGroupB.addTool(StackScrollMouseWheelTool.toolName );
-        toolGroupA.addTool(CrosshairsTool.toolName, {
-            getReferenceLineColor: (id) => { return ({"VIEW_AX": "rgb(255, 255, 100)","VIEW_SAG": "rgb(100, 100, 255)","VIEW_COR": "rgb(255, 100, 100)",})[id]},
-            // getReferenceLineControllable: (id)=> true,
-            getReferenceLineRotatable: (id)=> false,
-            getReferenceLineSlabThicknessControlsOn: (id)=> false,
+        toolGroupMain.addTool(CrosshairsTool.toolName, {
+            getReferenceLineColor: (id) => { return ({"VIEW_AX": "rgb(255, 255, 100)",
+                                                      "VIEW_SAG": "rgb(100, 100, 255)",
+                                                      "VIEW_COR": "rgb(255, 100, 100)",})[id]},
+            getReferenceLineRotatable: (id) => false,
+            getReferenceLineSlabThicknessControlsOn: (id) => false,
             // filterActorUIDsToSetSlabThickness: [viewportId(4)]
           });
-        
-        toolGroupA.addTool(WindowLevelTool.toolName );
-        // toolGroup.addTool(PanTool.toolName,  { volumeId } );
-        // toolGroup.addTool(ZoomTool.toolName,  { volumeId } );
-        toolGroupB.addTool(StackScrollMouseWheelTool.toolName);
-    
-    
-        // Set the initial state of the tools, here all tools are active and bound to
-        // Different mouse inputs
-        // toolGroup.setToolActive(WindowLevelTool.toolName, {
-        // bindings: [
-        //     {
-        //     mouseButton: MouseBindings.Primary, // Left Click
-        //     },
-        // ],
-        // });
-    
-        toolGroupA.setToolPassive(CrosshairsTool.toolName, {
-            // bindings: [{ mouseButton: MouseBindings.Secondary }],
+        return toolGroupMain;
+    }
+    enableTools() {
+        if (this.toolsAlreadyActive) {
+            return
+        }
+        const Tools = window.cornerstone.tools;
+        const Enums = Tools.Enums;
+        const toolGroupMain = Tools.ToolGroupManager.getToolGroup(`STACK_TOOL_GROUP_MAIN`);
+        const toolGroupAux = Tools.ToolGroupManager.getToolGroup(`STACK_TOOL_GROUP_AUX`);
+
+
+        toolGroupMain.setToolActive(Tools.CrosshairsTool.toolName, {
+            bindings: [{ 
+                mouseButton: Enums.MouseBindings.Primary,
+                modifierKey: Enums.KeyboardBindings.Shift,
+            }],
         });
-        
-        // toolGroup.setToolActive(PanTool.toolName, {
-        // bindings: [
-        //     {
-        //     mouseButton: MouseBindings.Auxiliary, // Middle Click
-        //     },
-        // ],
-        // });
-        // toolGroup.setToolActive(ZoomTool.toolName, {
-        // bindings: [
-        //     {
-        //     mouseButton: MouseBindings.Secondary, // Right Click
-        //     },
-        // ],
-        // });
-        // As the Stack Scroll mouse wheel is a tool using the `mouseWheelCallback`
-        // hook instead of mouse buttons, it does not need to assign any mouse button.
-        return toolGroupA;
+        toolGroupMain.setToolActive(Tools.WindowLevelTool.toolName, {
+            bindings: [{ 
+                mouseButton: Enums.MouseBindings.Primary,
+                modifierKey: Enums.KeyboardBindings.Ctrl,
+            }],
+        });
+        toolGroupMain.setToolActive(Tools.ZoomTool.toolName, {
+            bindings: [{ 
+                mouseButton: Enums.MouseBindings.Secondary,
+                modifierKey: Enums.KeyboardBindings.Alt,
+            }],
+        });
+        toolGroupMain.setToolActive(Tools.PanTool.toolName, {
+            bindings: [{ 
+                mouseButton: Enums.MouseBindings.Primary,
+                modifierKey: Enums.KeyboardBindings.Alt,
+            }],
+        });
+
+        toolGroupMain.setToolPassive(Tools.GravisROITool.toolName, {
+            bindings: [
+            {
+                mouseButton: Enums.MouseBindings.Primary,
+            },
+            ],
+        });
+        [toolGroupMain, toolGroupAux].map(g=>g.setToolActive(Tools.StackScrollMouseWheelTool.toolName))
+        const synchronizer = Tools.SynchronizerManager.getSynchronizer("SYNC_CAMERAS");
+        [...this.viewportIds.slice(0,3)].map(id => synchronizer.add({ renderingEngineId: "gravisRenderEngine", viewportId:id }))
+        this.toolsAlreadyActive = true;
     }
     async setVolumeByImageIds(imageIds, volumeName, keepCamera=true) {
         // const volumeName = series_uid; // Id of the volume less loader prefix
@@ -265,7 +348,7 @@ class GraspViewer {
         }
         let voi = null
         try {
-            voi = this.viewports[0].getDefaultActor().actor.getProperty().getRGBTransferFunction(0).getRange()
+            voi = this.getVolumeVOI(this.viewports[0]);
         } catch {}
         // dest_viewport.setVOI({lower, upper})
 
@@ -296,33 +379,7 @@ class GraspViewer {
         }
         // setVolumesForViewports(renderingEngine, [{ volumeId }], [viewportId]);
         // viewport.render();
-        if (!this.toolAlreadyActive) {
-            const toolGroup = window.cornerstone.tools.ToolGroupManager.getToolGroup(`STACK_TOOL_GROUP_ID_A`);
-            toolGroup.setToolActive(window.cornerstone.tools.CrosshairsTool.toolName, {
-                bindings: [{ mouseButton: window.cornerstone.tools.Enums.MouseBindings.Primary }],
-            });
-            // toolGroup.setToolActive(window.cornerstone.tools.WindowLevelTool.toolName, {
-            //     bindings: [{ mouseButton: window.cornerstone.tools.Enums.MouseBindings.Primary }],
-            // });
-            toolGroup.setToolPassive(cornerstone.tools.GravisROITool.toolName, {
-                bindings: [
-                {
-                    mouseButton: cornerstone.tools.Enums.MouseBindings.Primary, // Left Click
-                },
-                ],
-            });
-            toolGroup.setToolActive(window.cornerstone.tools.StackScrollMouseWheelTool.toolName);
-
-            const toolGroupB = window.cornerstone.tools.ToolGroupManager.getToolGroup(`STACK_TOOL_GROUP_ID_B`);
-            toolGroupB.setToolActive(window.cornerstone.tools.StackScrollMouseWheelTool.toolName);
-
-            this.toolAlreadyActive = true;
-
-            const synchronizer = cornerstone.tools.SynchronizerManager.getSynchronizer("SYNC_CAMERAS");
-            [...this.viewportIds.slice(0,3)].map(id => synchronizer.add({ renderingEngineId: "gravisRenderEngine", viewportId:id }))
-            // synchronizer.add({ renderingEngineId: "gravisRenderEngine", viewportId:"VIEW_MIP" });
-
-        }
+        this.enableTools();
         // console.log("Volume starts loading");
         // const loading_finished = new Promise((resolve) => {
         //     this.volume.load( (e) => { console.log("Volume finished loading",e); resolve() });
@@ -343,22 +400,21 @@ class GraspViewer {
         // console.log("Image IDs",imageIds)
         await this.setVolumeByImageIds(imageIds, series_uid, true);
     }
+    startPreview() {
+        console.info("Starting preview")
+        this.previewViewports.slice(0,3).map((v, n)=> {
+            v.element.getElementsByTagName('svg')[0].innerHTML = this.viewports[n].element.getElementsByTagName('svg')[0].innerHTML
+        });
+    }
     async setPreview(idx, l) {
         try {
             idx = parseInt(idx)
-            let [lower, upper] = this.viewports[0].getDefaultActor().actor.getProperty().getRGBTransferFunction(0).getRange()
+            let [lower, upper] = this.getVolumeVOI(this.viewports[0])
 
-            for (var v of this.previewViewports) {
-                // let voi = {lower: 0, upper: 1229+idx}
-                //             let k = v.getDefaultActor().actor.getMapper().getInputData().getPointData().getScalars().getRange()
+            this.previewViewports.slice(0,3).map(async (v, n)=> {
                 v.setVOI({lower, upper})
                 await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / l))
-                // v.setVOI({lower:0, upper:1229+(3497-1229)*(idx/v.getImageIds().length)})
-                // console.log("Stack VOI range.", v.voiRange.lower, v.voiRange.upper);
-                // console.log("Viewport VOI range.", lower, upper);
-                // v.setVOI({lower:0, upper: v._getImageDataMetadata(v.csImage).imagePixelModule.windowCenter*2})
-
-            }
+            })
         } catch (e) {
             console.error(e);
         }
@@ -366,15 +422,18 @@ class GraspViewer {
         
     }
 
+    getVolumeVOI(viewport) {
+        return viewport.getDefaultActor().actor.getProperty().getRGBTransferFunction(0).getRange()
+    }
     async updatePreview(n=null, idx=0) {
-        console.log("Updating previews...")
+        // console.log("Updating previews...")
         let update = [n]
         if (n==null){
             update = [0, 1, 2]
         }
         await Promise.all(update.map(async (n)=> {
-            console.log(`Preview ${n}`)
-            let [lower, upper] = this.viewports[0].getDefaultActor().actor.getProperty().getRGBTransferFunction(0).getRange()
+            // console.log(`Preview ${n}`)
+            let [lower, upper] = this.getVolumeVOI(this.viewports[0])
             this.previewViewports[n].setVOI({lower, upper})
             await this.renderCineFromViewport(n, this.previewViewports[n]) 
             this.previewViewports[n].setVOI({lower, upper})
@@ -404,19 +463,24 @@ class GraspViewer {
         
         this.viewports.slice(0,3).map((v, n)=> {
             v.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(250, async (evt) => {
-                // console.log(v.getCamera().position)
                 try {
                     await this.updatePreview(n)
+                    this.previewViewports[n].setZoom(v.getZoom());
+                    this.previewViewports[n].setPan(v.getPan());
+                    // this.previewViewports[n].element.getElementsByTagName('svg')[0].innerHTML = this.viewports[n].element.getElementsByTagName('svg')[0].innerHTML
+                    this.renderingEngine.renderViewports([this.previewViewportIds[n]])    
                 } catch (e) {
                     console.error(e);
                 }
-            //    console.log({position: evt.detail.camera.position, focalPoint:evt.detail.camera.focalPoint, viewPlaneNormal: evt.detail.camera.viewPlaneNormal} );
+                //    console.log({position: evt.detail.camera.position, focalPoint:evt.detail.camera.focalPoint, viewPlaneNormal: evt.detail.camera.viewPlaneNormal} );
             }));
             
-            v.element.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_RENDERED", debounce(100, (evt) => this.updateChart(v)));
+            v.element.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_RENDERED", debounce(100, (evt) => {
+                this.updateChart(v)
+            }));
         });
-                
         await this.setVolumeBySeries(graspVolumeInfo[0]["series_uid"]),
+        this.loadState();
         this.volume.load(()=>{ console.log("Volume loaded")})
         try {
             await this.updatePreview()
@@ -427,13 +491,13 @@ class GraspViewer {
         console.log("Study switched");
         return graspVolumeInfo
     }
-    async updateChart(v) {
-        let annotations = cornerstone.tools.annotation.state.getAnnotations(v.element,"GravisROI");
+    async updateChart() {
+        let annotations = cornerstone.tools.annotation.state.getAnnotations(this.viewports[0].element,"GravisROI");
         if (! annotations ) {
-            this.chart.updateOptions( {file: [] });
+            if (this.chart.file_.length > 0 )
+                this.chart.updateOptions( {file: [] });
             return;
         }
-        let sliceIndex  = cornerstone.utilities.getImageSliceDataForVolumeViewport(v).imageIndex
         var data = []
         var labels = ["time",]
         
@@ -454,7 +518,6 @@ class GraspViewer {
             const timeseries = await doFetch("/api/case/1/dicom_set/1/timeseries", {annotations: data})
             const options = { 'file':  timeseries["data"], labels: labels, series: seriesOptions} 
             this.chart.updateOptions( options );
-            console.log(options)
         } catch (e) {
             console.warn(e)
             return
@@ -463,9 +526,10 @@ class GraspViewer {
     // async setGraspVolume(seriesInfo) {
     //     await this.setVolumeByImageIds(seriesInfo.imageIds,seriesInfo.series_uid)
     // }
-    addAnnotationToViewport(viewport_n, idx) {
+    addAnnotationToViewport(viewport_n) {
         var viewport = this.viewports[viewport_n]
         var cam = viewport.getCamera()
+        var idx = Math.max(0,...Object.values(this.annotations).map(a => a.idx+1));
 
         var center_point = viewport.worldToCanvas(cam.focalPoint)
         var points = [
@@ -475,7 +539,7 @@ class GraspViewer {
             [ center_point[0]+50, center_point[1] ], // right
         ].map(viewport.canvasToWorld)
 
-        var template = {
+        var new_a = {
             chartColor: `rgb(${HSLToRGB(idx*(360/1.618033988),50,50).join(",")})`,
             highlighted:true,
             invalidated:false,
@@ -483,6 +547,9 @@ class GraspViewer {
             isVisible: true,
             annotationUID: cornerstone.utilities.uuidv4(),
             metadata: {
+                idx: idx,
+                viewportId: this.viewportIds[viewport_n],
+                cam: viewport.getCamera(),
                 toolName:"GravisROI","viewPlaneNormal":cam.viewPlaneNormal,"viewUp":cam.viewUp,"FrameOfReferenceUID":viewport.getFrameOfReferenceUID()
             },
             data: {
@@ -495,14 +562,16 @@ class GraspViewer {
                 },
             },
         }
-        cornerstone.tools.annotation.state.addAnnotation(viewport.element,template)
+        cornerstone.tools.annotation.state.addAnnotation(viewport.element,new_a)
         cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,[this.viewportIds[viewport_n]]) 
-        return { uid: template.annotationUID, label: template.data.label, viewport: viewport, idx: idx, cam: viewport.getCamera() }
+        this.annotations[new_a.annotationUID] = { uid: new_a.annotationUID, label: new_a.data.label, ...new_a.metadata }
     }
     async deleteAnnotation(annotation_info) {
-        cornerstone.tools.annotation.state.removeAnnotation(annotation_info.uid, annotation_info.viewport.element)
-        cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,[annotation_info.viewport.id]) 
-        await this.updateChart(annotation_info.viewport)        
+        const viewport = this.viewports.find((x)=>x.id == annotation_info.viewportId);
+
+        cornerstone.tools.annotation.state.removeAnnotation(annotation_info.uid, viewport.element)
+        cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,[annotation_info.viewportId]) 
+        await this.updateChart()
         // let labels = this.chart.getLabels()
         // let idx = labels.findIndex((a) => a === annotation_info.label)
         // let data = this.chart.rawData_.slice()
@@ -512,13 +581,14 @@ class GraspViewer {
         // this.chart.updateOptions( { file:  data, labels: labels} );
     }
     goToAnnotation(annotation_info) {
-        annotation_info.viewport.setCamera(annotation_info.cam);
-        this.renderingEngine.renderViewports([annotation_info.viewport.id]);
+        const viewport = this.viewports.find((x)=>x.id == annotation_info.viewportId);
+        viewport.setCamera(annotation_info.cam);
+        this.renderingEngine.renderViewports([annotation_info.viewportId]);
     }
     testChart() {
         var g = new Dygraph(document.getElementById("chart"), [],
         {
-            legend: 'always',
+            // legend: 'always',
             // valueRange: [0.0, 1000],
             gridLineColor: 'white',
             hideOverlayOnMouseOut: false,
@@ -557,7 +627,7 @@ class GraspViewer {
                 await fetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/processed_results/CINE/${view}?series_number=${val}`, {
             method: 'GET',   credentials: 'same-origin'
         })).json() 
-        console.log("Preview info:", info)
+        // console.log("Preview info:", info)
         var urls = info.urls
         // for ( var instance of info ) {
         //     urls.push("wadouri:" + 
@@ -577,7 +647,7 @@ class GraspViewer {
 
         dest_viewport = dest_viewport? dest_viewport : this.viewports[3]
         // dest_viewport.setProperties( { voiRange: viewport.getProperties().voiRange });
-        let [lower, upper] = viewport.getDefaultActor().actor.getProperty().getRGBTransferFunction(0).getRange()
+        let [lower, upper] = this.getVolumeVOI(viewport);
         dest_viewport.setVOI({lower, upper})
         await dest_viewport.setStack(urls,dest_viewport.currentImageIdIndex);
         // console.log(cornerstone.requestPoolManager.getRequestPool().interaction)
@@ -589,7 +659,7 @@ class GraspViewer {
 
 
 
-// var toolAlreadyActive = false;
+// var toolsAlreadyActive = false;
 
 
 function parseDicomTime(date, timestamp) {    

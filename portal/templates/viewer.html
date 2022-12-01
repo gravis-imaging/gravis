@@ -34,7 +34,7 @@ on htmx:afterRequest
 
 
 <div style="height:calc(100vh - 6rem); display:grid; grid-template-rows: 0fr 0fr 1fr; grid-template-columns: min-content;" 
-  x-data="{ viewer: null, annotations: {}, n_annotations: 0, study_id: null, previewing: false, switching: false, current_study: null, current_time: 0, index: 0, loading: false, job_loading: null, case_id: {{case.id}}, dicom_set: null }" >
+  x-data="{ viewer: null, n_annotations: 0, study_id: null, previewing: false, switching: false, current_study: null, current_time: 0, index: 0, loading: false, job_loading: null, case_id: {{case.id}}, dicom_set: null }" >
   <div style="grid-area: 1 / 1 / 1 / 3;">
     <div class="">
       <div class="select-wrapper">
@@ -53,11 +53,11 @@ on htmx:afterRequest
     <div id="chart" style="background-color: black; color: white;"></div>
   </div>
   <div id="annotations">
-    <template x-for="uid in Object.keys(annotations)" :key="uid">
-      <div x-show="!!annotations[uid]">
-        <div x-text="annotations[uid] ? annotations[uid].label : 'Error'"></div>
-        <button class="btn-primary btn-large m-2" x-on:click="await viewer.deleteAnnotation(annotations[uid]); delete annotations[uid];">Delete</button>
-        <button class="btn-primary btn-large m-2" x-on:click="await viewer.goToAnnotation(annotations[uid]);">Jump</button>
+    <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotations) : [])" :key="uid">
+      <div x-show="!!viewer.annotations[uid]">
+        <div x-text="viewer.annotations[uid] ? viewer.annotations[uid].label : 'Error'"></div>
+        <button class="btn-primary btn-large m-2" x-on:click="await viewer.deleteAnnotation(viewer.annotations[uid]); delete viewer.annotations[uid];">Delete</button>
+        <button class="btn-primary btn-large m-2" x-on:click="await viewer.goToAnnotation(viewer.annotations[uid]);">Jump</button>
       </div>
     </template>  
   </div>
@@ -78,7 +78,7 @@ on htmx:afterRequest
             <button style="pointer-events: auto" class="btn-primary btn-large m-2" 
               x-text="viewer && viewer.viewportIds[i-1]" 
               x-bind:disabled="job_loading != null"
-              x-on:click="let a=(viewer.addAnnotationToViewport(i-1, n_annotations)); annotations[a.uid] = a; n_annotations += 1;">
+              x-on:click="viewer.addAnnotationToViewport(i-1);">
               </button>
           </div>
         </template>
@@ -102,7 +102,7 @@ on htmx:afterRequest
       <div style="display: flex;">
         <input id='volume-picker' type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
         @mouseUp="previewing = false"
-        @input="previewing = true; index = $event.target.value; selected_time=current_study[index].acquisition_seconds; viewer.setPreview(index,current_study.length);"
+        @input="if (!previewing) { viewer.startPreview(); previewing = true; }; index = $event.target.value; selected_time=current_study[index].acquisition_seconds; viewer.setPreview(index,current_study.length);"
         @change="switching = true; await viewer.switchSeries(current_study[index].series_uid, case_id); current_time=selected_time; switching = false;"
         x-bind:disabled="!current_study || !!loading "
           {% comment %} @input="" {% endcomment %}
