@@ -122,9 +122,23 @@ def timeseries_data(request, case, source_set=None):
             v = in_array.view(numpy.ma.MaskedArray)
             v.mask = mask
             return v
-        
+
+        chart_options = data.get('chart_options',{})        
         # Average over time
-        avgs = numpy.ma.mean(masked(subarray), (1,2)).flatten()
+        mode = chart_options.get('mode','mean')
+        method = dict(mean=numpy.ma.mean,
+                    median=numpy.ma.median,
+                    ptp=numpy.ma.ptp)[mode]
+
+        subarray = subarray.astype('float32')
+        avgs = method(masked(subarray), (1,2)).flatten()
+
+        adj_mode = chart_options.get('adjust',None)
+        if adj_mode == "zeroed":
+            avgs = avgs - avgs[0]
+        elif adj_mode == "normalized":
+            avgs = ( avgs - avgs.min() ) 
+            avgs /= avgs.max()
         averages.append(avgs.tolist())
 
     return JsonResponse(dict(data=numpy.asarray(averages).T.tolist()))

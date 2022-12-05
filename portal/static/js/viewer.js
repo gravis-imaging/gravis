@@ -10,7 +10,14 @@ const SERIES_DESCRIPTION = '0008103E';
 function getMeta(data, val) {
     return data[val].Value[0]
 }
-
+// document.addEventListener(
+//     "wheel",
+//     function touchHandler(e) {
+//       if (e.ctrlKey) {
+//         e.preventDefault();
+//       }
+//     }, { passive: false } 
+// );
 function getImageId(instanceMetaData, wadoRsRoot) {
     const StudyInstanceUID = getMeta(instanceMetaData,STUDY_INSTANCE_UID)
     const SeriesInstanceUID = getMeta(instanceMetaData,SERIES_INSTANCE_UID)
@@ -93,7 +100,7 @@ class GraspViewer {
     volume; 
 
     annotations = {};
-
+    chart_options = {};
     constructor( ...inp ) {
         return (async () => {
             await this.initialize(...inp);
@@ -476,7 +483,7 @@ class GraspViewer {
             }));
             
             v.element.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_RENDERED", debounce(100, (evt) => {
-                this.updateChart(v)
+                this.updateChart()
             }));
         });
         await this.setVolumeBySeries(graspVolumeInfo[0]["series_uid"]),
@@ -507,15 +514,14 @@ class GraspViewer {
                 normal: annotation.metadata.viewPlaneNormal,
                 view_up: annotation.metadata.viewUp,
                 bounds: this.volume.imageData.getBounds(),
-                ellipse: annotation.data.handles.points ////.map((x)=>cornerstone.utilities.transformWorldToIndex(this.volume.imageData, x))})
+                ellipse: annotation.data.handles.points
             })
-             labels.push(annotation.data.label)
-             seriesOptions[annotation.data.label] = { color: annotation.chartColor }
-    // console.log(annotation);
+            labels.push(annotation.data.label)
+            seriesOptions[annotation.data.label] = { color: annotation.chartColor }
         }
 
         try {
-            const timeseries = await doFetch("/api/case/1/dicom_set/1/timeseries", {annotations: data})
+            const timeseries = await doFetch("/api/case/1/dicom_set/1/timeseries", {annotations: data, chart_options: this.chart_options})
             const options = { 'file':  timeseries["data"], labels: labels, series: seriesOptions} 
             this.chart.updateOptions( options );
         } catch (e) {
@@ -568,17 +574,9 @@ class GraspViewer {
     }
     async deleteAnnotation(annotation_info) {
         const viewport = this.viewports.find((x)=>x.id == annotation_info.viewportId);
-
         cornerstone.tools.annotation.state.removeAnnotation(annotation_info.uid, viewport.element)
         cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,[annotation_info.viewportId]) 
         await this.updateChart()
-        // let labels = this.chart.getLabels()
-        // let idx = labels.findIndex((a) => a === annotation_info.label)
-        // let data = this.chart.rawData_.slice()
-        // data.splice(idx,idx+1)
-        // labels.splice(idx,idx+1)
-
-        // this.chart.updateOptions( { file:  data, labels: labels} );
     }
     goToAnnotation(annotation_info) {
         const viewport = this.viewports.find((x)=>x.id == annotation_info.viewportId);

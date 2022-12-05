@@ -34,12 +34,12 @@ on htmx:afterRequest
 
 
 <div style="height:calc(100vh - 6rem); display:grid; grid-template-rows: 0fr 0fr 1fr; grid-template-columns: min-content;" 
-  x-data="{ viewer: null, n_annotations: 0, study_id: null, previewing: false, switching: false, current_study: null, current_time: 0, index: 0, loading: false, job_loading: null, case_id: {{case.id}}, dicom_set: null }" >
+  x-data="{ viewer: null, n_annotations: 0, previewing: false, switching: false, current_study: null, index: 0, loading: false, job_loading: null, case_id: {{case.id}} }" >
   <div style="grid-area: 1 / 1 / 1 / 3;">
     <div class="">
       <div class="select-wrapper">
         <select id="studies" name="studies" autocomplete="off" class="form-control" value="" x-bind:disabled="viewer == null" 
-        @change="loading=true; await $nextTick(); current_study = await viewer.switchStudy($event.target.value.split(':::'), case_id); current_time=current_study[0].acquisition_seconds; study_id = viewer.study_uid; dicom_set=viewer.dicom_set; loading=false;">
+        @change="loading=true; await $nextTick(); current_study = await viewer.switchStudy($event.target.value.split(':::'), case_id);  loading=false;">
           <option value="" selected disabled hidden>Select study...</option>
           {% for i in studies %}
           <option value="{{i.0}}:::{{i.1}}">{{ i.2 }}</option>
@@ -49,8 +49,14 @@ on htmx:afterRequest
       </div>
     </div>
   </div>
+  
   <div>
     <div id="chart" style="background-color: black; color: white;"></div>
+    <template x-if="viewer"><div>
+      <select x-model="viewer.chart_options['adjust']" @change="viewer.updateChart()"><option value="normal" autocomplete="off" selected>normal</option><option value="zeroed">zeroed</option><option value="normalized">normalized</option></select>
+      <select x-model="viewer.chart_options['mode']" @change="viewer.updateChart()"><option value="mean" autocomplete="off" selected>mean</option><option value="median">median</option><option value="ptp">ptp</option></select>
+    </div>
+    </template>
   </div>
   <div id="annotations">
     <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotations) : [])" :key="uid">
@@ -77,17 +83,21 @@ on htmx:afterRequest
           <div>
             <button style="pointer-events: auto" class="btn-primary btn-large m-2" 
               x-text="viewer && viewer.viewportIds[i-1]" 
-              x-bind:disabled="job_loading != null"
+              x-bind:disabled="switching || job_loading != null"
               x-on:click="viewer.addAnnotationToViewport(i-1);">
+              </button>
+              <button style="pointer-events: auto" class="btn-primary btn-large m-2" 
+              x-bind:disabled="switching || job_loading != null"
+              x-on:click="viewer.viewports[i-1].setZoom(1);viewer.viewports[i-1].setPan([0,0]);  viewer.viewports[i-1].render();">C
               </button>
           </div>
         </template>
         <div>
           <button style="pointer-events: auto" class="btn-primary btn-large m-2" 
-          x-on:click="viewer.viewports[3].setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${dicom_set}/processed_results/MIP?acquisition_number=3`)).json()).urls)">MIP
+          x-on:click="viewer.viewports[3].setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/MIP?acquisition_number=3`)).json()).urls)">MIP
           </button>
           <button style="pointer-events: auto" class="btn-primary btn-large m-2" 
-          x-on:click="viewer.viewports[3].setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${dicom_set}/processed_results/SUB?acquisition_number=3`)).json()).urls)">SUB
+          x-on:click="viewer.viewports[3].setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/SUB?acquisition_number=3`)).json()).urls)">SUB
           </button>
         </div>
           <div>

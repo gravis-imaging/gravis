@@ -18,6 +18,8 @@ h2 {
 .dygraph-legend {
     color: white !important;
     background-color: black !important;
+    left: calc(100% - 250px) !important;
+    top: 100% !important;
 }
 .dygraph-legend > span {
     display: block;
