@@ -112,6 +112,7 @@ def viewer(request, case):
     context = {
         "studies": [(k.study_uid,k.dicom_set.id, k.dicom_set.type) for k in instances],
         "case": instances[0].dicom_set.case,
+        "cases": Case.objects.filter(status = Case.CaseStatus.VIEWING)
     }
     return render(request, "viewer.html", context)
 
