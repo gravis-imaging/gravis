@@ -34,9 +34,13 @@
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
                           {% for item in cases %}
                           <li>
-                            <a class="dropdown-item" href="/viewer/Patient_ABC">{{ item }}</a>
-                          </li>
-                          {% endfor %}
+                            {% if item.num_spokes == "" %}
+                                <a class="dropdown-item" href="/viewer/{{ item.id }}">{{ item.patient_name }}</a>
+                            {% else %}
+                                <a class="dropdown-item" href="/viewer/{{ item.id }}">{{ item.patient_name }} ({{ item.num_spokes}} spokes)</a>
+                            {% endif %}
+                          </li>  
+                          {% endfor %}                        
                         </ul>
                     </li>
                     {% if user.is_staff %}

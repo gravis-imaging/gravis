@@ -116,6 +116,7 @@ def do_docker_job(job_id):
 
         except Exception as e:
             process_job_error(job_id, e)
+            logger.error(e)
             logger.error(
                 f"Error running docker container. Image for tag {docker_tag} not found."
             )  # handle_error

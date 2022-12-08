@@ -16,8 +16,11 @@ from enum import Enum
 class MRA:
     def __init__(self, vars):
         self.__input_dir_name = vars["GRAVIS_IN_DIR"]
+        
         self.__output_dir_name_sub = vars["GRAVIS_OUT_DIR"] + "sub/"
         self.__output_dir_name_mip = vars["GRAVIS_OUT_DIR"] + "mip/"
+
+        logger.info(f" __output_dir_name_mip {self.__output_dir_name_mip} input dir: {self.__input_dir_name}")
         # Values for all module settings
         # n_slices - number of bottom slices to calculate image intensity
         # angle_step - angle between each projection
@@ -33,6 +36,9 @@ class MRA:
         self.__tags_to_save_dict = {}
 
     def __load_grasp_files(self) -> int:
+
+
+        logger.info("AAAAAAAAAAA __load_grasp_files")
 
         if not Path(self.__input_dir_name).exists():
             logger.exception(f"Input Path {self.__input_dir_name} does not exist")
@@ -75,7 +81,7 @@ class MRA:
 
             t = 0
             # Use the functional interface to read the image series.
-            for series_ID in series_IDs[0:5]:
+            for series_ID in series_IDs:
                 series_file_names = reader.GetGDCMSeriesFileNames(
                     data_directory, series_ID
                 )
@@ -245,16 +251,19 @@ class MRA:
         try:
             if not os.path.exists(output_dir_name):
                 os.mkdir(output_dir_name)
-                logger.info("Directory ", output_dir_name, " Created ")
+                logger.info(f"Directory {output_dir_name} created ")
             else:
-                logger.info("Directory ", output_dir_name, " already exists")
+                logger.info(f"Directory {output_dir_name} already exists")
 
             writer = sitk.ImageFileWriter()
             writer.KeepOriginalImageUIDOn()
 
             # Different times
             t = self.__min_intensity_index
+            count = 0
+            logger.info(f"size of processed images: {len(processed_images)}")
             for images in processed_images:
+                
                 series_tag_values = self.__tags_to_save_dict[t]
 
                 modification_date = time.strftime("%Y%m%d")
@@ -377,24 +386,26 @@ class MRA:
         # angle_step = 10
         # full_rotation_flag = False
 
-        print("RETURN CODES ", self.__return_codes, self.__return_codes.NO_ERRORS)
+        logger.info("AAA RETURN CODES ", self.__return_codes, self.__return_codes.NO_ERRORS)
 
         ret_value = self.__load_grasp_files()
         if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
 
+        logger.info("BBB")
+
         ret_value = self.__get_time_index_of_minimum_intensities()
         if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
-
+        logger.info("CCC")
         ret_value = self.__subtract_images()
         if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
-
+        logger.info("EEE")
         ret_value = self.__create_projections()
         if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
-
+        logger.info("GGG")
         ret_value = self.__save_processed_images(
             "sub",
             self.__output_dir_name_sub,
@@ -402,7 +413,7 @@ class MRA:
         )
         if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
-
+        logger.info("HHH")
         ret_value = self.__save_processed_images(
             "mip",
             self.__output_dir_name_mip,
@@ -410,5 +421,5 @@ class MRA:
         )
         if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
-
+        logger.info("KKK")
         return self.__return_codes.NO_ERRORS

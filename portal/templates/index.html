@@ -70,7 +70,7 @@
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
         <div class="modal-header">
-            <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+            <h5 class="modal-title" id="exampleModalLabel">Case Info</h5>
             <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
@@ -200,7 +200,7 @@
                         document.getElementById("case_details_case_location").innerText = c.case_location;
                         document.getElementById("case_details_viewed_by_id").innerText = c.viewed_by_id;
                         document.getElementById("case_details_last_read_by_id").innerText = c.last_read_by_id;
-                        document.getElementById("case_details_settings").innerText = c.settings;
+                        document.getElementById("case_details_settings").innerText = JSON.stringify(c.settings, null, 4);
                         
                         const myModalEl = document.getElementById('modal')
                         const modal = new mdb.Modal(myModalEl)
