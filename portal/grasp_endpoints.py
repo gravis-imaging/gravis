@@ -43,13 +43,20 @@ def case_metadata(request, case, dicom_set, study=None):
     return JsonResponse(result, safe=False)
 
 @login_required
-def timeseries_data(request, case, source_set=None):
+def timeseries_data(request, case, source_set):
     data = json.loads(request.body)
     
     # averages = numpy.zeros((120,1+len(data['annotations'])))
     # averages[:,0] = numpy.asarray(range(120))
     averages = []
     
+
+    chart_options = data.get('chart_options',{})        
+    mode = chart_options.get('mode','mean')
+    summary_method = dict(mean=numpy.ma.mean,
+                median=numpy.ma.median,
+                ptp=numpy.ma.ptp)[mode]
+
     acquisition_seconds = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set=source_set).values("acquisition_seconds").distinct("acquisition_seconds")
     averages.append(sorted(list((k['acquisition_seconds'] for k in acquisition_seconds))))
     # case = Case.objects.get(id=int(case))
@@ -61,10 +68,9 @@ def timeseries_data(request, case, source_set=None):
         # logger.info(annotation["ellipse"])
         normal = numpy.asarray(annotation["normal"])
         viewUp = numpy.asarray(annotation["view_up"])
-        viewLeft = numpy.cross(normal,viewUp)
-        # logger.info(f"normal {normal:}")
-        logger.info(f"up {viewUp:}")
-        logger.info(f"left {viewLeft:}")
+        viewLeft = (lambda x,y:numpy.cross(x,y))(normal,viewUp) # workaround for numpy bug that makes Pylance think the rest of the code is unreachable
+        # logger.info(f"up {viewUp:}")
+        # logger.info(f"left {viewLeft:}")
 
         flipX = False
         flipY = False
@@ -72,14 +78,15 @@ def timeseries_data(request, case, source_set=None):
             flipY = True
         if sum(viewLeft) > 0:
             flipX = True        
-        logger.info(f"flip X: {flipX}  Y:{flipY}")
-        handles = numpy.asarray(annotation["ellipse"])
+        # logger.info(f"flip X: {flipX}  Y:{flipY}")
+        handles = numpy.asarray(annotation["handles"])
         bounds = numpy.asarray(annotation["bounds"])
+        tool = numpy.asarray(annotation["tool"])
         bounds = bounds.reshape(3,2) # reshape into three min/max pairs
 
         # logger.info(f"viewUp {annotation['view_up']}"),
         
-        logger.info(f"bounds {bounds}"),
+        # logger.info(f"bounds {bounds}"),
         dims_size = bounds[:,1] - bounds[:,0]
         # normalize coordinates to between 0 and 1
         handles_relative = (handles[:,:] - bounds[:,0]) / dims_size
@@ -98,6 +105,9 @@ def timeseries_data(request, case, source_set=None):
         handles_absolute = numpy.rint(handles_relative[:,:] * [ds.Columns, ds.Rows] - 0.5).astype(int)
         [[_, top], [_, bottom], [left,_], [right,_ ]] = handles_absolute
 
+        top, bottom = sorted([top, bottom])
+        left, right = sorted([right, left])
+        print(f"t {top} b {bottom} r {right} l {left}")
         center = numpy.rint((handles_absolute[0] + handles_absolute[1])/2.0)
         # logger.info(f"{handles_absolute[0] } + {handles_absolute[1] } = center {center}, {idx}")
               
@@ -111,35 +121,35 @@ def timeseries_data(request, case, source_set=None):
             min(left, right) < 0 or max(left,right) > ds.pixel_array.shape[2]:
             averages.append([None] * ds.pixel_array.shape[0])
             continue
-        # Pull out the rectangle described by the handles
-        subarray = ds.pixel_array[:,top:bottom,left:right]
 
-        def masked(in_array):
-            # Not an entirely accurate ellipse especially for small ones
-            ry, rx = map(lambda x: (x-1)/2.0,in_array.shape[1:3])
-            y,x = numpy.ogrid[-ry: ry+1, -rx: rx+1]
-            mask = (x / rx)**2+(y / ry)**2 > 1 
-            v = in_array.view(numpy.ma.MaskedArray)
-            v.mask = mask
-            return v
+        if tool == "GravisROI":
+            # Pull out the rectangle described by the handles
+            subarray = ds.pixel_array[:,top:bottom,left:right]
 
-        chart_options = data.get('chart_options',{})        
-        # Average over time
-        mode = chart_options.get('mode','mean')
-        method = dict(mean=numpy.ma.mean,
-                    median=numpy.ma.median,
-                    ptp=numpy.ma.ptp)[mode]
+            def masked(in_array):
+                # Not an entirely accurate ellipse especially for small ones
+                ry, rx = map(lambda x: (x-1)/2.0,in_array.shape[1:3])
+                y,x = numpy.ogrid[-ry: ry+1, -rx: rx+1]
+                mask = (x / rx)**2+(y / ry)**2 > 1 
+                v = in_array.view(numpy.ma.MaskedArray)
+                v.mask = mask
+                return v
 
-        subarray = subarray.astype('float32')
-        avgs = method(masked(subarray), (1,2)).flatten()
-
+            subarray = subarray.astype('float32')
+            values = summary_method(masked(subarray), (1,2)).flatten()
+        elif tool == "Probe":
+            values = ds.pixel_array[:,handles_absolute[0][1], handles_absolute[0][0]]
+            values = values.astype('float32')
+        else:
+            averages.append([None] * ds.pixel_array.shape[0])
+            continue
         adj_mode = chart_options.get('adjust',None)
         if adj_mode == "zeroed":
-            avgs = avgs - avgs[0]
+            values = values - values[0]
         elif adj_mode == "normalized":
-            avgs = ( avgs - avgs.min() ) 
-            avgs /= avgs.max()
-        averages.append(avgs.tolist())
+            values = ( values - values.min() ) 
+            values /= values.max()
+        averages.append(values.tolist())
 
     return JsonResponse(dict(data=numpy.asarray(averages).T.tolist()))
 

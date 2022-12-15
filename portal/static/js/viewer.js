@@ -42,15 +42,12 @@ async function cacheMetadata(
   ){
     
     const client = new dicomweb.DICOMwebClient({ url: wadoRsRoot });
-    var metadata;
-    if (studySearchOptions.seriesInstanceUID ) {
-        metadata = await client.retrieveSeriesMetadata(studySearchOptions);
-    } else {
-        metadata = await client.retrieveStudyMetadata(studySearchOptions);
-    }
-    imageIds = []
+    let metadata = await (studySearchOptions.seriesInstanceUID? 
+            client.retrieveSeriesMetadata(studySearchOptions) :
+            client.retrieveStudyMetadata(studySearchOptions))
+    let imageIds = []
     for (var instanceMetaData of metadata) {
-        imageId = getImageId(instanceMetaData, wadoRsRoot);
+        let imageId = getImageId(instanceMetaData, wadoRsRoot);
         cornerstone.cornerstoneWADOImageLoader.wadors.metaDataManager.add(
           imageId,
           instanceMetaData
@@ -66,9 +63,7 @@ async function cacheMetadata(
 
 const resizeObserver = new ResizeObserver(() => {
     console.log('Size changed');
-  
-    renderingEngine = window.cornerstone.getRenderingEngine('gravisRenderEngine');
-  
+    let renderingEngine = window.cornerstone.getRenderingEngine('gravisRenderEngine');
     if (renderingEngine) {
       renderingEngine.resize(true, false);
     }
@@ -98,7 +93,7 @@ class GraspViewer {
     case_id;
     study_uid;
     volume; 
-
+    selected_time = 0;
     annotations = {};
     chart_options = {};
     constructor( ...inp ) {
@@ -110,11 +105,11 @@ class GraspViewer {
     
     getState() {
         if (!this.viewports[0].getDefaultActor()) {
-            return
+            return;
         }
-        const cameras = this.viewports.map(v=>v.getCamera())
-        const voi = this.getVolumeVOI(this.viewports[0])
-        const annotations = cornerstone.tools.annotation.state.getAnnotations(this.viewports[0].element,"GravisROI");
+        const cameras = this.viewports.map(v=>v.getCamera());
+        const voi = this.getVolumeVOI(this.viewports[0]);
+        const annotations = this.getAllAnnotations();
         return { cameras, voi, annotations };
     }
     saveState() {
@@ -142,7 +137,7 @@ class GraspViewer {
             const annotationState = cornerstone.tools.annotation.state;
             let old_annotations = []
             for (let v of this.viewports.slice(0,3)) {
-                old_annotations = annotationState.getAnnotations(v.element,"GravisROI");
+                old_annotations = this.getAllAnnotations(v);
                 if (!old_annotations) continue;
                 for (let a of old_annotations) {
                     annotationState.removeAnnotation(a.annotationUID, v.element)
@@ -201,11 +196,11 @@ class GraspViewer {
             this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c))
             // renderingEngine.enableElement(viewportInput);
             cornerstone.tools.synchronizers.createVOISynchronizer("SYNC_CAMERAS");
-        
             this.createTools();
             this.renderingEngine.renderViewports([...this.viewportIds, ...this.previewViewports]);
             this.chart = this.testChart();
             this.backgroundSaveState();
+            
         }
     
     
@@ -259,10 +254,11 @@ class GraspViewer {
             ToolGroupManager,
             CrosshairsTool,
             GravisROITool,
+            ProbeTool,
             Enums: csToolsEnums,
         } = cornerstoneTools;
         const { MouseBindings } = csToolsEnums;
-        const tools = [CrosshairsTool, GravisROITool, StackScrollMouseWheelTool, VolumeRotateMouseWheelTool, WindowLevelTool, PanTool, ZoomTool]
+        const tools = [CrosshairsTool, GravisROITool, StackScrollMouseWheelTool, VolumeRotateMouseWheelTool, WindowLevelTool, PanTool, ZoomTool, ProbeTool]
         tools.map(cornerstoneTools.addTool)
     
         this.viewports.map(v=>v.element.oncontextmenu = e=>e.preventDefault())
@@ -279,6 +275,7 @@ class GraspViewer {
         toolGroupAux.addViewport(this.viewportIds[3], "gravisRenderEngine");
         allGroupTools.map( tool => [toolGroupMain, toolGroupAux].map(group => group.addTool(tool)))
 
+        toolGroupMain.addTool(ProbeTool.toolName);
         toolGroupMain.addTool(GravisROITool.toolName,
             {
                 centerPointRadius: 1,
@@ -344,6 +341,13 @@ class GraspViewer {
             bindings: [{ 
                 mouseButton: Enums.MouseBindings.Primary,
             }],
+        });
+        toolGroupMain.setToolPassive(Tools.ProbeTool.toolName, {
+            bindings: [
+            {
+                mouseButton: Enums.MouseBindings.Primary,
+            },
+            ],
         });
         [toolGroupMain, toolGroupAux].map(g=>g.setToolActive(Tools.StackScrollMouseWheelTool.toolName))
         const synchronizer = Tools.SynchronizerManager.getSynchronizer("SYNC_CAMERAS");
@@ -415,16 +419,17 @@ class GraspViewer {
     }
     startPreview() {
         console.info("Starting preview")
-        this.previewViewports.slice(0,3).map((v, n)=> {
+        this.previewViewports.slice(0,3).map((v, n) => {
             v.element.getElementsByTagName('svg')[0].innerHTML = this.viewports[n].element.getElementsByTagName('svg')[0].innerHTML
         });
     }
     async setPreview(idx, l) {
         try {
+            requestIdleCallback( (()=>this.chart.renderGraph_()).bind(this))
             idx = parseInt(idx)
             let [lower, upper] = this.getVolumeVOI(this.viewports[0])
 
-            this.previewViewports.slice(0,3).map(async (v, n)=> {
+            this.previewViewports.slice(0,3).map(async (v, n) => {
                 v.setVOI({lower, upper})
                 await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / l))
             })
@@ -444,7 +449,7 @@ class GraspViewer {
         if (n==null){
             update = [0, 1, 2]
         }
-        await Promise.all(update.map(async (n)=> {
+        await Promise.all(update.map(async n => {
             // console.log(`Preview ${n}`)
             let [lower, upper] = this.getVolumeVOI(this.viewports[0])
             this.previewViewports[n].setVOI({lower, upper})
@@ -455,6 +460,7 @@ class GraspViewer {
         }))
     }
     async switchSeries(series_uid, case_id) {
+        this.chart.renderGraph_()
         await this.setVolumeBySeries(series_uid);
         await new Promise((resolve) => {
             this.volume.load( (e) => { console.log("Volume finished loading",e); resolve() });
@@ -465,6 +471,7 @@ class GraspViewer {
         this.study_uid = study_uid;
         this.dicom_set = dicom_set;
         this.case_id = case_id
+        this.selected_time = 0;
         var graspVolumeInfo = await (await fetch(`/api/case/${case_id}/dicom_set/${dicom_set}/study/${study_uid}/metadata`, {
             method: 'GET',   credentials: 'same-origin'
         })).json()
@@ -472,8 +479,6 @@ class GraspViewer {
         document.getElementById("volume-picker").setAttribute("max",graspVolumeInfo.length-1)
         document.getElementById("volume-picker").setAttribute("value",0)
 
-        
-        
         this.viewports.slice(0,3).map((v, n)=> {
             v.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(250, async (evt) => {
                 try {
@@ -493,8 +498,7 @@ class GraspViewer {
             }));
         });
         await this.setVolumeBySeries(graspVolumeInfo[0]["series_uid"]),
-        this.loadState();
-        this.volume.load(()=>{ console.log("Volume loaded")})
+        this.volume.load(()=>{ console.log("Volume loaded"); this.loadState();})
         try {
             await this.updatePreview()
         } catch (e) {
@@ -504,8 +508,16 @@ class GraspViewer {
         console.log("Study switched");
         return graspVolumeInfo
     }
+    getAllAnnotations(viewport) {
+        return ["GravisROI","Probe"].flatMap(
+            type => cornerstone.tools.annotation.state.getAnnotations((viewport || this.viewports[0]).element,type) || []
+        );
+    }
     async updateChart() {
-        let annotations = cornerstone.tools.annotation.state.getAnnotations(this.viewports[0].element,"GravisROI");
+        if (! this.volume.imageData ) {
+            return;
+        }
+        let annotations = this.getAllAnnotations();
         if (! annotations ) {
             if (this.chart.file_.length > 0 )
                 this.chart.updateOptions( {file: [] });
@@ -520,7 +532,8 @@ class GraspViewer {
                 normal: annotation.metadata.viewPlaneNormal,
                 view_up: annotation.metadata.viewUp,
                 bounds: this.volume.imageData.getBounds(),
-                ellipse: annotation.data.handles.points
+                handles: annotation.data.handles.points,
+                tool: annotation.metadata.toolName
             })
             labels.push(annotation.data.label)
             seriesOptions[annotation.data.label] = { color: annotation.chartColor }
@@ -538,7 +551,7 @@ class GraspViewer {
     // async setGraspVolume(seriesInfo) {
     //     await this.setVolumeByImageIds(seriesInfo.imageIds,seriesInfo.series_uid)
     // }
-    addAnnotationToViewport(viewport_n) {
+    addAnnotationToViewport(tool_name,viewport_n) {
         var viewport = this.viewports[viewport_n]
         var cam = viewport.getCamera()
         var idx = Math.max(0,...Object.values(this.annotations).map(a => a.idx+1));
@@ -553,8 +566,8 @@ class GraspViewer {
 
         var new_a = {
             chartColor: `rgb(${HSLToRGB(idx*(360/1.618033988),50,50).join(",")})`,
-            highlighted:true,
-            invalidated:false,
+            highlighted: true,
+            invalidated: false,
             isLocked: false,
             isVisible: true,
             annotationUID: cornerstone.utilities.uuidv4(),
@@ -562,11 +575,14 @@ class GraspViewer {
                 idx: idx,
                 viewportId: this.viewportIds[viewport_n],
                 cam: viewport.getCamera(),
-                toolName:"GravisROI","viewPlaneNormal":cam.viewPlaneNormal,"viewUp":cam.viewUp,"FrameOfReferenceUID":viewport.getFrameOfReferenceUID()
+                toolName: tool_name,
+                viewPlaneNormal: cam.viewPlaneNormal,
+                viewUp: cam.viewUp,
+                FrameOfReferenceUID: viewport.getFrameOfReferenceUID()
             },
             data: {
-                cachedStats:{},
-                label:`Annotation ${idx}`,
+                cachedStats: {},
+                label: `Annotation ${idx}`,
                 handles: {
                     textBox:{"hasMoved":false,"worldPosition":[0,0,0],"worldBoundingBox":{"topLeft":[0,0,0],"topRight":[0,0,0],"bottomLeft":[0,0,0],"bottomRight":[0,0,0]}},
                     points: points,
@@ -603,10 +619,25 @@ class GraspViewer {
                         if (parseFloat(x))
                           return `${parseFloat(x)}s`;
                         return ''
-          }
+                    }
                   }
-            }
-            });
+            },
+            underlayCallback: (function(canvas, area, g) {
+                if (! this.study_uid ) {
+                    return
+                }
+                var bottom_left = g.toDomCoords(this.selected_time, -20);  
+                var left = bottom_left[0];
+                canvas.fillStyle = "rgba(255, 255, 102, 1.0)";
+                canvas.fillRect(left-2, area.y, 4, area.h);
+              }).bind(this),
+              pointClickCallback: function(event, p) {
+
+             }
+    
+            },
+            
+        );
         return g;
     }
     async renderCineFromViewport(n, dest_viewport=null) {
@@ -725,7 +756,7 @@ async function doJob(type, case_, params) {
 }
 
 async function doFetch(url, body) {
-    var raw_result = await fetch(url, {
+    let raw_result = await fetch(url, {
         method: 'POST', 
         credentials: 'same-origin',        
         headers: {
@@ -734,7 +765,7 @@ async function doFetch(url, body) {
         },
         body: JSON.stringify(body),
     })
-    text = await raw_result.text();
+    let text = await raw_result.text();
     
     try {
         return JSON.parse(text)
