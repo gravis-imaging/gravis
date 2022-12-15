@@ -58,7 +58,7 @@ on htmx:afterRequest
     </div>
     </template>
   </div>
-  <div id="annotations">
+  <div id="annotations" style="overflow-y: hidden; display: flex;flex-direction: column; flex-wrap: wrap;">
     <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotations) : [])" :key="uid">
       <div x-show="!!viewer.annotations[uid]">
         <div x-text="viewer.annotations[uid] ? viewer.annotations[uid].label : 'Error'"></div>
@@ -121,29 +121,9 @@ on htmx:afterRequest
     </div>
   </div>
 </div>
-<script defer src="/static/js/viewer.js"></script>
-<script type="text/javascript">
-  /*function pickSeries(evt) {
-    if (evt.target.value == "") {
-      return;
-    }
-    values = evt.target.value.split(":::")
-    studyUID = values[0]
-    seriesUID = values[1]
-    setVolumeBySeries(studyUID, seriesUID)
-  }
-
-  function pickStudy(evt) {
-    if (evt.target.value == "") {
-      return;
-    }
-    studyUID = evt.target.value;
-    setVolumeByStudy(studyUID)
-  }
-
-
-  window.onload = async function () {
-    // 
-  }*/
+<script defer type="module">
+  import { GraspViewer } from "/static/js/viewer.js"
+  window.GraspViewer = GraspViewer;
+  
 </script>
 {% endblock %}

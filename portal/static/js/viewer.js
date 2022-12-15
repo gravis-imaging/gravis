@@ -110,6 +110,9 @@ class GraspViewer {
         const cameras = this.viewports.map(v=>v.getCamera());
         const voi = this.getVolumeVOI(this.viewports[0]);
         const annotations = this.getAllAnnotations();
+        for (let a of annotations) {
+            a.data.cachedStats = {}
+        }
         return { cameras, voi, annotations };
     }
     saveState() {
@@ -198,9 +201,26 @@ class GraspViewer {
             cornerstone.tools.synchronizers.createVOISynchronizer("SYNC_CAMERAS");
             this.createTools();
             this.renderingEngine.renderViewports([...this.viewportIds, ...this.previewViewports]);
-            this.chart = this.testChart();
-            this.backgroundSaveState();
-            
+            this.chart = this.initChart();
+
+            this.viewports.slice(0,3).map((v, n)=> {
+                v.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(250, async (evt) => {
+                    if (! v.getDefaultActor() ) return;
+                    try {
+                        await this.updatePreview(n)
+                        this.previewViewports[n].setZoom(v.getZoom());
+                        this.previewViewports[n].setPan(v.getPan());
+                        this.renderingEngine.renderViewports([this.previewViewportIds[n]])    
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }));
+                
+                v.element.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_RENDERED", debounce(100, (evt) => {
+                    this.updateChart()
+                }));
+            });
+    
         }
     
     
@@ -468,6 +488,12 @@ class GraspViewer {
     }
     async switchStudy(info, case_id, keepCamera=true) {
         var [study_uid, dicom_set] = info;
+
+        if (this.study_uid) {
+            if (this.background_save_interval) 
+                clearInterval(this.background_save_interval)
+            this.saveState();
+        }
         this.study_uid = study_uid;
         this.dicom_set = dicom_set;
         this.case_id = case_id
@@ -479,26 +505,14 @@ class GraspViewer {
         document.getElementById("volume-picker").setAttribute("max",graspVolumeInfo.length-1)
         document.getElementById("volume-picker").setAttribute("value",0)
 
-        this.viewports.slice(0,3).map((v, n)=> {
-            v.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(250, async (evt) => {
-                try {
-                    await this.updatePreview(n)
-                    this.previewViewports[n].setZoom(v.getZoom());
-                    this.previewViewports[n].setPan(v.getPan());
-                    // this.previewViewports[n].element.getElementsByTagName('svg')[0].innerHTML = this.viewports[n].element.getElementsByTagName('svg')[0].innerHTML
-                    this.renderingEngine.renderViewports([this.previewViewportIds[n]])    
-                } catch (e) {
-                    console.error(e);
-                }
-                //    console.log({position: evt.detail.camera.position, focalPoint:evt.detail.camera.focalPoint, viewPlaneNormal: evt.detail.camera.viewPlaneNormal} );
-            }));
-            
-            v.element.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_RENDERED", debounce(100, (evt) => {
-                this.updateChart()
-            }));
-        });
         await this.setVolumeBySeries(graspVolumeInfo[0]["series_uid"]),
-        this.volume.load(()=>{ console.log("Volume loaded"); this.loadState();})
+        this.volume.load(()=>{ 
+            console.log("Volume loaded");
+            this.loadState();
+            if ( !this.background_save_interval ) {
+                this.background_save_interval = this.backgroundSaveState()
+            }
+        })
         try {
             await this.updatePreview()
         } catch (e) {
@@ -557,13 +571,18 @@ class GraspViewer {
         var idx = Math.max(0,...Object.values(this.annotations).map(a => a.idx+1));
 
         var center_point = viewport.worldToCanvas(cam.focalPoint)
-        var points = [
-            [ center_point[0], center_point[1]-50 ], // top
-            [ center_point[0], center_point[1]+50 ], // bottom
-            [ center_point[0]-50, center_point[1] ], // left
-            [ center_point[0]+50, center_point[1] ], // right
-        ].map(viewport.canvasToWorld)
-
+        if (tool_name == "GravisROI" )
+            var points = [
+                [ center_point[0], center_point[1]-50 ], // top
+                [ center_point[0], center_point[1]+50 ], // bottom
+                [ center_point[0]-50, center_point[1] ], // left
+                [ center_point[0]+50, center_point[1] ], // right
+            ].map(viewport.canvasToWorld)
+        else if ( tool_name == "Probe") {
+            var points = [viewport.canvasToWorld(center_point)];
+        } else {
+            throw Error("Unknown annotation type.")
+        }
         var new_a = {
             chartColor: `rgb(${HSLToRGB(idx*(360/1.618033988),50,50).join(",")})`,
             highlighted: true,
@@ -582,7 +601,7 @@ class GraspViewer {
             },
             data: {
                 cachedStats: {},
-                label: `Annotation ${idx}`,
+                label: `Annotation ${idx+1}`,
                 handles: {
                     textBox:{"hasMoved":false,"worldPosition":[0,0,0],"worldBoundingBox":{"topLeft":[0,0,0],"topRight":[0,0,0],"bottomLeft":[0,0,0],"bottomRight":[0,0,0]}},
                     points: points,
@@ -605,7 +624,7 @@ class GraspViewer {
         viewport.setCamera(annotation_info.cam);
         this.renderingEngine.renderViewports([annotation_info.viewportId]);
     }
-    testChart() {
+    initChart() {
         var g = new Dygraph(document.getElementById("chart"), [],
         {
             // legend: 'always',
@@ -839,3 +858,5 @@ function HSLToRGB (h, s, l) {
       l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
     return [255 * f(0), 255 * f(8), 255 * f(4)];
   };
+
+export { GraspViewer };

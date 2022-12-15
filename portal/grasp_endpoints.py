@@ -103,12 +103,7 @@ def timeseries_data(request, case, source_set):
         
         # Calculate pixel locations of handles
         handles_absolute = numpy.rint(handles_relative[:,:] * [ds.Columns, ds.Rows] - 0.5).astype(int)
-        [[_, top], [_, bottom], [left,_], [right,_ ]] = handles_absolute
-
-        top, bottom = sorted([top, bottom])
-        left, right = sorted([right, left])
-        print(f"t {top} b {bottom} r {right} l {left}")
-        center = numpy.rint((handles_absolute[0] + handles_absolute[1])/2.0)
+        # center = numpy.rint((handles_absolute[0] + handles_absolute[1])/2.0)
         # logger.info(f"{handles_absolute[0] } + {handles_absolute[1] } = center {center}, {idx}")
               
         # logger.info(f"handles_absolute {handles_absolute}")
@@ -117,12 +112,18 @@ def timeseries_data(request, case, source_set):
         # # avgs = numpy.mean(subarray, (1,2)).flatten()
 
         
-        if min(top,bottom) < 0 or max(top,bottom) > ds.pixel_array.shape[1] or \
-            min(left, right) < 0 or max(left,right) > ds.pixel_array.shape[2]:
-            averages.append([None] * ds.pixel_array.shape[0])
-            continue
 
         if tool == "GravisROI":
+            [[_, top], [_, bottom], [left,_], [right,_ ]] = handles_absolute
+
+            top, bottom = sorted([top, bottom])
+            left, right = sorted([right, left])
+            print(f"t {top} b {bottom} r {right} l {left}")
+            if min(top,bottom) < 0 or max(top,bottom) > ds.pixel_array.shape[1] or \
+                min(left, right) < 0 or max(left,right) > ds.pixel_array.shape[2]:
+                averages.append([None] * ds.pixel_array.shape[0])
+                continue
+
             # Pull out the rectangle described by the handles
             subarray = ds.pixel_array[:,top:bottom,left:right]
 
@@ -135,10 +136,21 @@ def timeseries_data(request, case, source_set):
                 v.mask = mask
                 return v
 
+            print(f"""P2
+{subarray.shape[2]} {subarray.shape[1]}
+{subarray[0].max()}
+"""+"\n".join(" ".join([str(k) for k in r]) for r in subarray[0]))
             subarray = subarray.astype('float32')
             values = summary_method(masked(subarray), (1,2)).flatten()
         elif tool == "Probe":
-            values = ds.pixel_array[:,handles_absolute[0][1], handles_absolute[0][0]]
+            handle = handles_absolute[0]
+            print(f"Handle {handle}: {ds.pixel_array[0,handle[1], handle[0]]}")
+            if handle[1] < 0 or handle[1] > ds.pixel_array.shape[1] or \
+                handle[0] < 0 or handle[0] > ds.pixel_array.shape[2]:
+                averages.append([None] * ds.pixel_array.shape[0])
+                continue
+
+            values = ds.pixel_array[:,handle[1], handle[0]]
             values = values.astype('float32')
         else:
             averages.append([None] * ds.pixel_array.shape[0])
