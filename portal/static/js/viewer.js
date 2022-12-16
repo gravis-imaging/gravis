@@ -547,6 +547,7 @@ class GraspViewer {
                 view_up: annotation.metadata.viewUp,
                 bounds: this.volume.imageData.getBounds(),
                 handles: annotation.data.handles.points,
+                handles_indexes: annotation.data.handles.points.map( pt=>cornerstone.utilities.transformWorldToIndex(this.volume.imageData, pt)),
                 tool: annotation.metadata.toolName
             })
             labels.push(annotation.data.label)
@@ -666,7 +667,7 @@ class GraspViewer {
         const volumeId = viewport.getActors()[0].uid;
         var volume = cornerstone.cache.getVolume(volumeId)
         var index = cornerstone.utilities.transformWorldToIndex(volume.imageData, cam.focalPoint)
-
+        console.log(`Current view index: ${index}`);
         if (cam.viewPlaneNormal[0] == 1) {
             var view = "SAG"
             var val = index[2]
@@ -762,16 +763,16 @@ function getCookie(name) {
 const csrftoken = getCookie('csrftoken');
 
 async function doJob(type, case_, params) {
-    const id = await startJob(type, case_, params);
-    console.log(`Do Job`,id);
+    let start_result = await startJob(type, case_, params);
+    console.log(`Do Job`,start_result.id);
     for (let i=0;i<100;i++) {
-        result = await getJob(type,id)
-        if ( result["status"] == "SUCCESS" ) {
-            break
+        let result = await getJob(type,start_result.id)
+        if ( result["status"] == "Success" ) {
+            return result;
         }
         await sleep(100);
     }
-    return result;
+    return;
 }
 
 async function doFetch(url, body) {
@@ -817,7 +818,7 @@ async function startJob(type, case_, params) {
 }
 
 async function getJob(job, id) {
-    var result = await (await fetch(`/job/${job}?id=${id}`, { //${new URLSearchParams({id})
+    var result = await (await fetch(`/job/${job}?id=${id}`, {
         method: 'GET',   credentials: 'same-origin'
     })).json()
     return result
@@ -859,4 +860,4 @@ function HSLToRGB (h, s, l) {
     return [255 * f(0), 255 * f(8), 255 * f(4)];
   };
 
-export { GraspViewer };
+export { GraspViewer, doJob };

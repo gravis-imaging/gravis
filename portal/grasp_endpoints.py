@@ -14,6 +14,7 @@ from django.http import JsonResponse
 
 from portal.models import *
 
+cross = (lambda x,y:numpy.cross(x,y))
 
 # @login_required
 # def grasp_metadata(request, case, study):
@@ -63,69 +64,92 @@ def timeseries_data(request, case, source_set):
     for i, annotation in enumerate(data['annotations']):
         idx = numpy.abs(annotation['normal']).argmax()
         orientation = ['SAG','COR','AX'][idx]
-        instances = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/{orientation}").latest('processing_job__created_at').instances
+        dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/{orientation}").latest('processing_job__created_at')
+        instances = dicom_set.instances
         example_instance = instances.first()
-        # logger.info(annotation["ellipse"])
+        # print(annotation["handles_indexes"])
+        # print(dicom_set.processing_job.json_result)
+        axes_permutation = dicom_set.processing_job.json_result["views"][orientation]['axes']
+        handles_absolute = [[handle[n] for n in axes_permutation] for handle in annotation["handles_indexes"]]
+        print(handles_absolute)
+        # print(transformed_handles[0][1:])
+        # # im_orientation_pt = numpy.asarray(json.loads(example_instance.json_metadata)["00200037"]["Value"]).reshape((2,3))
+        # # im_orientation_mat = numpy.rint(numpy.vstack((im_orientation_pt,[cross(*im_orientation_pt)])))
+
+        # # logger.info(annotation["ellipse"])
         normal = numpy.asarray(annotation["normal"])
         viewUp = numpy.asarray(annotation["view_up"])
         viewLeft = (lambda x,y:numpy.cross(x,y))(normal,viewUp) # workaround for numpy bug that makes Pylance think the rest of the code is unreachable
-        # logger.info(f"up {viewUp:}")
-        # logger.info(f"left {viewLeft:}")
+        # print(f"normal {normal:}")
+        # # logger.info(f"up {viewUp:}")
+        # # logger.info(f"left {viewLeft:}")
 
+        # flipX = False
+        # flipY = False
         flipX = False
-        flipY = False
-        if sum(viewUp) > 0:
-            flipY = True
-        if sum(viewLeft) > 0:
-            flipX = True        
-        # logger.info(f"flip X: {flipX}  Y:{flipY}")
-        handles = numpy.asarray(annotation["handles"])
-        bounds = numpy.asarray(annotation["bounds"])
-        tool = numpy.asarray(annotation["tool"])
-        bounds = bounds.reshape(3,2) # reshape into three min/max pairs
+        # if sum(viewUp) > 0:
+        #     flipY = True
+        # if sum(viewLeft) > 0:
+        #     flipX = True
+        if sum(normal) < 0:
+            flipX = True
+        print(flipX)
+        # # logger.info(f"flip X: {flipX}  Y:{flipY}")
+        # handles = numpy.asarray(annotation["handles"])
+        # bounds = numpy.asarray(annotation["bounds"])
+        # tool = numpy.asarray(annotation["tool"])
+        # bounds = bounds.reshape(3,2) # reshape into three min/max pairs
 
-        # logger.info(f"viewUp {annotation['view_up']}"),
+        # # logger.info(f"viewUp {annotation['view_up']}"),
         
-        # logger.info(f"bounds {bounds}"),
-        dims_size = bounds[:,1] - bounds[:,0]
-        # normalize coordinates to between 0 and 1
-        handles_relative = (handles[:,:] - bounds[:,0]) / dims_size
-        # 
-        slice_number = round(handles_relative[0][idx] * instances.count() - 0.5)
-        handles_relative = numpy.delete(handles_relative,idx,1)
-        if flipX:
-            handles_relative[:,0] = 1.0 - handles_relative[:,0]
-        if flipY:
-            handles_relative[:,1] = 1.0 - handles_relative[:,1]
+        # dims_size = bounds[:,1] - bounds[:,0]
+        # print(f"dims_size {dims_size}"),
 
-        instance = instances.filter(slice_location=slice_number).get()
+        # # normalize coordinates to between 0 and 1
+        # handles_relative = (handles[:,:] - bounds[:,0]) / dims_size
+
+        # slice_number = round(handles_relative[0][idx] * instances.count() - 0.5)
+
+        # handles_relative = numpy.delete(handles_relative,idx,1)
+        # if flipX:
+        #     handles_relative[:,0] = 1.0 - handles_relative[:,0]
+        # if flipY:
+        #     handles_relative[:,1] = 1.0 - handles_relative[:,1]
+        # # if flipZ:
+        # #     handles_relative[:,2] = 1.0 - handles_relative[:,2]
+
+        instance = instances.filter(slice_location=handles_absolute[0][0]).get()
         ds = pydicom.dcmread( Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location )
-        
-        # Calculate pixel locations of handles
-        handles_absolute = numpy.rint(handles_relative[:,:] * [ds.Columns, ds.Rows] - 0.5).astype(int)
-        # center = numpy.rint((handles_absolute[0] + handles_absolute[1])/2.0)
-        # logger.info(f"{handles_absolute[0] } + {handles_absolute[1] } = center {center}, {idx}")
+        # # Calculate pixel locations of handles
+        # handles_absolute = numpy.rint(handles_relative[:,:] * [ds.Columns, ds.Rows] - 0.5).astype(int)
+        # # center = numpy.rint((handles_absolute[0] + handles_absolute[1])/2.0)
+        # # logger.info(f"{handles_absolute[0] } + {handles_absolute[1] } = center {center}, {idx}")
               
-        # logger.info(f"handles_absolute {handles_absolute}")
-        # logger.info(f"top {top} bottom {bottom} left {left} right {right}")
-        # logger.info(f"center {center}")
-        # # avgs = numpy.mean(subarray, (1,2)).flatten()
+        # # logger.info(f"handles_absolute {handles_absolute}")
+        # # logger.info(f"top {top} bottom {bottom} left {left} right {right}")
+        # # logger.info(f"center {center}")
+        # # # avgs = numpy.mean(subarray, (1,2)).flatten()
+        # print(f"{handles_absolute[0]} slice_number = {slice_number}, flipX = {flipX}, flipY = {flipY}, flipZ = {flipZ}")        
 
-        
+        pixel_array = ds.pixel_array
+        # ????? manually determined to fix the axial view ?????
+        if sum(normal) < 0:
+            for k in range(len(handles_absolute)):
+                handles_absolute[k][2] = pixel_array.shape[2] - handles_absolute[k][2]-1
 
-        if tool == "GravisROI":
-            [[_, top], [_, bottom], [left,_], [right,_ ]] = handles_absolute
+        if annotation["tool"] == "GravisROI":
+            [[_, top, _], [_, bottom, _], [_,_,left], [_,_, right ]] = handles_absolute
 
             top, bottom = sorted([top, bottom])
             left, right = sorted([right, left])
-            print(f"t {top} b {bottom} r {right} l {left}")
-            if min(top,bottom) < 0 or max(top,bottom) > ds.pixel_array.shape[1] or \
-                min(left, right) < 0 or max(left,right) > ds.pixel_array.shape[2]:
-                averages.append([None] * ds.pixel_array.shape[0])
+            # print(f"t {top} b {bottom} r {right} l {left}")
+            if min(top,bottom) < 0 or max(top,bottom) > pixel_array.shape[1] or \
+                min(left, right) < 0 or max(left,right) > pixel_array.shape[2]:
+                averages.append([None] * pixel_array.shape[0])
                 continue
 
             # Pull out the rectangle described by the handles
-            subarray = ds.pixel_array[:,top:bottom,left:right]
+            subarray = pixel_array[:,top:bottom,left:right]
 
             def masked(in_array):
                 # Not an entirely accurate ellipse especially for small ones
@@ -142,18 +166,26 @@ def timeseries_data(request, case, source_set):
 """+"\n".join(" ".join([str(k) for k in r]) for r in subarray[0]))
             subarray = subarray.astype('float32')
             values = summary_method(masked(subarray), (1,2)).flatten()
-        elif tool == "Probe":
-            handle = handles_absolute[0]
-            print(f"Handle {handle}: {ds.pixel_array[0,handle[1], handle[0]]}")
-            if handle[1] < 0 or handle[1] > ds.pixel_array.shape[1] or \
-                handle[0] < 0 or handle[0] > ds.pixel_array.shape[2]:
-                averages.append([None] * ds.pixel_array.shape[0])
+        elif annotation["tool"] == "Probe":
+            handle = handles_absolute[0][1:]
+            print(handle)
+            # print(f"Handle {handle}: {pixel_array[0,handle[0], handle[1]]}")
+            if handle[1] < 0 or handle[1] > pixel_array.shape[2] or \
+                handle[0] < 0 or handle[0] > pixel_array.shape[1]:
+                averages.append([None] * pixel_array.shape[0])
                 continue
+            
+            # test_array = pixel_array[0,handle[0]:handle[0]+75,handle[1]:handle[1]+75]
+#             print(f"""P2
+# 75 75
+# {test_array.max()}
+# """+"\n".join(" ".join([str(k) for k in r]) for r in test_array))
 
-            values = ds.pixel_array[:,handle[1], handle[0]]
+            values = pixel_array[:,handle[0], handle[1]]
             values = values.astype('float32')
         else:
-            averages.append([None] * ds.pixel_array.shape[0])
+            print(annotation["tool"])
+            averages.append([None] * pixel_array.shape[0])
             continue
         adj_mode = chart_options.get('adjust',None)
         if adj_mode == "zeroed":

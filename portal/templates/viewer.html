@@ -52,10 +52,11 @@ on htmx:afterRequest
   
   <div>
     <div id="chart" style="background-color: black; color: white;"></div>
-    <template x-if="viewer"><div>
-      <select x-model="viewer.chart_options['adjust']" @change="viewer.updateChart()"><option value="normal" autocomplete="off" selected>normal</option><option value="zeroed">zeroed</option><option value="normalized">normalized</option></select>
-      <select x-model="viewer.chart_options['mode']" @change="viewer.updateChart()"><option value="mean" autocomplete="off" selected>mean</option><option value="median">median</option><option value="ptp">ptp</option></select>
-    </div>
+    <template x-if="viewer">
+      <div>
+        <select x-model="viewer.chart_options['adjust']" @change="viewer.updateChart()"><option value="normal" autocomplete="off" selected>normal</option><option value="zeroed">zeroed</option><option value="normalized">normalized</option></select>
+        <select x-model="viewer.chart_options['mode']" @change="viewer.updateChart()"><option value="mean" autocomplete="off" selected>mean</option><option value="median">median</option><option value="ptp">ptp</option></select>
+      </div>
     </template>
   </div>
   <div id="annotations" style="overflow-y: hidden; display: flex;flex-direction: column; flex-wrap: wrap;">
@@ -122,8 +123,8 @@ on htmx:afterRequest
   </div>
 </div>
 <script defer type="module">
-  import { GraspViewer } from "/static/js/viewer.js"
+  import { GraspViewer, doJob } from "/static/js/viewer.js"
   window.GraspViewer = GraspViewer;
-  
+  window.doJob = doJob;
 </script>
 {% endblock %}

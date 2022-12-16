@@ -23,6 +23,7 @@ import django_rq
 def do_job(View,id):
     View._do_job(id)
 
+cross = (lambda x,y:np.cross(x,y))
 
 @method_decorator(login_required, name='dispatch')
 class WorkJobView(View):
@@ -106,7 +107,7 @@ class CineJob(WorkJobView):
         index = job.parameters["index"] # [ column, row, slice ] order
         normal = np.array([job.parameters["normal"]])
         viewUp = np.array([job.parameters["viewUp"]])
-        viewHoriz = np.cross(normal,viewUp)
+        viewHoriz = cross(normal,viewUp)
         # axis = np.argmax(np.abs(normal))
 
         # The index is in volume-space, but the normal is in world-space.
@@ -117,7 +118,7 @@ class CineJob(WorkJobView):
         # array([[ 0.050593 ,  0.9987193,  0.       ],
         #        [-0.       , -0.       , -1.       ] ]
 
-        im_orientation_mat = np.rint(np.vstack((im_orientation_pt,[np.cross(*im_orientation_pt)])))
+        im_orientation_mat = np.rint(np.vstack((im_orientation_pt,[cross(*im_orientation_pt)])))
         # Eg 
         # M = [  0,  1,  0 ],
         #     [ -0, -0, -1 ],
@@ -247,7 +248,7 @@ class TestJob(WorkJobView):
 
         instances = job.dicom_set.instances.all()
         im_orientation_pt = np.asarray(json.loads(instances[0].json_metadata)["00200037"]["Value"]).reshape((2,3))
-        im_orientation_mat = np.rint(np.vstack((im_orientation_pt,[np.cross(*im_orientation_pt)])))
+        im_orientation_mat = np.rint(np.vstack((im_orientation_pt,[cross(*im_orientation_pt)])))
 
         ax_sagittal = [ 1, 0,  0 ]
         ax_coronal =  [ 0, 1,  0 ]
@@ -263,7 +264,7 @@ class TestJob(WorkJobView):
         # axis_numbers = []
         for v in views:
             print(v)
-            v.viewHoriz         = np.cross(v.normal,v.viewUp)
+            v.viewHoriz         = cross(v.normal,v.viewUp)
             transformed_normal  = im_orientation_mat @ v.normal
             normal_axis_number  = np.abs(transformed_normal).argmax()
             transformed_viewUp  = im_orientation_mat @ v.viewUp
@@ -323,7 +324,7 @@ class TestJob(WorkJobView):
                 ds.Columns          = t_array.shape[3]
                 ds.PixelData        = t_array[:,i,:,:].tobytes()
                 ds.SliceLocation    = str(i)+".0"
-                ds.InstanceNumber   = str(i)
+                ds.SeriesNumber     = str(i)
 
                 ds.StudyInstanceUID  = new_study_uid
                 ds.SeriesInstanceUID = new_series_uid
@@ -336,7 +337,10 @@ class TestJob(WorkJobView):
                 new_instance.instance_location = f"multiframe.{i}.dcm"
                 new_instance.save()
 
-        return ({},[v.dicom_set for v in views])
+        return (
+            {"views": {v.name: dict(name=v.name,axes=v.transformed_axes.tolist()) for v in views}},
+            [v.dicom_set for v in views]
+        )
         # num_slices = len(files_by_series[0])
         # ds = pydicom.dcmread(files_by_series[0][0])
         # num_rows = int(ds.Rows)
