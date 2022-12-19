@@ -50,7 +50,7 @@ def timeseries_data(request, case, source_set=None):
     # averages[:,0] = numpy.asarray(range(120))
     averages = []
     
-    acquisition_seconds = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set=1).values("acquisition_seconds").distinct("acquisition_seconds")
+    acquisition_seconds = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set=source_set).values("acquisition_seconds").distinct("acquisition_seconds")
     averages.append(sorted(list((k['acquisition_seconds'] for k in acquisition_seconds))))
     # case = Case.objects.get(id=int(case))
     for i, annotation in enumerate(data['annotations']):
@@ -151,7 +151,8 @@ def processed_results_urls(request, case, case_type, source_set=None):
     dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=case_type)
     if source_set:
         dicom_set = dicom_set.filter(processing_job__dicom_set=source_set)
-    instances = dicom_set.latest('processing_job__created_at').instances.filter(**slices_lookup)
+    instances = dicom_set.latest('processing_job__created_at').instances.filter(**slices_lookup).order_by("slice_location") # or "instance_number"
+
 
     urls = []
     for instance in instances:

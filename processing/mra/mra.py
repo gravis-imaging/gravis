@@ -1,13 +1,13 @@
 # Standard Python includes
 from loguru import logger
 import numpy as np
-import sys, time, os
+import time, os
 from pathlib import Path
 
 # Imports for loading, saving and manipulating DICOMs
 import SimpleITK as sitk
 
-import json
+# import json
 import ast
 
 from enum import Enum
@@ -87,7 +87,7 @@ class MRA:
                 )
                 reader.SetFileNames(series_file_names)
                 image = reader.Execute()
-
+                direction = image.GetDirection()
                 series_tag_values = [
                     (k, reader.GetMetaData(0, k))
                     for k in patient_tags_to_copy
@@ -103,10 +103,12 @@ class MRA:
                     ),  # Slice Thickness
                     ("0020|0011", f"{1000+t:04d}"),  # Series Number
                     ("0020|0012", f"{t:04d}"),  # Acquisition Number
+                    ("0020|0037", '\\'.join(map(str, (direction[0], direction[3], direction[6], # Image Orientation (Patient)
+                                                        direction[1], direction[4], direction[7])))),
                 ]
 
                 self.__tags_to_save_dict[t] = series_tag_values
-
+                image = sitk.Cast(image, sitk.sitkFloat32)
                 self.__images.append(image)
                 t += 1
         except Exception as e:
@@ -129,7 +131,7 @@ class MRA:
             if min_intensity_value == len(self.__images) - 1:
                 logger.exception("Error while calculating minimum intensity index.")
                 return self.__return_codes.INTENSITY_INDEX_SHOULD_BE_LESS_THAN_NUM_VOLUMES
-            self.__min_intensity_index = intensities.index(min_intensity_value) - 2
+            self.__min_intensity_index = intensities.index(min_intensity_value) 
             print("min_intensity_index ", self.__min_intensity_index)
         except Exception as e:
             logger.exception(e, "Error while calculating minimum intensity index.")
@@ -144,7 +146,7 @@ class MRA:
                 subtracted_image = (
                     self.__images[i] - self.__images[self.__min_intensity_index]
                 )
-                subtracted_image = sitk.Cast(subtracted_image, sitk.sitkFloat32)
+                # subtracted_image = sitk.Cast(subtracted_image, sitk.sitkFloat32)
                 self.__subtracted_images.append(subtracted_image)
         except Exception as e:
             logger.exception(e, "Error while subtracting images.")
@@ -331,7 +333,7 @@ class MRA:
                         [
                             image_slice.SetMetaData(tag, value)
                             for tag, value in series_tag_values
-                            if tag not in ("0018|0050")
+                            if tag not in ("0018|0050", "0020|0037")
                         ]
                         [
                             image_slice.SetMetaData(
@@ -382,38 +384,22 @@ class MRA:
 
     def calculateMIPs(self):
 
-        # n_slices = 20
-        # angle_step = 10
-        # full_rotation_flag = False
-
-        logger.info("AAA RETURN CODES ", self.__return_codes, self.__return_codes.NO_ERRORS)
-
         ret_value = self.__load_grasp_files()
         if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
 
-        logger.info("BBB")
-
         ret_value = self.__get_time_index_of_minimum_intensities()
         if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
-        logger.info("CCC")
+       
         ret_value = self.__subtract_images()
         if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
-        logger.info("EEE")
+       
         ret_value = self.__create_projections()
         if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
-        logger.info("GGG")
-        ret_value = self.__save_processed_images(
-            "sub",
-            self.__output_dir_name_sub,
-            self.__subtracted_images,
-        )
-        if ret_value != self.__return_codes.NO_ERRORS:
-            return ret_value
-        logger.info("HHH")
+        
         ret_value = self.__save_processed_images(
             "mip",
             self.__output_dir_name_mip,
@@ -421,5 +407,13 @@ class MRA:
         )
         if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
-        logger.info("KKK")
+
+        ret_value = self.__save_processed_images(
+            "sub",
+            self.__output_dir_name_sub,
+            self.__subtracted_images,
+        )
+        if ret_value != self.__return_codes.NO_ERRORS:
+            return ret_value
+
         return self.__return_codes.NO_ERRORS

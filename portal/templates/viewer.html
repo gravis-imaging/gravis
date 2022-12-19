@@ -94,10 +94,10 @@ on htmx:afterRequest
         </template>
         <div>
           <button style="pointer-events: auto" class="btn-primary btn-large m-2" 
-          x-on:click="viewer.viewports[3].setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/MIP?acquisition_number=3`)).json()).urls)">MIP
+          x-on:click="viewer.viewports[3].setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/MIP?acquisition_number=42`)).json()).urls)">MIP
           </button>
           <button style="pointer-events: auto" class="btn-primary btn-large m-2" 
-          x-on:click="viewer.viewports[3].setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/SUB?acquisition_number=3`)).json()).urls)">SUB
+          x-on:click="viewer.viewports[3].setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/SUB?acquisition_number=42`)).json()).urls)">SUB
           </button>
         </div>
           <div>

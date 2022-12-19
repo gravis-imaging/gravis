@@ -177,6 +177,7 @@ class DICOMInstance(models.Model):
             acquisition_number=ds.get("AcquisitionNumber"),
             series_number=ds.get("SeriesNumber"),
             slice_location=ds.get("SliceLocation"),
+            # instance_number=ds.get("InstanceNumber"),
             num_frames=ds.get("NumberOfFrames"),
             acquisition_seconds = delta.total_seconds(),
             json_metadata=ds.to_json(bulk_data_threshold=1024, bulk_data_element_handler=lambda _: ""),

@@ -339,6 +339,12 @@ class GraspViewer {
             },
             ],
         });
+
+        toolGroupAux.setToolActive(Tools.WindowLevelTool.toolName, {
+            bindings: [{ 
+                mouseButton: Enums.MouseBindings.Primary,
+            }],
+        });
         [toolGroupMain, toolGroupAux].map(g=>g.setToolActive(Tools.StackScrollMouseWheelTool.toolName))
         const synchronizer = Tools.SynchronizerManager.getSynchronizer("SYNC_CAMERAS");
         [...this.viewportIds.slice(0,3)].map(id => synchronizer.add({ renderingEngineId: "gravisRenderEngine", viewportId:id }))
@@ -521,7 +527,7 @@ class GraspViewer {
         }
 
         try {
-            const timeseries = await doFetch("/api/case/1/dicom_set/1/timeseries", {annotations: data, chart_options: this.chart_options})
+            const timeseries = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/timeseries`, {annotations: data, chart_options: this.chart_options})
             const options = { 'file':  timeseries["data"], labels: labels, series: seriesOptions} 
             this.chart.updateOptions( options );
         } catch (e) {
@@ -622,7 +628,7 @@ class GraspViewer {
             var val = index[1]
         }
         var info = await (
-                await fetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/processed_results/CINE/${view}?series_number=${val}`, {
+                await fetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/processed_results/CINE/${view}?slice_location=${val}`, {
             method: 'GET',   credentials: 'same-origin'
         })).json() 
         // console.log("Preview info:", info)
