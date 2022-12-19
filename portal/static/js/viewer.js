@@ -187,7 +187,11 @@ class GraspViewer {
     
             const preview_info = [["AX"],["SAG"],["COR"]]
             const [ previewViewports, previewViewportIds ] = this.createViewports("PREVIEW",preview_info, preview)
-    
+            /*
+            ["COR",{
+                                sliceNormal: [ 0, -1, 0 ],
+                                viewUp: [ 0, 0, 1 ]
+            }],*/
             const view_info = [["AX",ORIENTATION.AXIAL],["SAG",ORIENTATION.SAGITTAL],["COR",ORIENTATION.CORONAL],["CINE"]]
             const [ viewViewports, viewportIds ] = this.createViewports("VIEW", view_info, main)
             this.renderingEngine.setViewports([...previewViewports, ...viewViewports])
@@ -671,7 +675,7 @@ class GraspViewer {
         if (cam.viewPlaneNormal[0] == 1) {
             var view = "SAG"
             var val = index[2]
-        } else if  (cam.viewPlaneNormal[1] == 1) {
+        } else if  (Math.abs(cam.viewPlaneNormal[1]) == 1) {
             var view = "COR"
             var val = index[0]
         } else {

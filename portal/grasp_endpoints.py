@@ -67,75 +67,23 @@ def timeseries_data(request, case, source_set):
         dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/{orientation}").latest('processing_job__created_at')
         instances = dicom_set.instances
         example_instance = instances.first()
-        # print(annotation["handles_indexes"])
-        # print(dicom_set.processing_job.json_result)
-        axes_permutation = dicom_set.processing_job.json_result["views"][orientation]['axes']
+        
+        view_information = dicom_set.processing_job.json_result["views"][orientation]
+        axes_permutation = view_information["transformed_axes"]
         handles_absolute = [[handle[n] for n in axes_permutation] for handle in annotation["handles_indexes"]]
-        print(handles_absolute)
-        # print(transformed_handles[0][1:])
-        # # im_orientation_pt = numpy.asarray(json.loads(example_instance.json_metadata)["00200037"]["Value"]).reshape((2,3))
-        # # im_orientation_mat = numpy.rint(numpy.vstack((im_orientation_pt,[cross(*im_orientation_pt)])))
 
-        # # logger.info(annotation["ellipse"])
         normal = numpy.asarray(annotation["normal"])
         viewUp = numpy.asarray(annotation["view_up"])
         viewLeft = (lambda x,y:numpy.cross(x,y))(normal,viewUp) # workaround for numpy bug that makes Pylance think the rest of the code is unreachable
-        # print(f"normal {normal:}")
-        # # logger.info(f"up {viewUp:}")
-        # # logger.info(f"left {viewLeft:}")
-
-        # flipX = False
-        # flipY = False
-        flipX = False
-        # if sum(viewUp) > 0:
-        #     flipY = True
-        # if sum(viewLeft) > 0:
-        #     flipX = True
-        if sum(normal) < 0:
-            flipX = True
-        print(flipX)
-        # # logger.info(f"flip X: {flipX}  Y:{flipY}")
-        # handles = numpy.asarray(annotation["handles"])
-        # bounds = numpy.asarray(annotation["bounds"])
-        # tool = numpy.asarray(annotation["tool"])
-        # bounds = bounds.reshape(3,2) # reshape into three min/max pairs
-
-        # # logger.info(f"viewUp {annotation['view_up']}"),
-        
-        # dims_size = bounds[:,1] - bounds[:,0]
-        # print(f"dims_size {dims_size}"),
-
-        # # normalize coordinates to between 0 and 1
-        # handles_relative = (handles[:,:] - bounds[:,0]) / dims_size
-
-        # slice_number = round(handles_relative[0][idx] * instances.count() - 0.5)
-
-        # handles_relative = numpy.delete(handles_relative,idx,1)
-        # if flipX:
-        #     handles_relative[:,0] = 1.0 - handles_relative[:,0]
-        # if flipY:
-        #     handles_relative[:,1] = 1.0 - handles_relative[:,1]
-        # # if flipZ:
-        # #     handles_relative[:,2] = 1.0 - handles_relative[:,2]
 
         instance = instances.filter(slice_location=handles_absolute[0][0]).get()
         ds = pydicom.dcmread( Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location )
-        # # Calculate pixel locations of handles
-        # handles_absolute = numpy.rint(handles_relative[:,:] * [ds.Columns, ds.Rows] - 0.5).astype(int)
-        # # center = numpy.rint((handles_absolute[0] + handles_absolute[1])/2.0)
-        # # logger.info(f"{handles_absolute[0] } + {handles_absolute[1] } = center {center}, {idx}")
-              
-        # # logger.info(f"handles_absolute {handles_absolute}")
-        # # logger.info(f"top {top} bottom {bottom} left {left} right {right}")
-        # # logger.info(f"center {center}")
-        # # # avgs = numpy.mean(subarray, (1,2)).flatten()
-        # print(f"{handles_absolute[0]} slice_number = {slice_number}, flipX = {flipX}, flipY = {flipY}, flipZ = {flipZ}")        
 
         pixel_array = ds.pixel_array
         # ????? manually determined to fix the axial view ?????
-        if sum(normal) < 0:
+        for flipped_axis in view_information["flipped"]:
             for k in range(len(handles_absolute)):
-                handles_absolute[k][2] = pixel_array.shape[2] - handles_absolute[k][2]-1
+                handles_absolute[k][flipped_axis] = pixel_array.shape[2] - handles_absolute[k][flipped_axis] - 1
 
         if annotation["tool"] == "GravisROI":
             [[_, top, _], [_, bottom, _], [_,_,left], [_,_, right ]] = handles_absolute
