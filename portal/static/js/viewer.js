@@ -559,7 +559,8 @@ class GraspViewer {
         }
 
         try {
-            const timeseries = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/timeseries`, {annotations: data, chart_options: this.chart_options})
+            const timeseries = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/timeseries`,
+                 {annotations: data, chart_options: this.chart_options})
             const options = { 'file':  timeseries["data"], labels: labels, series: seriesOptions} 
             this.chart.updateOptions( options );
         } catch (e) {
