@@ -132,7 +132,24 @@ class DICOMSet(models.Model):
     class Meta:
         db_table = "gravis_dicom_set"
 
-
+class SessionInfo(models.Model):
+    case = models.OneToOneField(
+        Case,
+        on_delete=models.CASCADE,
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+    )
+    last_stored = models.DateTimeField(default=timezone.now)
+    view_state = models.JSONField(null=False)
+    current_session_tag = models.CharField(
+        max_length=100, blank=True, null=True
+    )
+    class Meta:
+        db_table = "gravis_session"
+        
 class DICOMInstance(models.Model):
     """
     A model to represent a single DICOM slice.

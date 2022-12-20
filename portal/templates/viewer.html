@@ -72,7 +72,7 @@ on htmx:afterRequest
     <div x-show="loading" style="z-index:10;" class="pointer-events-none grid-fill">
       <div style="display: flex;justify-content: center;align-items: center; height:100%">Loading...</div>
     </div>
-    <div x-init="await $nextTick(); viewer = await new GraspViewer($refs.viewer_main, $refs.viewer_preview ); window.viewer = viewer" class="grid-fill grid-container h-100">
+    <div x-init="await $nextTick(); viewer = await new GraspViewer(case_id, $refs.viewer_main, $refs.viewer_preview ); window.viewer = viewer" class="grid-fill grid-container h-100">
       <div x-ref="viewer_preview" class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 1 : 0 }"></div>
       <div x-ref="viewer_main"  class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 0 : 1 }"></div>
     </div>
@@ -90,7 +90,7 @@ on htmx:afterRequest
             </button><button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
               :disabled="switching || job_loading != null"
               @click="viewer.viewports[i-1].setZoom(1);viewer.viewports[i-1].setPan([0,0]);  viewer.viewports[i-1].render();"><i class="fa-solid fa-arrows-to-circle"></i>
-            </button>
+              </button>
           </div>
         </template>
         <div>

@@ -10,7 +10,7 @@ from django.shortcuts import render
 from django.conf import settings
 
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotAllowed
 
 from portal.models import *
 
@@ -165,6 +165,52 @@ def processed_results_urls(request, case, case_type, source_set=None):
         else:
             urls.append(wado_uri)
     return JsonResponse(dict(urls=urls))
+
+@login_required
+def update_state(request, case, session_tag):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    new_state = json.loads(request.body)
+
+    try:
+        session = SessionInfo.objects.get(case=case)
+    except:
+        session = SessionInfo(case=case, user=request.user, view_state=new_state, current_session_tag=session_tag)
+        session.save()
+        return JsonResponse(dict(error="", action=""))
+
+    if session_tag != session.current_session_tag:
+        return JsonResponse(dict(error="Opened elsewhere.", action="lock"),status=409)
+
+    session.view_state = new_state
+    session.last_stored = timezone.now()
+    session.save()
+    return JsonResponse(dict(error="", action="", ok=True))
+
+@login_required
+def load_state(request, case, session_tag):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    
+    forced = request.GET.get('force','False').lower() == 'true'
+    try:
+        session = SessionInfo.objects.get(case=case)
+    except SessionInfo.DoesNotExist:
+        session = SessionInfo(case=Case.objects.get(id=case), user=request.user, view_state={}, current_session_tag=session_tag)
+        session.save()
+        return JsonResponse(dict(state={}))
+    
+    if session.user != request.user:
+        return HttpResponseForbidden()
+    if session_tag != session.current_session_tag:
+        if not forced:
+            return JsonResponse(dict(error="Opened elsewhere.", action="confirm"),status=409)
+        else:
+            session.current_session_tag = session_tag
+            session.save()
+            return JsonResponse(session.view_state)
+    else:
+        return JsonResponse(session.view_state)
 
 # @login_required
 # def preview_data(request, case, view, index):

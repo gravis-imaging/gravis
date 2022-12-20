@@ -26,6 +26,9 @@ urlpatterns = [
     path("api/case/<str:case>/dicom_set/<str:dicom_set>/metadata", grasp_endpoints.case_metadata),
     path("api/case/<str:case>/dicom_set/<str:dicom_set>/study/<str:study>/metadata", grasp_endpoints.case_metadata),
 
+    path("api/case/<str:case>/state/<str:session_tag>/store", grasp_endpoints.update_state),
+    path("api/case/<str:case>/state/<str:session_tag>/load", grasp_endpoints.load_state),
+
     *rqjobs.urls,
     *staticfiles_urlpatterns()
 ]

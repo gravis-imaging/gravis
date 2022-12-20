@@ -94,6 +94,9 @@ class GraspViewer {
     study_uid;
     volume; 
     selected_time = 0;
+    enabled;
+    state_info;
+    save_state_interval;
     annotations = {};
     chart_options = {};
     constructor( ...inp ) {
@@ -103,7 +106,7 @@ class GraspViewer {
           })();   
          }
     
-    getState() {
+    calculateState() {
         if (!this.viewports[0].getDefaultActor()) {
             return;
         }
@@ -116,22 +119,27 @@ class GraspViewer {
         return { cameras, voi, annotations };
     }
     saveState() {
-        if (!this.case_id) return;
-        console.info("Saving state.")
-        const state = this.getState()
-        if (state)
-            localStorage.setItem(this.case_id, JSON.stringify(state));
+        if ( !this.case_id ) return;
+        console.log("Saving state.")
+        const view_state = this.calculateState()
+        this.state_info[this.dicom_set] = view_state;
+        // if (state)
+        //     localStorage.setItem(this.case_id, JSON.stringify(state));
+
+        this.pushStateInfo();
     }
-    loadState() {
-        var state;
-        state = JSON.parse(localStorage.getItem(this.case_id));
+    async applyStateInfo() {
+        let state = this.state_info[this.dicom_set]
+        // state = JSON.parse(localStorage.getItem(this.case_id));
         if (!state) {
             return;
         }
         console.info("Loading state.");
-        state.cameras.map((c,n)=> {
-            this.viewports[n].setCamera(c);
-        })
+        if ( state.cameras ) {
+            state.cameras.map((c,n)=> {
+                this.viewports[n].setCamera(c);
+            })
+        }
         if ( state.voi ) {
             const [ lower, upper ] = state.voi;
             this.viewports[0].setProperties( { voiRange: {lower,upper}})
@@ -155,9 +163,44 @@ class GraspViewer {
             }
         }
         this.renderingEngine.renderViewports(this.viewportIds);
-        console.log(state);
     }
 
+    async pushStateInfo(){
+        let doPostState = async state =>
+            doFetch(`/api/case/${this.case_id}/state/${sessionStorage.session_tag}/store`, state || {})
+
+        let response = await doPostState(this.state_info);
+        if ( response.status == 409 ) {
+            clearInterval(this.save_state_interval);
+            if ( window.confirm("Session has been taken over. Take it back?") ) {
+                sessionStorage.force_session = true;
+                window.location.reload();
+            } else {
+                window.close();
+                if ( !window.closed ){
+                    location.href = "/";
+                }
+            }
+        } else if ( response.status != 200 ) {
+            window.alert("Autosave failed, unknown error.")
+        } else {
+        }
+    }
+    async pullStateInfo(){
+        sessionStorage.session_tag = sessionStorage.session_tag || cornerstone.utilities.uuidv4();
+        let doFetchState = async force => doFetch(`/api/case/${this.case_id}/state/${sessionStorage.session_tag}/load?force=${force? 'true': 'false'}`)
+        
+        const response = await doFetchState( sessionStorage.force_session? true: false);
+        sessionStorage.force_session = false;
+
+        if ( response.status == 409 ) {
+            if ( window.confirm("Session is open in another window. Take over?") ) {
+                this.state_info = await (await doFetchState(true)).json();
+            }
+        } else {
+            this.state_info = await response.json()
+        }
+    }
     backgroundSaveState(){ 
         const saveStateSoon = () => {
             requestIdleCallback(this.saveState.bind(this));
@@ -166,13 +209,15 @@ class GraspViewer {
             if (document.visibilityState === 'hidden') {
                 this.saveState();
             } else if (document.visibilityState === 'visible') {
-                this.loadState();
+                this.pullStateInfo();
+                this.applyStateInfo();
             }
         }).bind(this));
         return setInterval(saveStateSoon.bind(this), 1000);
     }
 
-    async initialize( main, preview ) {
+    async initialize( case_id, main_element, preview_element ) {
+            this.case_id = case_id;
             const { RenderingEngine, Types, Enums, volumeLoader, CONSTANTS, setVolumesForViewports} = window.cornerstone; 
             const { ViewportType } = Enums;
             // Force cornerstone to try to use GPU rendering even if it thinks the GPU is weak.
@@ -193,7 +238,7 @@ class GraspViewer {
                                 viewUp: [ 0, 0, 1 ]
             }],*/
             const view_info = [["AX",ORIENTATION.AXIAL],["SAG",ORIENTATION.SAGITTAL],["COR",ORIENTATION.CORONAL],["CINE"]]
-            const [ viewViewports, viewportIds ] = this.createViewports("VIEW", view_info, main)
+            const [ viewViewports, viewportIds ] = this.createViewports("VIEW", view_info, main_element)
             this.renderingEngine.setViewports([...previewViewports, ...viewViewports])
     
             this.viewportIds = viewportIds
@@ -207,6 +252,8 @@ class GraspViewer {
             this.renderingEngine.renderViewports([...this.viewportIds, ...this.previewViewports]);
             this.chart = this.initChart();
 
+            await this.pullStateInfo();
+            this.save_state_interval = this.backgroundSaveState();
             this.viewports.slice(0,3).map((v, n)=> {
                 v.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(250, async (evt) => {
                     if (! v.getDefaultActor() ) return;
@@ -224,8 +271,8 @@ class GraspViewer {
                     this.updateChart()
                 }));
             });
-    
-        }
+
+                    }
     
     
     createViewportGrid(n=4) {
@@ -522,7 +569,7 @@ class GraspViewer {
         } catch (e) {
             console.error(e);
         }
-
+        await this.applyStateInfo()
         console.log("Study switched");
         return graspVolumeInfo
     }
@@ -795,7 +842,7 @@ async function doFetch(url, body) {
     try {
         return JSON.parse(text)
     } catch (e) {
-        console.warn(text);
+        console.warn("Received invalid JSON", text);
         throw e
     }
 }
