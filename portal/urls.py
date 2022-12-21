@@ -1,6 +1,8 @@
 from django.urls import path
 
-from . import views, rqjobs, grasp_endpoints
+from .jobs import cine_generation
+
+from . import views, grasp_endpoints
 
 from django.conf import settings
 from django.conf.urls.static import static
@@ -26,6 +28,6 @@ urlpatterns = [
     path("api/case/<str:case>/dicom_set/<str:dicom_set>/metadata", grasp_endpoints.case_metadata),
     path("api/case/<str:case>/dicom_set/<str:dicom_set>/study/<str:study>/metadata", grasp_endpoints.case_metadata),
 
-    *rqjobs.urls,
+    *cine_generation.urls,
     *staticfiles_urlpatterns()
 ]
