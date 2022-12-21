@@ -63,7 +63,7 @@ on htmx:afterRequest
     <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotations) : [])" :key="uid">
       <div x-show="!!viewer.annotations[uid]">
         <div x-text="viewer.annotations[uid] ? viewer.annotations[uid].label : 'Error'"></div>
-        <button class="btn-primary btn-large m-2" @click="await viewer.deleteAnnotation(viewer.annotations[uid]); delete viewer.annotations[uid];">Delete</button>
+        <button class="btn-primary btn-large m-2" @click="await viewer.deleteAnnotation(viewer.annotations[uid]);">Delete</button>
         <button class="btn-primary btn-large m-2" @click="await viewer.goToAnnotation(viewer.annotations[uid]);">Jump</button>
       </div>
     </template>  
@@ -87,11 +87,25 @@ on htmx:afterRequest
           </button><button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2" 
               :disabled="switching || job_loading != null"
               @click="viewer.addAnnotationToViewport('Probe',i-1);"><i class="fa-solid fa-plus"></i>
-            </button><button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
+          </button><button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
               :disabled="switching || job_loading != null"
               @click="viewer.viewports[i-1].setZoom(1);viewer.viewports[i-1].setPan([0,0]);  viewer.viewports[i-1].render();"><i class="fa-solid fa-arrows-to-circle"></i>
-            </button>
-            <template x-if="viewer && viewer.getNativeViewports().indexOf(viewer.viewports[i-1].id) > -1"><div>Native</div></template>
+          </button><button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
+            :disabled="switching || job_loading != null"
+            @click="viewer.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
+          </button><button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
+            :disabled="switching || job_loading != null"
+            @click="viewer.deleteSelectedAnnotations();"><i class="fa-solid fa-trash"></i>
+          </button><button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
+            :disabled="switching || job_loading != null"
+            @click="viewer.flipSelectedAnnotations();">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-symmetry-vertical" viewBox="0 0 16 16">
+              <path d="M7 2.5a.5.5 0 0 0-.939-.24l-6 11A.5.5 0 0 0 .5 14h6a.5.5 0 0 0 .5-.5v-11zm2.376-.484a.5.5 0 0 1 .563.245l6 11A.5.5 0 0 1 15.5 14h-6a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .376-.484zM10 4.46V13h4.658L10 4.46z"/>
+            </svg>
+          </button>
+
+
+          <template x-if="viewer && viewer.getNativeViewports().indexOf(viewer.viewports[i-1].id) > -1"><div>Native</div></template>
           </div>
         </template>
         <div>

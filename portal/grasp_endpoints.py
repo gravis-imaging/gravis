@@ -108,15 +108,15 @@ def timeseries_data(request, case, source_set):
                 v.mask = mask
                 return v
 
-            print(f"""P2
-{subarray.shape[2]} {subarray.shape[1]}
-{subarray[0].max()}
-"""+"\n".join(" ".join([str(k) for k in r]) for r in subarray[0]))
+#             print(f"""P2
+# {subarray.shape[2]} {subarray.shape[1]}
+# {subarray[0].max()}
+# """+"\n".join(" ".join([str(k) for k in r]) for r in subarray[0]))
             subarray = subarray.astype('float32')
             values = summary_method(masked(subarray), (1,2)).flatten()
         elif annotation["tool"] == "Probe":
             handle = handles_absolute[0][1:]
-            print(handle)
+            # print(handle)
             # print(f"Handle {handle}: {pixel_array[0,handle[0], handle[1]]}")
             if handle[1] < 0 or handle[1] > pixel_array.shape[2] or \
                 handle[0] < 0 or handle[0] > pixel_array.shape[1]:

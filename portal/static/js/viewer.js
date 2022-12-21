@@ -128,7 +128,7 @@ class GraspViewer {
         if (!state) {
             return;
         }
-        console.info("Loading state.");
+        console.info("Loading state");
         state.cameras.map((c,n)=> {
             this.viewports[n].setCamera(c);
         })
@@ -526,11 +526,8 @@ class GraspViewer {
         console.log("Study switched");
         return graspVolumeInfo
     }
-    getAllAnnotations(viewport) {
-        return ["GravisROI","Probe"].flatMap(
-            type => cornerstone.tools.annotation.state.getAnnotations((viewport || this.viewports[0]).element,type) || []
-        );
-    }
+
+
     async updateChart() {
         if (! this.volume.imageData ) {
             return;
@@ -570,11 +567,82 @@ class GraspViewer {
     // async setGraspVolume(seriesInfo) {
     //     await this.setVolumeByImageIds(seriesInfo.imageIds,seriesInfo.series_uid)
     // }
+    getAllAnnotations(viewport) {
+        return ["GravisROI","Probe"].flatMap(
+            type => cornerstone.tools.annotation.state.getAnnotations((viewport || this.viewports[0]).element,type) || []
+        );
+    }
+
+    getSelectedFilteredAnnotations() {
+        let annotation_uids = cornerstone.tools.annotation.selection.getAnnotationsSelected() || []
+        let annotations = annotation_uids.map(cornerstone.tools.annotation.state.getAnnotation)
+        return annotations.filter(x=> x && ["GravisROI", "Probe"].indexOf(x.metadata.toolName)>-1)
+    }
+
+    createAnnotationTemplate() {
+        var idx = Math.max(0,...Object.values(this.annotations).map(a => a.idx+1));
+        return {
+            chartColor: `rgb(${HSLToRGB(idx*(360/1.618033988),50,50).join(",")})`,
+            highlighted: true,
+            invalidated: false,
+            isLocked: false,
+            isVisible: true,
+            annotationUID: cornerstone.utilities.uuidv4(),
+            metadata: {
+                idx: idx,
+            },
+            data: {
+                cachedStats: {},
+                label: `Annotation ${idx+1}`,
+                handles: {
+                    textBox:{"hasMoved":false,"worldPosition":[0,0,0],"worldBoundingBox":{"topLeft":[0,0,0],"topRight":[0,0,0],"bottomLeft":[0,0,0],"bottomRight":[0,0,0]}},
+                    activeHandleIndex: null
+                },
+            }
+        }
+    }
+
+    duplicateSelectedAnnotation() {
+        for (let a of this.getSelectedFilteredAnnotations() ) {
+            if (!a) { continue }
+
+            let new_a = this.createAnnotationTemplate();
+            new_a.metadata = { ...a.metadata, idx: new_a.metadata.idx };
+            new_a.data.handles.points = a.data.handles.points.slice().map(p=>p.slice());
+            cornerstone.tools.annotation.state.addAnnotation(this.viewports.find(x=>x.id=new_a.metadata.viewportId).element,new_a)
+            cornerstone.tools.annotation.selection.setAnnotationSelected(a.annotationUID, false, true);
+            cornerstone.tools.annotation.selection.setAnnotationSelected(new_a.annotationUID, true, true);
+
+            cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,[new_a.metadata.viewportId]) 
+            this.annotations[new_a.annotationUID] = { uid: new_a.annotationUID, label: new_a.data.label, ...new_a.metadata }
+        }
+    }
+
+    deleteSelectedAnnotations() {
+        for (let a of this.getSelectedFilteredAnnotations() ) {
+            if (!a) { continue }
+            cornerstone.tools.annotation.state.removeAnnotation(a.annotationUID)
+            cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,[a.metadata.viewportId]) 
+            delete this.annotations[a.annotationUID];
+        }
+        this.updateChart();
+    }
+
+    flipSelectedAnnotations() {
+        let [ left, right ] = this.volume.imageData.getBounds().slice(0,2);
+        let midpoint = (left + right) / 2;
+        for (let a of this.getSelectedFilteredAnnotations() ) {
+            if (!a) { continue }
+            a.data.handles.points.map( point => {
+                point[0] = midpoint - (point[0] - midpoint)
+            })
+            cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,[a.metadata.viewportId]) 
+        }
+    }
+    
     addAnnotationToViewport(tool_name,viewport_n) {
         var viewport = this.viewports[viewport_n]
         var cam = viewport.getCamera()
-        var idx = Math.max(0,...Object.values(this.annotations).map(a => a.idx+1));
-
         var center_point = viewport.worldToCanvas(cam.focalPoint)
         if (tool_name == "GravisROI" )
             var points = [
@@ -588,44 +656,31 @@ class GraspViewer {
         } else {
             throw Error("Unknown annotation type.")
         }
-        var new_a = {
-            chartColor: `rgb(${HSLToRGB(idx*(360/1.618033988),50,50).join(",")})`,
-            highlighted: true,
-            invalidated: false,
-            isLocked: false,
-            isVisible: true,
-            annotationUID: cornerstone.utilities.uuidv4(),
-            metadata: {
-                idx: idx,
-                viewportId: this.viewportIds[viewport_n],
-                cam: viewport.getCamera(),
-                toolName: tool_name,
-                viewPlaneNormal: cam.viewPlaneNormal,
-                viewUp: cam.viewUp,
-                FrameOfReferenceUID: viewport.getFrameOfReferenceUID()
-            },
-            data: {
-                cachedStats: {},
-                label: `Annotation ${idx+1}`,
-                handles: {
-                    textBox:{"hasMoved":false,"worldPosition":[0,0,0],"worldBoundingBox":{"topLeft":[0,0,0],"topRight":[0,0,0],"bottomLeft":[0,0,0],"bottomRight":[0,0,0]}},
-                    points: points,
-                    activeHandleIndex:null
-                },
-            },
+        let new_annotation = this.createAnnotationTemplate();
+        new_annotation.metadata = {
+            ...new_annotation.metadata,
+            viewportId: this.viewportIds[viewport_n],
+            cam: viewport.getCamera(),
+            toolName: tool_name,
+            viewPlaneNormal: cam.viewPlaneNormal,
+            viewUp: cam.viewUp,
+            FrameOfReferenceUID: viewport.getFrameOfReferenceUID()
         }
-        cornerstone.tools.annotation.state.addAnnotation(viewport.element,new_a)
+        new_annotation.data.handles.points = points;
+        cornerstone.tools.annotation.state.addAnnotation(viewport.element,new_annotation)
         cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,[this.viewportIds[viewport_n]]) 
-        this.annotations[new_a.annotationUID] = { uid: new_a.annotationUID, label: new_a.data.label, ...new_a.metadata }
+
+        this.annotations[new_annotation.annotationUID] = { uid: new_annotation.annotationUID, label: new_annotation.data.label, ...new_annotation.metadata }
     }
     async deleteAnnotation(annotation_info) {
-        const viewport = this.viewports.find((x)=>x.id == annotation_info.viewportId);
+        const viewport = this.viewports.find( x => x.id == annotation_info.viewportId);
         cornerstone.tools.annotation.state.removeAnnotation(annotation_info.uid, viewport.element)
         cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,[annotation_info.viewportId]) 
+        delete this.annotations[annotation_info.uid];
         await this.updateChart()
     }
     goToAnnotation(annotation_info) {
-        const viewport = this.viewports.find((x)=>x.id == annotation_info.viewportId);
+        const viewport = this.viewports.find( x => x.id == annotation_info.viewportId);
         viewport.setCamera(annotation_info.cam);
         this.renderingEngine.renderViewports([annotation_info.viewportId]);
     }
