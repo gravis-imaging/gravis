@@ -91,6 +91,7 @@ on htmx:afterRequest
               :disabled="switching || job_loading != null"
               @click="viewer.viewports[i-1].setZoom(1);viewer.viewports[i-1].setPan([0,0]);  viewer.viewports[i-1].render();"><i class="fa-solid fa-arrows-to-circle"></i>
             </button>
+            <template x-if="viewer && viewer.getNativeViewports().indexOf(viewer.viewports[i-1].id) > -1"><div>Native</div></template>
           </div>
         </template>
         <div>

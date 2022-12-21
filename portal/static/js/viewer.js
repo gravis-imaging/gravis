@@ -713,6 +713,20 @@ class GraspViewer {
 
         // cornerstone.tools.utilities.stackPrefetch.enable(dest_viewport.element);
     }
+    getNativeViewports() {
+        let native_viewports = [];
+        for (var v of viewer.viewports) {
+            let imageData = v.getDefaultImageData()
+            if (!imageData) { continue; };
+            let direction = imageData.getDirection().slice(-3);
+            let normal = v.getCamera().viewPlaneNormal;
+            let is_native = direction.every((v,i) => Math.abs(v) == Math.abs(normal[i]))
+            if (is_native) {
+                native_viewports.push(v.id);
+            }
+        }
+        return native_viewports;
+    }
     
 }
 
