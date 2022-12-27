@@ -514,35 +514,30 @@ class GraspViewer {
     }
 
     async setPreviewStackForViewport(n, dest_viewport) {
-        var viewport = this.viewports[n];
-        var cam = viewport.getCamera()
+        const viewport = this.viewports[n];
+        const cam = viewport.getCamera();
     
         const volumeId = viewport.getActors()[0].uid;
-        var volume = cornerstone.cache.getVolume(volumeId)
-        var index = cornerstone.utilities.transformWorldToIndex(volume.imageData, cam.focalPoint)
-        console.log(`Current view index: ${index}`);
-        if (Math.abs(cam.viewPlaneNormal[0] == 1)) {
-            var view = "SAG"
-            var val = index[2]
-        } else if (Math.abs(cam.viewPlaneNormal[1]) == 1) {
-            var view = "COR"
-            var val = index[0]
-        } else if (Math.abs(cam.viewPlaneNormal[2]) == 1) {
-            var view = "AX"
-            var val = index[1]
-        } else {
-            return;
-        }
-        var info = await (
+        const volume = cornerstone.cache.getVolume(volumeId);
+        const info = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/processed_json/CINE`);
+        const index = cornerstone.utilities.transformWorldToIndex(volume.imageData, cam.focalPoint);
+
+        const view = ["SAG", "COR","AX"][cam.viewPlaneNormal.findIndex(x=>Math.abs(x)==1)];
+        const viewInfo = info.result.views[view];
+        console.log(viewInfo);
+        const idx = viewInfo.transformed_axes[0];
+
+        var val = index[idx];
+        const cine_urls = await (
                 await fetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/processed_results/CINE/${view}?slice_location=${val}`, {
             method: 'GET',   credentials: 'same-origin'
-        })).json() 
+        })).json();
         // console.log("Preview info:", info)
         // dest_viewport = dest_viewport? dest_viewport : this.viewports[3]
         // dest_viewport.setProperties( { voiRange: viewport.getProperties().voiRange });
         let [lower, upper] = this.getVolumeVOI(viewport);
-        dest_viewport.setVOI({lower, upper})
-        await dest_viewport.setStack(info.urls,dest_viewport.currentImageIdIndex);
+        dest_viewport.setVOI({lower, upper});
+        await dest_viewport.setStack(cine_urls.urls,dest_viewport.currentImageIdIndex);
         // console.log(cornerstone.requestPoolManager.getRequestPool().interaction)
         // cornerstone.tools.utilities.stackPrefetch.enable(dest_viewport.element);
     }

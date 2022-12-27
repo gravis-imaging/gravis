@@ -59,7 +59,7 @@ def timeseries_data(request, case, source_set):
                 ptp=numpy.ma.ptp)[mode]
 
     acquisition_seconds = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set=source_set).values("acquisition_seconds").distinct("acquisition_seconds")
-    averages.append(sorted(list((k['acquisition_seconds'] for k in acquisition_seconds))))
+    acquisition_timepoints = sorted(list((k['acquisition_seconds'] for k in acquisition_seconds)))
     # case = Case.objects.get(id=int(case))
     for i, annotation in enumerate(data['annotations']):
         idx = numpy.abs(annotation['normal']).argmax()
@@ -71,7 +71,8 @@ def timeseries_data(request, case, source_set):
         view_information = dicom_set.processing_job.json_result["views"][orientation]
         axes_permutation = view_information["transformed_axes"]
         handles_absolute = [[handle[n] for n in axes_permutation] for handle in annotation["handles_indexes"]]
-
+        print(view_information)
+        print(handles_absolute[0])
         normal = numpy.asarray(annotation["normal"])
         viewUp = numpy.asarray(annotation["view_up"])
         viewLeft = (lambda x,y:numpy.cross(x,y))(normal,viewUp) # workaround for numpy bug that makes Pylance think the rest of the code is unreachable
@@ -80,10 +81,10 @@ def timeseries_data(request, case, source_set):
         ds = pydicom.dcmread( Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location )
 
         pixel_array = ds.pixel_array
-        # ????? manually determined to fix the axial view ?????
+        # # ????? manually determined to fix the axial view ?????
         for flipped_axis in view_information["flipped"]:
             for k in range(len(handles_absolute)):
-                handles_absolute[k][flipped_axis] = pixel_array.shape[2] - handles_absolute[k][flipped_axis] - 1
+                handles_absolute[k][flipped_axis] = pixel_array.shape[flipped_axis] - handles_absolute[k][flipped_axis] - 1
 
         if annotation["tool"] == "GravisROI":
             [[_, top, _], [_, bottom, _], [_,_,left], [_,_, right ]] = handles_absolute
@@ -143,7 +144,21 @@ def timeseries_data(request, case, source_set):
             values /= values.max()
         averages.append(values.tolist())
 
+    # In case the CINEs are undersampled in time
+    if averages and len(averages[0]) < len(acquisition_timepoints):
+        acquisition_timepoints = acquisition_timepoints[::len(acquisition_timepoints) // len(averages[0])]
+    
+    averages.insert(0,acquisition_timepoints)
     return JsonResponse(dict(data=numpy.asarray(averages).T.tolist()))
+
+
+@login_required
+def processed_results_json(request, case, category, source_set):
+    # fields = ["series_number", "slice_location", "acquisition_number"]
+    case = Case.objects.get(id=int(case))
+    # slices_lookup = {k: request.GET.get(k) for k in fields if k in request.GET}
+    job = ProcessingJob.objects.filter(status="Success", case=case, dicom_set=source_set, category=category).latest("created_at")
+    return JsonResponse(dict(result = job.json_result))
 
 @login_required
 def processed_results_urls(request, case, case_type, source_set=None):

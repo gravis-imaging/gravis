@@ -139,7 +139,9 @@ on htmx:afterRequest
 </div>
 <script defer type="module">
   import { GraspViewer, doJob } from "/static/js/viewer.js"
+  import { doFetch } from "/static/js/utils.js"
   window.GraspViewer = GraspViewer;
   window.doJob = doJob;
+  window.doFetch = doFetch;
 </script>
 {% endblock %}

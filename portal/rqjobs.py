@@ -109,6 +109,10 @@ class VView:
     flipped: list = dataclasses.field(default_factory=list)
     dicom_set: DICOMSet = None
 
+    transformed_normal : npt.ArrayLike = None
+    transformed_viewUp : npt.ArrayLike = None
+    transformed_viewHoriz : npt.ArrayLike = None
+
     def to_dict(self):
         return dict(
             name = self.name,
@@ -116,7 +120,10 @@ class VView:
             viewUp = self.viewUp,
             viewHoriz = self.viewHoriz.tolist() if self.viewHoriz is not None else None,
             transformed_axes = self.transformed_axes.tolist() if self.transformed_axes is not None else None,
-            flipped = self.flipped
+            flipped = self.flipped,
+            transformed_normal = self.transformed_normal.tolist() if self.transformed_normal is not None else None,
+            transformed_viewUp = self.transformed_viewUp.tolist() if self.transformed_viewUp is not None else None,
+            transformed_viewHoriz = self.transformed_viewHoriz.tolist() if self.transformed_viewHoriz is not None else None,
         )
 class TestJob(WorkJobView):
     type = "CINE"
@@ -126,7 +133,7 @@ class TestJob(WorkJobView):
         instances = job.dicom_set.instances.all()
         im_orientation_pt = np.asarray(json.loads(instances[0].json_metadata)["00200037"]["Value"]).reshape((2,3))
         im_orientation_mat = np.rint(np.vstack((im_orientation_pt,[cross(*im_orientation_pt)])))
-
+        print(im_orientation_mat)
         normal_sagittal = [ 1, 0,  0 ]
         normal_coronal =  [ 0, 1,  0 ]
         normal_axial =    [ 0, 0, -1 ]
@@ -140,24 +147,23 @@ class TestJob(WorkJobView):
                 ]
         # axis_numbers = []
         for v in views:
-            print(v)
             v.viewHoriz         = cross(v.normal,v.viewUp)
-            transformed_normal  = im_orientation_mat @ v.normal
-            normal_axis_number  = np.abs(transformed_normal).argmax()
-            transformed_viewUp  = im_orientation_mat @ v.viewUp
-            rows_axis_number    = np.abs(transformed_viewUp).argmax()
-            transformed_viewHoriz = im_orientation_mat @ v.viewHoriz
-            cols_axis_number    = np.abs(transformed_viewHoriz).argmax()
+            v.transformed_normal  = im_orientation_mat @ v.normal
+            normal_axis_number  = np.abs(v.transformed_normal).argmax()
+            v.transformed_viewUp  = im_orientation_mat @ v.viewUp
+            rows_axis_number    = np.abs(v.transformed_viewUp).argmax()
+            v.transformed_viewHoriz = im_orientation_mat @ v.viewHoriz
+            cols_axis_number    = np.abs(v.transformed_viewHoriz).argmax()
             v.transformed_axes  = np.array([normal_axis_number, rows_axis_number, cols_axis_number])
 
             print(f"---{v.name}---")
-            print("Normal",     v.normal,       transformed_normal.T,       normal_axis_number)
-            print("Rows axis",  v.viewUp,       transformed_viewUp.T,       rows_axis_number)
-            print("Cols axis",  v.viewHoriz,    transformed_viewHoriz.T,    cols_axis_number)
-            print(v.transformed_axes)
+            print("Normal",     v.normal,       v.transformed_normal.T,       normal_axis_number)
+            print("Rows axis",  v.viewUp,       v.transformed_viewUp.T,       rows_axis_number)
+            print("Cols axis",  v.viewHoriz,    v.transformed_viewHoriz.T,    cols_axis_number)
+            print(v)
 
-        series_uids = {k.series_uid for k in instances}
-        split_by_series = [ sorted([k for k in instances if k.series_uid == uid],key = lambda x:x.slice_location,reverse=True) for uid in series_uids]
+        series_uids = { k.series_uid for k in instances }
+        split_by_series = [ sorted([k for k in instances if k.series_uid == uid], key = lambda x:x.slice_location) for uid in series_uids ]
         files_by_series = [ [ Path(i.dicom_set.set_location) / i.instance_location for i in k] for k in sorted(split_by_series,key=lambda x:x[0].acquisition_seconds) ]
         
         random_name = str(uuid.uuid4())
@@ -186,16 +192,43 @@ class TestJob(WorkJobView):
                 volume[i,:,:,j] = array.T
         assert volume is not None
 
+        # raise Exception("foo")
+#         print(f"""P2
+# {volume.shape[2]/2} {volume.shape[1]/2}
+# {volume[0].max()}
+# """+"\n".join(" ".join([str(k) for k in r]) for r in volume[0,::2,::2,100].T))
         for v in views:
             new_study_uid = pydicom.uid.generate_uid()
             new_series_uid = pydicom.uid.generate_uid()
+            
+            t_array = volume[:]
+            # Hardcoding these for now. 
+            # --- SAGITTAL
+            if np.array_equal(im_orientation_mat, 
+                    np.array(
+                        [[ 0.,  1.,  0.],
+                         [-0., -0., -1.],
+                         [-1.,  0.,  0.]])):
+                if v.name in ("COR", "SAG"):
+                    t_array = np.flip(t_array, 3)
+                elif v.name == "AX":
+                    v.flipped.append(2)
+            # --- AXIAL
+            elif np.array_equal(im_orientation_mat, 
+                    np.array(
+                        [[ 1., -0., -0.],
+                         [ 0.,  1., -0.],
+                         [ 0.,  0.,  1.]])):
+                if v.name in ("COR", "SAG"):
+                    t_array = np.flip(t_array, 3)
+                    v.flipped.append(1)
+                if v.name == "COR":
+                    t_array = np.flip(t_array, 1)
+                    v.flipped.append(2)
 
-            t_array = volume.transpose(*(0,*[1+x for x in v.transformed_axes]))
+            t_array = t_array.transpose(*(0,*[1+x for x in v.transformed_axes]))
             # t_array is now in [ time, normal, rows, columns ]
-            if sum(v.normal) < 0: 
-                # We're viewing from the "other" side, so the view needs to be flipped. By convention we flip horizontally
-                t_array = np.flip(t_array,3)
-                v.flipped = [2]
+
             for i in range(t_array.shape[1]):
                 ds = prototype_ds.copy()
                 ds.NumberOfFrames   = t_array.shape[0]
@@ -210,7 +243,6 @@ class TestJob(WorkJobView):
                 ds.SOPInstanceUID    = pydicom.uid.generate_uid()
 
                 ds.save_as(Path(v.dicom_set.set_location) / f"multiframe.{i}.dcm")
-                print(Path(v.dicom_set.set_location) / f"multiframe.{i}.dcm")
                 new_instance = DICOMInstance.from_dataset(ds)
                 new_instance.dicom_set = v.dicom_set
                 new_instance.instance_location = f"multiframe.{i}.dcm"
