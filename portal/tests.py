@@ -97,24 +97,51 @@ def test_orientation():
     from .rqjobs import TestJob, VView
     import numpy as np
 
-    def check_orientation(orientation, result):
-        views = [v.to_dict() for v in TestJob.calc_views_for_set(orientation)]
-        expected = [v.to_dict() for v in result]
-        assert views == expected
+    def check_orientation(orientation, expected):
+        calc_views =  TestJob.calc_views_for_set(orientation)
+        # print(calc_views)
+        views = [v.to_dict() for v in calc_views]
+        expected_d = [v.to_dict() for v in expected]
+        assert views == expected_d
 
     sagittal_orientation =  \
         [np.array(
-            [[ 0.,  1.,  0.],
-            [-0., -0., -1.]]),
-            [VView(name='SAG', normal=[1, 0, 0], viewUp=[0, 0, 1], viewHoriz=np.array([ 0, -1,  0]), transformed_axes=np.array([2, 1, 0]), flip_for_preview=[3], flip_for_timeseries=[], dicom_set=None, transformed_normal=np.array([ 0.,  0., -1.]), transformed_viewUp=np.array([ 0., -1.,  0.]), transformed_viewHoriz=np.array([-1.,  0.,  0.])), VView(name='COR', normal=[0, 1, 0], viewUp=[0, 0, 1], viewHoriz=np.array([1, 0, 0]), transformed_axes=np.array([0, 1, 2]), flip_for_preview=[3], flip_for_timeseries=[], dicom_set=None, transformed_normal=np.array([1., 0., 0.]), transformed_viewUp=np.array([ 0., -1.,  0.]), transformed_viewHoriz=np.array([ 0.,  0., -1.])), VView(name='AX', normal=[0, 0, -1], viewUp=[0, -1, 0], viewHoriz=np.array([-1,  0,  0]), transformed_axes=np.array([1, 0, 2]), flip_for_preview=[], flip_for_timeseries=[2], dicom_set=None, transformed_normal=np.array([0., 1., 0.]), transformed_viewUp=np.array([-1.,  0.,  0.]), transformed_viewHoriz=np.array([0., 0., 1.]))]
+            [[ 0, 1,  0 ],
+             [ 0, 0, -1 ]]),
+            [VView(name='SAG', normal=[1, 0, 0], viewUp=[0, 0, 1], viewHoriz=np.array([ 0, -1,  0]), transformed_axes=np.array([2, 1, 0]), flip_for_preview=[3], flip_for_timeseries=[], dicom_set=None, transformed_normal=np.array([ 0.,  0., -1.]), transformed_viewUp=np.array([ 0., -1.,  0.]), transformed_viewHoriz=np.array([-1.,  0.,  0.])),
+             VView(name='COR', normal=[0, 1, 0], viewUp=[0, 0, 1], viewHoriz=np.array([1, 0, 0]), transformed_axes=np.array([0, 1, 2]), flip_for_preview=[3], flip_for_timeseries=[], dicom_set=None, transformed_normal=np.array([1., 0., 0.]), transformed_viewUp=np.array([ 0., -1.,  0.]), transformed_viewHoriz=np.array([ 0.,  0., -1.])),
+             VView(name='AX', normal=[0, 0, -1], viewUp=[0, -1, 0], viewHoriz=np.array([-1,  0,  0]), transformed_axes=np.array([1, 0, 2]), flip_for_preview=[], flip_for_timeseries=[2], dicom_set=None, transformed_normal=np.array([0., 1., 0.]), transformed_viewUp=np.array([-1.,  0.,  0.]), transformed_viewHoriz=np.array([0., 0., 1.]))]
         ]
     check_orientation(*sagittal_orientation)
 
     axial_orientation =  \
         [np.array(
-            [[ 1.,  0.,  0.],
-             [-0., 1., 0.]]),
-            [VView(name='SAG', normal=[1, 0, 0], viewUp=[0, 0, 1], viewHoriz=np.array([ 0, -1,  0]), transformed_axes=np.array([0, 2, 1]), flip_for_preview=[3], flip_for_timeseries=[1], dicom_set=None, transformed_normal=np.array([1., 0., 0.]), transformed_viewUp=np.array([0., 0., 1.]), transformed_viewHoriz=np.array([ 0., -1.,  0.])), VView(name='COR', normal=[0, 1, 0], viewUp=[0, 0, 1], viewHoriz=np.array([1, 0, 0]), transformed_axes=np.array([1, 2, 0]), flip_for_preview=[3, 1], flip_for_timeseries=[1, 2], dicom_set=None, transformed_normal=np.array([0., 1., 0.]), transformed_viewUp=np.array([0., 0., 1.]), transformed_viewHoriz=np.array([1., 0., 0.])), VView(name='AX', normal=[0, 0, -1], viewUp=[0, -1, 0], viewHoriz=np.array([-1,  0,  0]), transformed_axes=np.array([2, 1, 0]), flip_for_preview=[], flip_for_timeseries=[], dicom_set=None, transformed_normal=np.array([ 0.,  0., -1.]), transformed_viewUp=np.array([ 0., -1.,  0.]), transformed_viewHoriz=np.array([-1.,  0.,  0.]))]
+            [[ 1, 0, 0 ],
+             [ 0, 1, 0 ]]),
+            [VView(name='SAG', normal=[1, 0, 0], viewUp=[0, 0, 1], viewHoriz=np.array([ 0, -1,  0]), transformed_axes=np.array([0, 2, 1]), flip_for_preview=[3], flip_for_timeseries=[1], dicom_set=None, transformed_normal=np.array([1., 0., 0.]), transformed_viewUp=np.array([0., 0., 1.]), transformed_viewHoriz=np.array([ 0., -1.,  0.])), 
+            VView(name='COR', normal=[0, 1, 0], viewUp=[0, 0, 1], viewHoriz=np.array([1, 0, 0]), transformed_axes=np.array([1, 2, 0]), flip_for_preview=[3, 1], flip_for_timeseries=[1, 2], dicom_set=None, transformed_normal=np.array([0., 1., 0.]), transformed_viewUp=np.array([0., 0., 1.]), transformed_viewHoriz=np.array([1., 0., 0.])), 
+            VView(name='AX', normal=[0, 0, -1], viewUp=[0, -1, 0], viewHoriz=np.array([-1,  0,  0]), transformed_axes=np.array([2, 1, 0]), flip_for_preview=[], flip_for_timeseries=[], dicom_set=None, transformed_normal=np.array([ 0.,  0., -1.]), transformed_viewUp=np.array([ 0., -1.,  0.]), transformed_viewHoriz=np.array([-1.,  0.,  0.]))]
         ]
 
     check_orientation(*axial_orientation)
+
+    axial_orientation2 =  \
+        [np.array(
+            [[ 0, 1, 0 ],
+             [ 1, 0, 0 ]]),
+            [VView(name='SAG', normal=[1, 0, 0], viewUp=[0, 0, 1], viewHoriz=np.array([ 0, -1,  0]), transformed_axes=np.array([1, 2, 0]), flip_for_preview=[3], flip_for_timeseries=[], dicom_set=None, transformed_normal=np.array([0., 1., 0.]), transformed_viewUp=np.array([ 0.,  0., -1.]), transformed_viewHoriz=np.array([-1.,  0.,  0.])),
+             VView(name='COR', normal=[0, 1, 0], viewUp=[0, 0, 1], viewHoriz=np.array([1, 0, 0]), transformed_axes=np.array([0, 2, 1]), flip_for_preview=[3, 2], flip_for_timeseries=[2], dicom_set=None, transformed_normal=np.array([1., 0., 0.]), transformed_viewUp=np.array([ 0.,  0., -1.]), transformed_viewHoriz=np.array([0., 1., 0.])), 
+             VView(name='AX', normal=[0, 0, -1], viewUp=[0, -1, 0], viewHoriz=np.array([-1,  0,  0]), transformed_axes=np.array([2, 0, 1]), flip_for_preview=[3], flip_for_timeseries=[], dicom_set=None, transformed_normal=np.array([0., 0., 1.]), transformed_viewUp=np.array([-1.,  0.,  0.]), transformed_viewHoriz=np.array([ 0., -1.,  0.]))]
+        ]
+
+    check_orientation(*axial_orientation2)
+
+    coronal_orientation = \
+        [np.array(
+            [[ 1, 0,  0 ],
+             [ 0, 0, -1 ]]),
+             [VView(name='SAG', normal=[1, 0, 0], viewUp=[0, 0, 1], viewHoriz=np.array([ 0, -1,  0]), transformed_axes=np.array([0, 1, 2]), flip_for_preview=[], flip_for_timeseries=[], dicom_set=None, transformed_normal=np.array([1., 0., 0.]), transformed_viewUp=np.array([ 0., -1.,  0.]), transformed_viewHoriz=np.array([ 0.,  0., -1.])), 
+              VView(name='COR', normal=[0, 1, 0], viewUp=[0, 0, 1], viewHoriz=np.array([1, 0, 0]), transformed_axes=np.array([2, 1, 0]), flip_for_preview=[1], flip_for_timeseries=[2], dicom_set=None, transformed_normal=np.array([0., 0., 1.]), transformed_viewUp=np.array([ 0., -1.,  0.]), transformed_viewHoriz=np.array([1., 0., 0.])), 
+              VView(name='AX', normal=[0, 0, -1], viewUp=[0, -1, 0], viewHoriz=np.array([-1,  0,  0]), transformed_axes=np.array([1, 2, 0]), flip_for_preview=[], flip_for_timeseries=[], dicom_set=None, transformed_normal=np.array([0., 1., 0.]), transformed_viewUp=np.array([ 0.,  0., -1.]), transformed_viewHoriz=np.array([-1.,  0.,  0.]))]
+        ]
+    check_orientation(*coronal_orientation)

@@ -165,25 +165,44 @@ class TestJob(WorkJobView):
             # --- SAGITTAL
             if np.array_equal(im_orientation_mat, 
                     np.array(
-                        [[ 0.,  1.,  0.],
-                         [-0., -0., -1.],
-                         [-1.,  0.,  0.]])):
+                        [[  0, 1,  0 ],
+                         [  0, 0, -1 ],
+                         [ -1, 0,  0 ]])):
                 if v.name in ("COR", "SAG"):
-                    v.flip_for_preview.append(3)
+                    v.flip_for_preview.append(3) # X axis in patient coordinates
                 elif v.name == "AX":
                     v.flip_for_timeseries.append(2)
             # --- AXIAL
             elif np.array_equal(im_orientation_mat, 
                     np.array(
-                        [[ 1., -0., -0.],
-                         [ 0.,  1., -0.],
-                         [ 0.,  0.,  1.]])):
+                        [[ 1, 0, 0 ],
+                         [ 0, 1, 0 ],
+                         [ 0, 0, 1 ]])):
                 if v.name in ("COR", "SAG"):
-                    v.flip_for_preview.append(3)
+                    v.flip_for_preview.append(3) # Z axis in patient coordinates
                     v.flip_for_timeseries.append(1)
+                if v.name == "COR":
+                    v.flip_for_preview.append(1) # X axis in patient coordinates
+                    v.flip_for_timeseries.append(2)
+            elif np.array_equal(im_orientation_mat, 
+                    np.array(
+                        [[ 0, 1,  0 ],
+                         [ 1, 0,  0 ],
+                         [ 0, 0, -1 ]])):
+                v.flip_for_preview.append(3) # Z axis in patient coordinates
+                if v.name == "COR":
+                    v.flip_for_preview.append(2)
+                    v.flip_for_timeseries.append(2)
+            # -- CORONAL
+            elif np.array_equal(im_orientation_mat, 
+                    np.array(
+                        [[ 1, 0,  0 ],
+                         [ 0, 0, -1 ],
+                         [ 0, 1,  0 ]])):
                 if v.name == "COR":
                     v.flip_for_preview.append(1)
                     v.flip_for_timeseries.append(2)
+
         return views
 
     @classmethod
@@ -210,12 +229,12 @@ class TestJob(WorkJobView):
 
         volume = None
         prototype_ds = None
-        for i, files in enumerate(files_by_series):
+        for i, files in enumerate(files_by_series[::]):
             for j, file in enumerate(files):
                 dcm = pydicom.dcmread(file)
                 array = dcm.pixel_array # [ row, column ] order
                 if volume is None:
-                    volume = np.empty_like(array,shape=(len(files_by_series), *array.shape[::-1], len(files)))
+                    volume = np.empty_like(array,shape=(len(files_by_series[::]), *array.shape[::-1], len(files)))
                     # [ time, column, row, slice ] order
                     prototype_ds = dcm
                     print(volume.shape)
