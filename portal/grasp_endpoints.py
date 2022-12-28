@@ -81,8 +81,7 @@ def timeseries_data(request, case, source_set):
         ds = pydicom.dcmread( Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location )
 
         pixel_array = ds.pixel_array
-        # # ????? manually determined to fix the axial view ?????
-        for flipped_axis in view_information["flipped"]:
+        for flipped_axis in view_information["flip_for_timeseries"]:
             for k in range(len(handles_absolute)):
                 handles_absolute[k][flipped_axis] = pixel_array.shape[flipped_axis] - handles_absolute[k][flipped_axis] - 1
 

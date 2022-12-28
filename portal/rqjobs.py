@@ -106,7 +106,8 @@ class VView:
     viewUp: npt.ArrayLike
     viewHoriz: npt.ArrayLike = None
     transformed_axes: npt.ArrayLike = None
-    flipped: list = dataclasses.field(default_factory=list)
+    flip_for_preview: list = dataclasses.field(default_factory=list)
+    flip_for_timeseries: list = dataclasses.field(default_factory=list)
     dicom_set: DICOMSet = None
 
     transformed_normal : npt.ArrayLike = None
@@ -120,7 +121,8 @@ class VView:
             viewUp = self.viewUp,
             viewHoriz = self.viewHoriz.tolist() if self.viewHoriz is not None else None,
             transformed_axes = self.transformed_axes.tolist() if self.transformed_axes is not None else None,
-            flipped = self.flipped,
+            flip_for_preview = self.flip_for_preview,
+            flip_for_timeseries = self.flip_for_timeseries,
             transformed_normal = self.transformed_normal.tolist() if self.transformed_normal is not None else None,
             transformed_viewUp = self.transformed_viewUp.tolist() if self.transformed_viewUp is not None else None,
             transformed_viewHoriz = self.transformed_viewHoriz.tolist() if self.transformed_viewHoriz is not None else None,
@@ -129,9 +131,7 @@ class TestJob(WorkJobView):
     type = "CINE"
 
     @classmethod
-    def do_job(cls, job: ProcessingJob):
-        instances = job.dicom_set.instances.all()
-        im_orientation_pt = np.asarray(json.loads(instances[0].json_metadata)["00200037"]["Value"]).reshape((2,3))
+    def calc_views_for_set(cls, im_orientation_pt):
         im_orientation_mat = np.rint(np.vstack((im_orientation_pt,[cross(*im_orientation_pt)])))
         print(im_orientation_mat)
         normal_sagittal = [ 1, 0,  0 ]
@@ -145,7 +145,6 @@ class TestJob(WorkJobView):
                                      [ "COR", normal_coronal,  viewUp_coronal  ],
                                      [ "AX",  normal_axial,    viewUp_axial    ]]
                 ]
-        # axis_numbers = []
         for v in views:
             v.viewHoriz         = cross(v.normal,v.viewUp)
             v.transformed_normal  = im_orientation_mat @ v.normal
@@ -161,6 +160,37 @@ class TestJob(WorkJobView):
             print("Rows axis",  v.viewUp,       v.transformed_viewUp.T,       rows_axis_number)
             print("Cols axis",  v.viewHoriz,    v.transformed_viewHoriz.T,    cols_axis_number)
             print(v)
+
+            # Hardcoding these for now. 
+            # --- SAGITTAL
+            if np.array_equal(im_orientation_mat, 
+                    np.array(
+                        [[ 0.,  1.,  0.],
+                         [-0., -0., -1.],
+                         [-1.,  0.,  0.]])):
+                if v.name in ("COR", "SAG"):
+                    v.flip_for_preview.append(3)
+                elif v.name == "AX":
+                    v.flip_for_timeseries.append(2)
+            # --- AXIAL
+            elif np.array_equal(im_orientation_mat, 
+                    np.array(
+                        [[ 1., -0., -0.],
+                         [ 0.,  1., -0.],
+                         [ 0.,  0.,  1.]])):
+                if v.name in ("COR", "SAG"):
+                    v.flip_for_preview.append(3)
+                    v.flip_for_timeseries.append(1)
+                if v.name == "COR":
+                    v.flip_for_preview.append(1)
+                    v.flip_for_timeseries.append(2)
+        return views
+
+    @classmethod
+    def do_job(cls, job: ProcessingJob):
+        instances = job.dicom_set.instances.all()
+        im_orientation_patient = np.asarray(json.loads(instances[0].json_metadata)["00200037"]["Value"]).reshape((2,3))
+        views = cls.calc_views_for_set(im_orientation_patient)
 
         series_uids = { k.series_uid for k in instances }
         split_by_series = [ sorted([k for k in instances if k.series_uid == uid], key = lambda x:x.slice_location) for uid in series_uids ]
@@ -202,30 +232,8 @@ class TestJob(WorkJobView):
             new_series_uid = pydicom.uid.generate_uid()
             
             t_array = volume[:]
-            # Hardcoding these for now. 
-            # --- SAGITTAL
-            if np.array_equal(im_orientation_mat, 
-                    np.array(
-                        [[ 0.,  1.,  0.],
-                         [-0., -0., -1.],
-                         [-1.,  0.,  0.]])):
-                if v.name in ("COR", "SAG"):
-                    t_array = np.flip(t_array, 3)
-                elif v.name == "AX":
-                    v.flipped.append(2)
-            # --- AXIAL
-            elif np.array_equal(im_orientation_mat, 
-                    np.array(
-                        [[ 1., -0., -0.],
-                         [ 0.,  1., -0.],
-                         [ 0.,  0.,  1.]])):
-                if v.name in ("COR", "SAG"):
-                    t_array = np.flip(t_array, 3)
-                    v.flipped.append(1)
-                if v.name == "COR":
-                    t_array = np.flip(t_array, 1)
-                    v.flipped.append(2)
-
+            for k in v.flip_for_preview:
+                t_array = np.flip(t_array,k)
             t_array = t_array.transpose(*(0,*[1+x for x in v.transformed_axes]))
             # t_array is now in [ time, normal, rows, columns ]
 
