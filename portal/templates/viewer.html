@@ -110,10 +110,10 @@ on htmx:afterRequest
         </template>
         <div>
           <button style="pointer-events: auto" class="btn-primary btn-large ml-2 my-2" 
-          @click="viewer.viewports[3].setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/MIP?acquisition_number=3`)).json()).urls)">MIP
+          @click="viewer.viewports[3].setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/MIP?acquisition_number=35`)).json()).urls)">MIP
           </button>
           <button style="pointer-events: auto" class="btn-primary btn-large ml-2 my-2" 
-          @click="viewer.viewports[3].setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/SUB?acquisition_number=3`)).json()).urls)">SUB
+          @click="viewer.viewports[3].setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/SUB?acquisition_number=35`)).json()).urls)">SUB
           </button>
         </div>
           <div>

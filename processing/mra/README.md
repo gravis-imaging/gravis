@@ -41,3 +41,8 @@ rqinfo
 ```
 python manage.py rqworker default
 ```
+
+## run django server 
+```
+python manage.py runserver
+```

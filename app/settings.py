@@ -117,7 +117,7 @@ DB_BACKEND = env("DB_BACKEND")
 BACKENDS = {
     "postgres":  {
         "ENGINE": "django.db.backends.postgresql",
-        "USER": "gravis",
+        "USER": "vagrant",
         "DBNAME": "gravis",
         "NAME": "gravis"
     },

@@ -11,6 +11,7 @@ import SimpleITK as sitk
 import ast
 
 from enum import Enum
+from collections import defaultdict
 
 
 class MRA:
@@ -37,9 +38,6 @@ class MRA:
 
     def __load_grasp_files(self) -> int:
 
-
-        logger.info("AAAAAAAAAAA __load_grasp_files")
-
         if not Path(self.__input_dir_name).exists():
             logger.exception(f"Input Path {self.__input_dir_name} does not exist")
             return self.__return_codes.INPUT_PATH_DOES_NOT_EXIST
@@ -47,10 +45,24 @@ class MRA:
         data_directory = os.path.dirname(self.__input_dir_name)
 
         # Get the list of series IDs.
-        reader = sitk.ImageSeriesReader()
-        series_IDs = reader.GetGDCMSeriesIDs(data_directory)
+                
+        reader = sitk.ImageFileReader()
+        d_files = defaultdict(list)
+        d_idx = defaultdict(list)
 
-        if not series_IDs:
+        for f in Path(data_directory).glob("*.dcm"):    
+            
+            reader.SetFileName(str(f))
+            reader.LoadPrivateTagsOn()
+            reader.ReadImageInformation()
+            # series_id = reader.GetMetaData("0020|000e")
+            acquisition_number = int(reader.GetMetaData("0020|0012"))
+            slice_location = reader.GetMetaData("0020|1041")
+            d_files[acquisition_number].append(str(f))
+            d_idx[acquisition_number].append(int(slice_location))
+
+
+        if len(d_files) == 0:
             logger.exception(
                 'ERROR: given directory "'
                 + data_directory
@@ -64,8 +76,6 @@ class MRA:
             # By default if tags are loaded, the private tags are not loaded.
             # We explicitly configure the reader to load tags, including the
             # private ones.
-            reader.MetaDataDictionaryArrayUpdateOn()
-            reader.LoadPrivateTagsOn()
 
             patient_tags_to_copy = [
                 "0008|0020",  # Study Date
@@ -81,25 +91,33 @@ class MRA:
 
             t = 0
             # Use the functional interface to read the image series.
-            for series_ID in series_IDs:
-                series_file_names = reader.GetGDCMSeriesFileNames(
-                    data_directory, series_ID
-                )
-                reader.SetFileNames(series_file_names)
-                image = reader.Execute()
+                        
+            series_reader = sitk.ImageSeriesReader()
+            series_reader.LoadPrivateTagsOn()
+            series_reader.MetaDataDictionaryArrayUpdateOn()
+
+            for series_ID in sorted(d_files):
+
+                indexes = d_idx[series_ID]
+                series_file_names = d_files[series_ID]
+                file_names = [x for _, x in sorted(zip(indexes, series_file_names))]
+                
+                series_reader.SetFileNames(file_names)
+                image = series_reader.Execute()
+                
                 direction = image.GetDirection()
                 series_tag_values = [
-                    (k, reader.GetMetaData(0, k))
+                    (k, series_reader.GetMetaData(0, k))
                     for k in patient_tags_to_copy
-                    if reader.HasMetaDataKey(0, k)
+                    if series_reader.HasMetaDataKey(0, k)
                 ] + [
                     (
                         "0008|103e",
-                        reader.GetMetaData(0, "0008|103e") + " GRASP MIP Projections",
+                        series_reader.GetMetaData(0, "0008|103e") + " GRASP MIP Projections",
                     ),  # Series Description
                     (
                         "0018|0050",
-                        reader.GetMetaData(0, "0018|0050"),
+                        series_reader.GetMetaData(0, "0018|0050"),
                     ),  # Slice Thickness
                     ("0020|0011", f"{1000+t:04d}"),  # Series Number
                     ("0020|0012", f"{t:04d}"),  # Acquisition Number
