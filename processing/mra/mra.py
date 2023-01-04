@@ -31,12 +31,15 @@ class MRA:
         self.__n_slices = int(vars["GRAVIS_NUM_BOTTOM_SLICES"])
         self.__return_codes = Enum('ReturnCodes', ast.literal_eval(vars["DOCKER_RETURN_CODES"]))
         self.__min_intensity_index = 0
-        self.__images = []
-        self.__subtracted_images = []
-        self.__processed_images = []
+        self.__images = {}
+        self.__subtracted_images = {}
+        self.__processed_images = {}
         self.__tags_to_save_dict = {}
+        self.__d_files = defaultdict(list)
+        self.__d_indexes = defaultdict(list)
+        
 
-    def __load_grasp_files(self) -> int:
+    def __process_volume(self):
 
         if not Path(self.__input_dir_name).exists():
             logger.exception(f"Input Path {self.__input_dir_name} does not exist")
@@ -44,12 +47,8 @@ class MRA:
 
         data_directory = os.path.dirname(self.__input_dir_name)
 
-        # Get the list of series IDs.
-                
+        # Create a map of SeriesIDs wih corresponding lists of files
         reader = sitk.ImageFileReader()
-        d_files = defaultdict(list)
-        d_idx = defaultdict(list)
-
         for f in Path(data_directory).glob("*.dcm"):    
             
             reader.SetFileName(str(f))
@@ -58,11 +57,11 @@ class MRA:
             # series_id = reader.GetMetaData("0020|000e")
             acquisition_number = int(reader.GetMetaData("0020|0012"))
             slice_location = reader.GetMetaData("0020|1041")
-            d_files[acquisition_number].append(str(f))
-            d_idx[acquisition_number].append(int(slice_location))
+            self.__d_files[acquisition_number].append(str(f))
+            self.__d_indexes[acquisition_number].append(int(slice_location))
 
 
-        if len(d_files) == 0:
+        if len(self.__d_files) == 0:
             logger.exception(
                 'ERROR: given directory "'
                 + data_directory
@@ -70,12 +69,155 @@ class MRA:
             )
             return self.__return_codes.NO_DICOMS_EXIST
 
+        # Calculate Minimum Intensity index.
+
         try:
+            # Read 50 first time points to find minimum intensity index:
+            max_index_to_read = 50          
+            beginning_times_volumes = []              
+            series_reader = sitk.ImageSeriesReader()
+            for acquisition_number in sorted(self.__d_files)[0:max_index_to_read]:
+                indexes = self.__d_indexes[acquisition_number]
+                series_file_names =  self.__d_files[acquisition_number]
+                file_names = [x for _, x in sorted(zip(indexes, series_file_names))]
+                
+                series_reader.SetFileNames(file_names)
+                image = series_reader.Execute()
+                beginning_times_volumes.append(image)
+
+            # self.__get_time_index_of_minimum_intensities()
+
+            intensities = []
+            n_slices = self.__n_slices
+            for image in beginning_times_volumes:
+                vol_n = sitk.GetArrayFromImage(image[:, :, :n_slices])
+                intensity = vol_n.sum()
+                intensities.append(intensity)
+
+            min_intensity_value = min(intensities)
+            # it is expected to have a minimum intensity index in the [10:30] range.
+            # if minimum intensity index is the last in the time series of [0: max_index_to_read]
+            # there might be a problem with the data.
+            if min_intensity_value == len(beginning_times_volumes) - 1:
+                logger.exception("Error while calculating minimum intensity index.")
+                return self.__return_codes.INTENSITY_INDEX_SHOULD_BE_LESS_THAN_NUM_VOLUMES
+            self.__min_intensity_index = intensities.index(min_intensity_value) 
+            beginning_times_volumes.clear()
+            print("min_intensity_index ", self.__min_intensity_index)
+        except Exception as e:
+            logger.exception(e, "Error while calculating minimum intensity index.")
+            return self.__return_codes.CANNOT_CALCULATE_INTENSITY_INDEX          
+
+        print("Min intensity index: ", self.__min_intensity_index)
+        print("acquisition_numbers ", sorted(self.__d_files))
+    
+        # Read the data, beginning from __min_intensity_index + 1, one time point at a time.
+        # Calculate subtractions, and then MIPs for this time point.
+
+        try:               
+            # series_reader = sitk.ImageSeriesReader()
+            ret_value = self.__load_grasp_files(self.__min_intensity_index)
+            if ret_value == self.__return_codes.NO_ERRORS:
+                return ret_value
+
+            for acquisition_number in sorted(self.__d_files)[self.__min_intensity_index + 1:]:
+                    
+                ret_value = self.__load_grasp_files(acquisition_number)
+                if ret_value != self.__return_codes.NO_ERRORS:
+                    return ret_value
+            
+                ret_value = self.__subtract_images(acquisition_number)
+                if ret_value != self.__return_codes.NO_ERRORS:
+                    return ret_value
+            
+                ret_value = self.__create_projections(acquisition_number)
+                if ret_value != self.__return_codes.NO_ERRORS:
+                    return ret_value
+                
+                ret_value = self.__save_processed_images(
+                    acquisition_number,
+                    "mip",
+                    self.__output_dir_name_mip,
+                    self.__processed_images[acquisition_number],
+                )
+                if ret_value != self.__return_codes.NO_ERRORS:
+                    return ret_value
+
+                ret_value = self.__save_processed_images(
+                    acquisition_number,
+                    "sub",
+                    self.__output_dir_name_sub,
+                    self.__subtracted_images[acquisition_number],
+                )
+                if ret_value != self.__return_codes.NO_ERRORS:
+                    return ret_value
+
+
+
+                # indexes = self.__d_indexes[acquisition_number]
+                # series_file_names =  self.__d_files[acquisition_number]
+                # file_names = [x for _, x in sorted(zip(indexes, series_file_names))]
+                
+                # series_reader.SetFileNames(file_names)
+                # image = series_reader.Execute()
+                # self.__images.append(image)
+
+            
+
+
+
+
+            self.__images.clear()
+
+        except Exception as e:
+            logger.exception(e, f"Problem reading DICOM files from {data_directory}.")
+            return self.__return_codes.DICOM_READING_ERROR
+
+        return self.__return_codes.NO_ERRORS
+
+
+
+    def __load_grasp_files(self, acquisition_number) -> int:
+
+        # if not Path(self.__input_dir_name).exists():
+        #     logger.exception(f"Input Path {self.__input_dir_name} does not exist")
+        #     return self.__return_codes.INPUT_PATH_DOES_NOT_EXIST
+
+        # data_directory = os.path.dirname(self.__input_dir_name)
+
+        # # Get the list of series IDs.
+                
+        # reader = sitk.ImageFileReader()
+        # d_files = defaultdict(list)
+        # d_idx = defaultdict(list)
+
+        # for f in Path(data_directory).glob("*.dcm"):    
+            
+        #     reader.SetFileName(str(f))
+        #     reader.LoadPrivateTagsOn()
+        #     reader.ReadImageInformation()
+        #     # series_id = reader.GetMetaData("0020|000e")
+        #     acquisition_number = int(reader.GetMetaData("0020|0012"))
+        #     slice_location = reader.GetMetaData("0020|1041")
+        #     d_files[acquisition_number].append(str(f))
+        #     d_idx[acquisition_number].append(int(slice_location))
+
+
+        # if len(d_files) == 0:
+        #     logger.exception(
+        #         'ERROR: given directory "'
+        #         + data_directory
+        #         + '" does not contain a DICOM series.'
+        #     )
+        #     return self.__return_codes.NO_DICOMS_EXIST
+
+        try:
+
             # Configure the reader to load all of the DICOM tags (public+private):
             # By default tags are not loaded (saves time).
             # By default if tags are loaded, the private tags are not loaded.
             # We explicitly configure the reader to load tags, including the
-            # private ones.
+            # private ones.        
 
             patient_tags_to_copy = [
                 "0008|0020",  # Study Date
@@ -89,89 +231,87 @@ class MRA:
                 "0020|0010",  # Study ID, for human consumption
             ]
 
-            t = 0
-            # Use the functional interface to read the image series.
                         
             series_reader = sitk.ImageSeriesReader()
             series_reader.LoadPrivateTagsOn()
             series_reader.MetaDataDictionaryArrayUpdateOn()
 
-            for series_ID in sorted(d_files):
+            # for series_ID in sorted(self.__d_files):
 
-                indexes = d_idx[series_ID]
-                series_file_names = d_files[series_ID]
-                file_names = [x for _, x in sorted(zip(indexes, series_file_names))]
-                
-                series_reader.SetFileNames(file_names)
-                image = series_reader.Execute()
-                
-                direction = image.GetDirection()
-                series_tag_values = [
-                    (k, series_reader.GetMetaData(0, k))
-                    for k in patient_tags_to_copy
-                    if series_reader.HasMetaDataKey(0, k)
-                ] + [
-                    (
-                        "0008|103e",
-                        series_reader.GetMetaData(0, "0008|103e") + " GRASP MIP Projections",
-                    ),  # Series Description
-                    (
-                        "0018|0050",
-                        series_reader.GetMetaData(0, "0018|0050"),
-                    ),  # Slice Thickness
-                    ("0020|0011", f"{1000+t:04d}"),  # Series Number
-                    ("0020|0012", f"{t:04d}"),  # Acquisition Number
-                    ("0020|0037", '\\'.join(map(str, (direction[0], direction[3], direction[6], # Image Orientation (Patient)
-                                                        direction[1], direction[4], direction[7])))),
-                ]
+            indexes = self.__d_indexes[acquisition_number]
+            series_file_names = self.__d_files[acquisition_number]
+            file_names = [x for _, x in sorted(zip(indexes, series_file_names))]
+            
+            series_reader.SetFileNames(file_names)
+            image = series_reader.Execute()
+            
+            direction = image.GetDirection()
+            series_tag_values = [
+                (k, series_reader.GetMetaData(0, k))
+                for k in patient_tags_to_copy
+                if series_reader.HasMetaDataKey(0, k)
+            ] + [
+                (
+                    "0008|103e",
+                    series_reader.GetMetaData(0, "0008|103e") + " GRASP MIP Projections",
+                ),  # Series Description
+                (
+                    "0018|0050",
+                    series_reader.GetMetaData(0, "0018|0050"),
+                ),  # Slice Thickness
+                ("0020|0011", f"{1000+acquisition_number:04d}"),  # Series Number
+                ("0020|0012", f"{acquisition_number:04d}"),  # Acquisition Number
+                ("0020|0037", '\\'.join(map(str, (direction[0], direction[3], direction[6], # Image Orientation (Patient)
+                                                    direction[1], direction[4], direction[7])))),
+            ]
 
-                self.__tags_to_save_dict[t] = series_tag_values
-                image = sitk.Cast(image, sitk.sitkFloat32)
-                self.__images.append(image)
-                t += 1
+            self.__tags_to_save_dict[acquisition_number] = series_tag_values
+            image = sitk.Cast(image, sitk.sitkFloat32)
+            self.__images[acquisition_number] = image
+
         except Exception as e:
-            logger.exception(e, f"Problem reading DICOM files from {data_directory}.")
+            logger.exception(e, f"Problem loading DICOM files for acquisition number: {acquisition_number}.")
             return self.__return_codes.DICOM_READING_ERROR
 
         return self.__return_codes.NO_ERRORS
 
-    def __get_time_index_of_minimum_intensities(self):
+    # def __get_time_index_of_minimum_intensities(self):
 
-        intensities = []
+    #     intensities = []
+    #     try:
+    #         n_slices = self.__n_slices
+    #         for image in self.__images:
+    #             vol_n = sitk.GetArrayFromImage(image[:, :, :n_slices])
+    #             intensity = vol_n.sum()
+    #             intensities.append(intensity)
+
+    #         min_intensity_value = min(intensities)
+    #         if min_intensity_value == len(self.__images) - 1:
+    #             logger.exception("Error while calculating minimum intensity index.")
+    #             return self.__return_codes.INTENSITY_INDEX_SHOULD_BE_LESS_THAN_NUM_VOLUMES
+    #         self.__min_intensity_index = intensities.index(min_intensity_value) 
+    #         print("min_intensity_index ", self.__min_intensity_index)
+    #     except Exception as e:
+    #         logger.exception(e, "Error while calculating minimum intensity index.")
+    #         return self.__return_codes.CANNOT_CALCULATE_INTENSITY_INDEX
+    #     return self.__return_codes.NO_ERRORS
+
+    def __subtract_images(self, acquisition_number):
+
         try:
-            n_slices = self.__n_slices
-            for image in self.__images:
-                vol_n = sitk.GetArrayFromImage(image[:, :, :n_slices])
-                intensity = vol_n.sum()
-                intensities.append(intensity)
-
-            min_intensity_value = min(intensities)
-            if min_intensity_value == len(self.__images) - 1:
-                logger.exception("Error while calculating minimum intensity index.")
-                return self.__return_codes.INTENSITY_INDEX_SHOULD_BE_LESS_THAN_NUM_VOLUMES
-            self.__min_intensity_index = intensities.index(min_intensity_value) 
-            print("min_intensity_index ", self.__min_intensity_index)
-        except Exception as e:
-            logger.exception(e, "Error while calculating minimum intensity index.")
-            return self.__return_codes.CANNOT_CALCULATE_INTENSITY_INDEX
-        return self.__return_codes.NO_ERRORS
-
-    def __subtract_images(self):
-
-        try:
-            n = len(self.__images)
-            for i in range(self.__min_intensity_index + 1, n):
-                subtracted_image = (
-                    self.__images[i] - self.__images[self.__min_intensity_index]
-                )
+            # n = len(self.__images)
+            # for acquisition_number in sorted(self.__images):
+            print("will subtract images: ", acquisition_number, self.__min_intensity_index)
+            self.__subtracted_images[acquisition_number] = self.__images[acquisition_number] - self.__images[self.__min_intensity_index]    
+                
                 # subtracted_image = sitk.Cast(subtracted_image, sitk.sitkFloat32)
-                self.__subtracted_images.append(subtracted_image)
+                # self.__subtracted_images.append(subtracted_image)
         except Exception as e:
             logger.exception(e, "Error while subtracting images.")
             return self.__return_codes.ERROR_CALCULATING_SUBTRACTED_IMAGES
         return self.__return_codes.NO_ERRORS
 
-    def __create_projections(self):
+    def __create_projections(self, acquisition_number):
 
         try:
             projection = {
@@ -192,82 +332,82 @@ class MRA:
             rotation_angles = np.linspace(
                 0.0, max_angle, int(max_angle_degree / self.__angle_step)
             )
-            for image in self.__subtracted_images:
+            # for image in self.__subtracted_images:
+            image =  self.__subtracted_images[acquisition_number]
+            rotation_center = image.TransformContinuousIndexToPhysicalPoint(
+                [(index - 1) / 2.0 for index in image.GetSize()]
+            )
 
-                rotation_center = image.TransformContinuousIndexToPhysicalPoint(
-                    [(index - 1) / 2.0 for index in image.GetSize()]
+            rotation_transform = sitk.VersorRigid3DTransform()
+            rotation_transform.SetCenter(rotation_center)
+
+            # Compute bounding box of rotating volume and the resampling grid structure
+            image_indexes = list(zip([0, 0, 0], [sz - 1 for sz in image.GetSize()]))
+            image_bounds = []
+            for i in image_indexes[0]:
+                for j in image_indexes[1]:
+                    for k in image_indexes[2]:
+                        image_bounds.append(
+                            image.TransformIndexToPhysicalPoint([i, j, k])
+                        )
+            all_points = []
+            for angle in rotation_angles:
+                rotation_transform.SetRotation(rotation_axis, angle)
+                all_points.extend(
+                    [rotation_transform.TransformPoint(pnt) for pnt in image_bounds]
                 )
-
-                rotation_transform = sitk.VersorRigid3DTransform()
-                rotation_transform.SetCenter(rotation_center)
-
-                # Compute bounding box of rotating volume and the resampling grid structure
-                image_indexes = list(zip([0, 0, 0], [sz - 1 for sz in image.GetSize()]))
-                image_bounds = []
-                for i in image_indexes[0]:
-                    for j in image_indexes[1]:
-                        for k in image_indexes[2]:
-                            image_bounds.append(
-                                image.TransformIndexToPhysicalPoint([i, j, k])
-                            )
-                all_points = []
-                for angle in rotation_angles:
-                    rotation_transform.SetRotation(rotation_axis, angle)
-                    all_points.extend(
-                        [rotation_transform.TransformPoint(pnt) for pnt in image_bounds]
-                    )
-                all_points = np.array(all_points)
-                min_bounds = all_points.min(0)
-                max_bounds = all_points.max(0)
-                # resampling grid will be isotropic so no matter which direction we project to
-                # the images we save will always be isotropic
-                new_spc = [np.min(image.GetSpacing())] * 3
-                new_sz = [
-                    int(sz / spc + 0.5)
-                    for spc, sz in zip(new_spc, max_bounds - min_bounds)
-                ]
-                proj_images = []
-                for angle in rotation_angles:
-                    rad = angle * np.pi / 180.0
-                    new_dir = (
-                        np.cos(rad),
-                        0,
-                        np.sin(rad),
-                        0,
-                        1,
-                        0,
-                        -np.sin(rad),
-                        0,
-                        np.cos(rad),
-                    )
-                    rotation_transform.SetRotation(rotation_axis, angle)
-                    resampled_image = sitk.Resample(
-                        image1=image,
-                        size=new_sz,
-                        transform=rotation_transform,
-                        interpolator=sitk.sitkLinear,
-                        outputOrigin=min_bounds,
-                        outputSpacing=new_spc,
-                        outputDirection=new_dir,
-                    )
-                    proj_image = projection[ptype](resampled_image, paxis)
-                    proj_image = sitk.DICOMOrient(proj_image, "LPI")
-                    # In cases when we rotate around x or y axises we need to
-                    # covert the image to 2D first and then add z axis to make the image 3D.
-                    # The image has to be 3D to be properly saved in DICOM format.
-                    extract_size = list(proj_image.GetSize())
-                    extract_size[paxis] = 0
-                    extracted_image = sitk.Extract(proj_image, extract_size)
-                    slice_volume = sitk.JoinSeries(extracted_image)
-                    slice_volume.SetOrigin((min_bounds + max_bounds) / 2)
-                    proj_images.append(slice_volume)
-                self.__processed_images.append(proj_images)
+            all_points = np.array(all_points)
+            min_bounds = all_points.min(0)
+            max_bounds = all_points.max(0)
+            # resampling grid will be isotropic so no matter which direction we project to
+            # the images we save will always be isotropic
+            new_spc = [np.min(image.GetSpacing())] * 3
+            new_sz = [
+                int(sz / spc + 0.5)
+                for spc, sz in zip(new_spc, max_bounds - min_bounds)
+            ]
+            proj_images = []
+            for angle in rotation_angles:
+                rad = angle * np.pi / 180.0
+                new_dir = (
+                    np.cos(rad),
+                    0,
+                    np.sin(rad),
+                    0,
+                    1,
+                    0,
+                    -np.sin(rad),
+                    0,
+                    np.cos(rad),
+                )
+                rotation_transform.SetRotation(rotation_axis, angle)
+                resampled_image = sitk.Resample(
+                    image1=image,
+                    size=new_sz,
+                    transform=rotation_transform,
+                    interpolator=sitk.sitkLinear,
+                    outputOrigin=min_bounds,
+                    outputSpacing=new_spc,
+                    outputDirection=new_dir,
+                )
+                proj_image = projection[ptype](resampled_image, paxis)
+                proj_image = sitk.DICOMOrient(proj_image, "LPI")
+                # In cases when we rotate around x or y axises we need to
+                # covert the image to 2D first and then add z axis to make the image 3D.
+                # The image has to be 3D to be properly saved in DICOM format.
+                extract_size = list(proj_image.GetSize())
+                extract_size[paxis] = 0
+                extracted_image = sitk.Extract(proj_image, extract_size)
+                slice_volume = sitk.JoinSeries(extracted_image)
+                slice_volume.SetOrigin((min_bounds + max_bounds) / 2)
+                proj_images.append(slice_volume)
+            self.__processed_images[acquisition_number] = proj_images
         except Exception as e:
             logger.exception(e, "Error calculating projections.")
             return self.__return_codes.ERROR_CALCULATING_PROJECTIONS
         return self.__return_codes.NO_ERRORS
 
-    def __save_processed_images(self, type, output_dir_name, processed_images):
+    def __save_processed_images(self, acquisition_number, type, output_dir_name, images):
         try:
             if not os.path.exists(output_dir_name):
                 os.mkdir(output_dir_name)
@@ -279,122 +419,122 @@ class MRA:
             writer.KeepOriginalImageUIDOn()
 
             # Different times
-            t = self.__min_intensity_index
-            count = 0
-            logger.info(f"size of processed images: {len(processed_images)}")
-            for images in processed_images:
+            # t = acquisition_number # self.__min_intensity_index
+            # count = 0
+            # logger.info(f"size of processed images: {len(processed_images)}")
+            # for images in processed_images:
                 
-                series_tag_values = self.__tags_to_save_dict[t]
+            series_tag_values = self.__tags_to_save_dict[acquisition_number]
 
-                modification_date = time.strftime("%Y%m%d")
-                modification_time = time.strftime("%H%M%S")
-                seriesID = (
-                    "1.2.276.0.7230010.3.1.3."
-                    + modification_date
-                    + ".1"
-                    + modification_time
-                    + f".{t:03d}"
-                )
-                if type == "sub":
-                    for i in range(images.GetDepth()):
-                        image_slice = images[:, :, i]
-                        image_slice = sitk.Cast(image_slice, sitk.sitkInt16)
+            modification_date = time.strftime("%Y%m%d")
+            modification_time = time.strftime("%H%M%S")
+            seriesID = (
+                "1.2.276.0.7230010.3.1.3."
+                + modification_date
+                + ".1"
+                + modification_time
+                + f".{acquisition_number:03d}"
+            )
+            if type == "sub":
+                for i in range(images.GetDepth()):
+                    image_slice = images[:, :, i]
+                    image_slice = sitk.Cast(image_slice, sitk.sitkInt16)
 
-                        [
-                            image_slice.SetMetaData(tag, value)
-                            for tag, value in series_tag_values
-                            if tag not in ("0018|0050")
-                        ]
-                        [
-                            image_slice.SetMetaData(
-                                tag, f"{float(value)*max(image_slice.GetSize())}"
-                            )
-                            for tag, value in series_tag_values
-                            if tag in ("0018|0050")
-                        ]
+                    [
+                        image_slice.SetMetaData(tag, value)
+                        for tag, value in series_tag_values
+                        if tag not in ("0018|0050")
+                    ]
+                    [
                         image_slice.SetMetaData(
-                            "0008|0008", "DERIVED\\SECONDARY\\SUB"
-                        ),  # Image Type
-                        image_slice.SetMetaData(
-                            "0008|0012", time.strftime("%Y%m%d")
-                        )  # Instance Creation Date
-                        image_slice.SetMetaData(
-                            "0008|0013", time.strftime("%H%M%S")
-                        )  # Instance Creation Time
-                        image_slice.SetMetaData(
-                            "0008|0021", modification_date
-                        )  # Series Date,
-                        image_slice.SetMetaData(
-                            "0008|0031", modification_time
-                        )  # Series Time
-                        image_slice.SetMetaData(
-                            "0020|000e", seriesID
-                        )  # Series Instance UID
-                        image_slice.SetMetaData(
-                            "0020|0013", f"{i+1:04d}"
-                        )  # Instance Number
-
-                        path_name = os.path.join(
-                            output_dir_name,
-                            "sub." + f"{t:03d}" + "." + f"{i:03d}" + ".dcm",
+                            tag, f"{float(value)*max(image_slice.GetSize())}"
                         )
+                        for tag, value in series_tag_values
+                        if tag in ("0018|0050")
+                    ]
+                    image_slice.SetMetaData(
+                        "0008|0008", "DERIVED\\SECONDARY\\SUB"
+                    ),  # Image Type
+                    image_slice.SetMetaData(
+                        "0008|0012", time.strftime("%Y%m%d")
+                    )  # Instance Creation Date
+                    image_slice.SetMetaData(
+                        "0008|0013", time.strftime("%H%M%S")
+                    )  # Instance Creation Time
+                    image_slice.SetMetaData(
+                        "0008|0021", modification_date
+                    )  # Series Date,
+                    image_slice.SetMetaData(
+                        "0008|0031", modification_time
+                    )  # Series Time
+                    image_slice.SetMetaData(
+                        "0020|000e", seriesID
+                    )  # Series Instance UID
+                    image_slice.SetMetaData(
+                        "0020|0013", f"{i+1:04d}"
+                    )  # Instance Number
 
-                        writer.SetFileName(path_name)
-                        writer.Execute(image_slice)
-                        i += 1
-                else:
-                    # Different angles
-                    i = 0
-                    for image_slice in images:
-                        image_slice = sitk.Cast(image_slice, sitk.sitkInt16)
+                    path_name = os.path.join(
+                        output_dir_name,
+                        "sub." + f"{acquisition_number:03d}" + "." + f"{i:03d}" + ".dcm",
+                    )
 
-                        [
-                            image_slice.SetMetaData(tag, value)
-                            for tag, value in series_tag_values
-                            if tag not in ("0018|0050", "0020|0037")
-                        ]
-                        [
-                            image_slice.SetMetaData(
-                                tag, f"{float(value)*max(image_slice.GetSize())}"
-                            )
-                            for tag, value in series_tag_values
-                            if tag in ("0018|0050")
-                        ]
-                        image_slice.SetMetaData(
-                            "0008|0008", "DERIVED\\SECONDARY\\MIP"
-                        ),  # Image Type
-                        image_slice.SetMetaData(
-                            "0008|0012", time.strftime("%Y%m%d")
-                        )  # Instance Creation Date
-                        image_slice.SetMetaData(
-                            "0008|0013", time.strftime("%H%M%S")
-                        )  # Instance Creation Time
-                        image_slice.SetMetaData(
-                            "0008|0021", modification_date
-                        )  # Series Date,
-                        image_slice.SetMetaData(
-                            "0008|0031", modification_time
-                        )  # Series Time
-                        image_slice.SetMetaData(
-                            "0020|000e", seriesID
-                        )  # Series Instance UID
-                        image_slice.SetMetaData(
-                            "0020|0013", f"{i+1:04d}"
-                        )  # Instance Number
+                    writer.SetFileName(path_name)
+                    writer.Execute(image_slice)
+                    i += 1
+            else:
+                # Different angles
+                i = 0
+                for image_slice in images:
+                    image_slice = sitk.Cast(image_slice, sitk.sitkInt16)
 
-                        path_name = os.path.join(
-                            output_dir_name,
-                            "mip."
-                            + f"{t:03d}"
-                            + "."
-                            + f"{i*self.__angle_step:03d}"
-                            + ".dcm",
+                    [
+                        image_slice.SetMetaData(tag, value)
+                        for tag, value in series_tag_values
+                        if tag not in ("0018|0050", "0020|0037")
+                    ]
+                    [
+                        image_slice.SetMetaData(
+                            tag, f"{float(value)*max(image_slice.GetSize())}"
                         )
+                        for tag, value in series_tag_values
+                        if tag in ("0018|0050")
+                    ]
+                    image_slice.SetMetaData(
+                        "0008|0008", "DERIVED\\SECONDARY\\MIP"
+                    ),  # Image Type
+                    image_slice.SetMetaData(
+                        "0008|0012", time.strftime("%Y%m%d")
+                    )  # Instance Creation Date
+                    image_slice.SetMetaData(
+                        "0008|0013", time.strftime("%H%M%S")
+                    )  # Instance Creation Time
+                    image_slice.SetMetaData(
+                        "0008|0021", modification_date
+                    )  # Series Date,
+                    image_slice.SetMetaData(
+                        "0008|0031", modification_time
+                    )  # Series Time
+                    image_slice.SetMetaData(
+                        "0020|000e", seriesID
+                    )  # Series Instance UID
+                    image_slice.SetMetaData(
+                        "0020|0013", f"{i+1:04d}"
+                    )  # Instance Number
 
-                        writer.SetFileName(path_name)
-                        writer.Execute(image_slice)
-                        i += 1
-                t += 1
+                    path_name = os.path.join(
+                        output_dir_name,
+                        "mip."
+                        + f"{acquisition_number:03d}"
+                        + "."
+                        + f"{i*self.__angle_step:03d}"
+                        + ".dcm",
+                    )
+
+                    writer.SetFileName(path_name)
+                    writer.Execute(image_slice)
+                    i += 1
+            # t += 1
         except Exception as e:
             logger.exception(e, f"Error saving files in {output_dir_name}.")
             return self.__return_codes.ERROR_SAVING_FILES
@@ -402,36 +542,40 @@ class MRA:
 
     def calculateMIPs(self):
 
-        ret_value = self.__load_grasp_files()
+        ret_value = self.__process_volume()
         if ret_value != self.__return_codes.NO_ERRORS:
             return ret_value
 
-        ret_value = self.__get_time_index_of_minimum_intensities()
-        if ret_value != self.__return_codes.NO_ERRORS:
-            return ret_value
+        # ret_value = self.__load_grasp_files()
+        # if ret_value != self.__return_codes.NO_ERRORS:
+        #     return ret_value
+
+        # # ret_value = self.__get_time_index_of_minimum_intensities()
+        # # if ret_value != self.__return_codes.NO_ERRORS:
+        # #     return ret_value
        
-        ret_value = self.__subtract_images()
-        if ret_value != self.__return_codes.NO_ERRORS:
-            return ret_value
+        # ret_value = self.__subtract_images()
+        # if ret_value != self.__return_codes.NO_ERRORS:
+        #     return ret_value
        
-        ret_value = self.__create_projections()
-        if ret_value != self.__return_codes.NO_ERRORS:
-            return ret_value
+        # ret_value = self.__create_projections()
+        # if ret_value != self.__return_codes.NO_ERRORS:
+        #     return ret_value
         
-        ret_value = self.__save_processed_images(
-            "mip",
-            self.__output_dir_name_mip,
-            self.__processed_images,
-        )
-        if ret_value != self.__return_codes.NO_ERRORS:
-            return ret_value
+        # ret_value = self.__save_processed_images(
+        #     "mip",
+        #     self.__output_dir_name_mip,
+        #     self.__processed_images,
+        # )
+        # if ret_value != self.__return_codes.NO_ERRORS:
+        #     return ret_value
 
-        ret_value = self.__save_processed_images(
-            "sub",
-            self.__output_dir_name_sub,
-            self.__subtracted_images,
-        )
-        if ret_value != self.__return_codes.NO_ERRORS:
-            return ret_value
+        # ret_value = self.__save_processed_images(
+        #     "sub",
+        #     self.__output_dir_name_sub,
+        #     self.__subtracted_images,
+        # )
+        # if ret_value != self.__return_codes.NO_ERRORS:
+        #     return ret_value
 
         return self.__return_codes.NO_ERRORS
