@@ -31,9 +31,9 @@ class MRA:
         self.__n_slices = int(vars["GRAVIS_NUM_BOTTOM_SLICES"])
         self.__return_codes = Enum('ReturnCodes', ast.literal_eval(vars["DOCKER_RETURN_CODES"]))
         self.__min_intensity_index = 0
-        self.__images = {}
-        self.__subtracted_images = {}
-        self.__processed_images = {}
+        # self.__images = {}
+        # self.__subtracted_images = {}
+        # self.__processed_images = {}
         self.__tags_to_save_dict = {}
         self.__d_files = defaultdict(list)
         self.__d_indexes = defaultdict(list)
@@ -98,9 +98,9 @@ class MRA:
             # it is expected to have a minimum intensity index in the [10:30] range.
             # if minimum intensity index is the last in the time series of [0: max_index_to_read]
             # there might be a problem with the data.
-            if min_intensity_value == len(beginning_times_volumes) - 1:
-                logger.exception("Error while calculating minimum intensity index.")
-                return self.__return_codes.INTENSITY_INDEX_SHOULD_BE_LESS_THAN_NUM_VOLUMES
+            # if min_intensity_value == len(beginning_times_volumes) - 1:
+            #     logger.exception("Error while calculating minimum intensity index.")
+            #     return self.__return_codes.INTENSITY_INDEX_SHOULD_BE_LESS_THAN_NUM_VOLUMES
             self.__min_intensity_index = intensities.index(min_intensity_value) 
             beginning_times_volumes.clear()
             print("min_intensity_index ", self.__min_intensity_index)
@@ -112,45 +112,61 @@ class MRA:
         print("acquisition_numbers ", sorted(self.__d_files))
     
         # Read the data, beginning from __min_intensity_index + 1, one time point at a time.
-        # Calculate subtractions, and then MIPs for this time point.
+        # Calculate subtractions, and then MIPs for this time point. 
 
         try:               
+            print("Will load volume for minimum intensity index")
             # series_reader = sitk.ImageSeriesReader()
-            ret_value = self.__load_grasp_files(self.__min_intensity_index)
-            if ret_value == self.__return_codes.NO_ERRORS:
+            ret_value, base_image = self.__load_grasp_files(self.__min_intensity_index)
+            if ret_value != self.__return_codes.NO_ERRORS:
                 return ret_value
+
+            print("Volume loaded")
 
             for acquisition_number in sorted(self.__d_files)[self.__min_intensity_index + 1:]:
                     
-                ret_value = self.__load_grasp_files(acquisition_number)
+                print(" acquisition_number: ", acquisition_number)
+
+
+                ret_value, image = self.__load_grasp_files(acquisition_number)
                 if ret_value != self.__return_codes.NO_ERRORS:
                     return ret_value
+
+                print("AAA")
             
-                ret_value = self.__subtract_images(acquisition_number)
+                ret_value, subtracted_image = self.__subtract_images(base_image, image)
                 if ret_value != self.__return_codes.NO_ERRORS:
                     return ret_value
+
+                print("111")
             
-                ret_value = self.__create_projections(acquisition_number)
+                ret_value, proj_image = self.__create_projections(subtracted_image)
                 if ret_value != self.__return_codes.NO_ERRORS:
                     return ret_value
+
+                print("222")
                 
                 ret_value = self.__save_processed_images(
                     acquisition_number,
                     "mip",
                     self.__output_dir_name_mip,
-                    self.__processed_images[acquisition_number],
+                    proj_image,
                 )
                 if ret_value != self.__return_codes.NO_ERRORS:
                     return ret_value
+
+                print("333")
 
                 ret_value = self.__save_processed_images(
                     acquisition_number,
                     "sub",
                     self.__output_dir_name_sub,
-                    self.__subtracted_images[acquisition_number],
+                    subtracted_image,
                 )
                 if ret_value != self.__return_codes.NO_ERRORS:
                     return ret_value
+
+                print("555")
 
 
 
@@ -167,7 +183,7 @@ class MRA:
 
 
 
-            self.__images.clear()
+            # self.__images.clear()
 
         except Exception as e:
             logger.exception(e, f"Problem reading DICOM files from {data_directory}.")
@@ -177,39 +193,7 @@ class MRA:
 
 
 
-    def __load_grasp_files(self, acquisition_number) -> int:
-
-        # if not Path(self.__input_dir_name).exists():
-        #     logger.exception(f"Input Path {self.__input_dir_name} does not exist")
-        #     return self.__return_codes.INPUT_PATH_DOES_NOT_EXIST
-
-        # data_directory = os.path.dirname(self.__input_dir_name)
-
-        # # Get the list of series IDs.
-                
-        # reader = sitk.ImageFileReader()
-        # d_files = defaultdict(list)
-        # d_idx = defaultdict(list)
-
-        # for f in Path(data_directory).glob("*.dcm"):    
-            
-        #     reader.SetFileName(str(f))
-        #     reader.LoadPrivateTagsOn()
-        #     reader.ReadImageInformation()
-        #     # series_id = reader.GetMetaData("0020|000e")
-        #     acquisition_number = int(reader.GetMetaData("0020|0012"))
-        #     slice_location = reader.GetMetaData("0020|1041")
-        #     d_files[acquisition_number].append(str(f))
-        #     d_idx[acquisition_number].append(int(slice_location))
-
-
-        # if len(d_files) == 0:
-        #     logger.exception(
-        #         'ERROR: given directory "'
-        #         + data_directory
-        #         + '" does not contain a DICOM series.'
-        #     )
-        #     return self.__return_codes.NO_DICOMS_EXIST
+    def __load_grasp_files(self, acquisition_number):
 
         try:
 
@@ -232,6 +216,7 @@ class MRA:
             ]
 
                         
+            print("__load_grasp_files 111")
             series_reader = sitk.ImageSeriesReader()
             series_reader.LoadPrivateTagsOn()
             series_reader.MetaDataDictionaryArrayUpdateOn()
@@ -244,7 +229,7 @@ class MRA:
             
             series_reader.SetFileNames(file_names)
             image = series_reader.Execute()
-            
+            print("__load_grasp_files 111a")
             direction = image.GetDirection()
             series_tag_values = [
                 (k, series_reader.GetMetaData(0, k))
@@ -264,16 +249,16 @@ class MRA:
                 ("0020|0037", '\\'.join(map(str, (direction[0], direction[3], direction[6], # Image Orientation (Patient)
                                                     direction[1], direction[4], direction[7])))),
             ]
-
+            print("__load_grasp_files 111b")
             self.__tags_to_save_dict[acquisition_number] = series_tag_values
             image = sitk.Cast(image, sitk.sitkFloat32)
-            self.__images[acquisition_number] = image
-
+            # self.__images[acquisition_number] = image
+            print("__load_grasp_files 111c")
         except Exception as e:
             logger.exception(e, f"Problem loading DICOM files for acquisition number: {acquisition_number}.")
             return self.__return_codes.DICOM_READING_ERROR
-
-        return self.__return_codes.NO_ERRORS
+        print("__load_grasp_files AAA")
+        return self.__return_codes.NO_ERRORS, image
 
     # def __get_time_index_of_minimum_intensities(self):
 
@@ -296,22 +281,22 @@ class MRA:
     #         return self.__return_codes.CANNOT_CALCULATE_INTENSITY_INDEX
     #     return self.__return_codes.NO_ERRORS
 
-    def __subtract_images(self, acquisition_number):
+    def __subtract_images(self, base_image, image):
 
         try:
             # n = len(self.__images)
             # for acquisition_number in sorted(self.__images):
-            print("will subtract images: ", acquisition_number, self.__min_intensity_index)
-            self.__subtracted_images[acquisition_number] = self.__images[acquisition_number] - self.__images[self.__min_intensity_index]    
+            # self.__subtracted_images[acquisition_number] = self.__images[acquisition_number] - self.__images[self.__min_intensity_index]    
+            subtracted_image = image - base_image
                 
                 # subtracted_image = sitk.Cast(subtracted_image, sitk.sitkFloat32)
                 # self.__subtracted_images.append(subtracted_image)
         except Exception as e:
             logger.exception(e, "Error while subtracting images.")
             return self.__return_codes.ERROR_CALCULATING_SUBTRACTED_IMAGES
-        return self.__return_codes.NO_ERRORS
+        return self.__return_codes.NO_ERRORS, subtracted_image
 
-    def __create_projections(self, acquisition_number):
+    def __create_projections(self, image):
 
         try:
             projection = {
@@ -333,7 +318,7 @@ class MRA:
                 0.0, max_angle, int(max_angle_degree / self.__angle_step)
             )
             # for image in self.__subtracted_images:
-            image =  self.__subtracted_images[acquisition_number]
+            # image =  self.__subtracted_images[acquisition_number]
             rotation_center = image.TransformContinuousIndexToPhysicalPoint(
                 [(index - 1) / 2.0 for index in image.GetSize()]
             )
@@ -401,19 +386,19 @@ class MRA:
                 slice_volume = sitk.JoinSeries(extracted_image)
                 slice_volume.SetOrigin((min_bounds + max_bounds) / 2)
                 proj_images.append(slice_volume)
-            self.__processed_images[acquisition_number] = proj_images
+            # self.__processed_images[acquisition_number] = proj_images
         except Exception as e:
             logger.exception(e, "Error calculating projections.")
             return self.__return_codes.ERROR_CALCULATING_PROJECTIONS
-        return self.__return_codes.NO_ERRORS
+        return self.__return_codes.NO_ERRORS, proj_images
 
     def __save_processed_images(self, acquisition_number, type, output_dir_name, images):
         try:
             if not os.path.exists(output_dir_name):
                 os.mkdir(output_dir_name)
                 logger.info(f"Directory {output_dir_name} created ")
-            else:
-                logger.info(f"Directory {output_dir_name} already exists")
+            # else:
+            #     logger.info(f"Directory {output_dir_name} already exists")
 
             writer = sitk.ImageFileWriter()
             writer.KeepOriginalImageUIDOn()
