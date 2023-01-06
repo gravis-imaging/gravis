@@ -13,6 +13,8 @@ import ast
 from enum import Enum
 from collections import defaultdict
 
+# import psutil
+
 
 class MRA:
     def __init__(self, vars):
@@ -31,9 +33,6 @@ class MRA:
         self.__n_slices = int(vars["GRAVIS_NUM_BOTTOM_SLICES"])
         self.__return_codes = Enum('ReturnCodes', ast.literal_eval(vars["DOCKER_RETURN_CODES"]))
         self.__min_intensity_index = 0
-        # self.__images = {}
-        # self.__subtracted_images = {}
-        # self.__processed_images = {}
         self.__tags_to_save_dict = {}
         self.__d_files = defaultdict(list)
         self.__d_indexes = defaultdict(list)
@@ -47,6 +46,13 @@ class MRA:
 
         data_directory = os.path.dirname(self.__input_dir_name)
 
+        # print("=====MEMORY USAGE BEFORE=====")
+        # print('RAM total memory excluding swap (GB):', psutil.virtual_memory()[0]/1000000000)
+        # print('RAM available memory (GB):', psutil.virtual_memory()[1]/1000000000)
+        # print('RAM memory % used:', psutil.virtual_memory()[2])
+        # print('RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
+        # print('RAM memory not used at and is readily available (GB):', psutil.virtual_memory()[4]/1000000000)
+
         # Create a map of SeriesIDs wih corresponding lists of files
         reader = sitk.ImageFileReader()
         for f in Path(data_directory).glob("*.dcm"):    
@@ -54,12 +60,10 @@ class MRA:
             reader.SetFileName(str(f))
             reader.LoadPrivateTagsOn()
             reader.ReadImageInformation()
-            # series_id = reader.GetMetaData("0020|000e")
             acquisition_number = int(reader.GetMetaData("0020|0012"))
             slice_location = reader.GetMetaData("0020|1041")
             self.__d_files[acquisition_number].append(str(f))
             self.__d_indexes[acquisition_number].append(int(slice_location))
-
 
         if len(self.__d_files) == 0:
             logger.exception(
@@ -70,7 +74,6 @@ class MRA:
             return self.__return_codes.NO_DICOMS_EXIST
 
         # Calculate Minimum Intensity index.
-
         try:
             # Read 50 first time points to find minimum intensity index:
             max_index_to_read = 50          
@@ -85,8 +88,6 @@ class MRA:
                 image = series_reader.Execute()
                 beginning_times_volumes.append(image)
 
-            # self.__get_time_index_of_minimum_intensities()
-
             intensities = []
             n_slices = self.__n_slices
             for image in beginning_times_volumes:
@@ -98,53 +99,50 @@ class MRA:
             # it is expected to have a minimum intensity index in the [10:30] range.
             # if minimum intensity index is the last in the time series of [0: max_index_to_read]
             # there might be a problem with the data.
-            # if min_intensity_value == len(beginning_times_volumes) - 1:
-            #     logger.exception("Error while calculating minimum intensity index.")
-            #     return self.__return_codes.INTENSITY_INDEX_SHOULD_BE_LESS_THAN_NUM_VOLUMES
+            if min_intensity_value == len(beginning_times_volumes) - 1:
+                logger.exception("Error while calculating minimum intensity index.")
+                return self.__return_codes.INTENSITY_INDEX_SHOULD_BE_LESS_THAN_NUM_VOLUMES
             self.__min_intensity_index = intensities.index(min_intensity_value) 
+            # print("=====MEMORY USAGE AFTER CALCULATING MIN INTENSITY BEFORE CLEARING =====")
+            # print('RAM total memory excluding swap (GB):', psutil.virtual_memory()[0]/1000000000)
+            # print('RAM available memory (GB):', psutil.virtual_memory()[1]/1000000000)
+            # print('RAM memory % used:', psutil.virtual_memory()[2])
+            # print('RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
+            # print('RAM memory not used at and is readily available (GB):', psutil.virtual_memory()[4]/1000000000) 
             beginning_times_volumes.clear()
-            print("min_intensity_index ", self.__min_intensity_index)
+            # print("min_intensity_index ", self.__min_intensity_index)
         except Exception as e:
             logger.exception(e, "Error while calculating minimum intensity index.")
-            return self.__return_codes.CANNOT_CALCULATE_INTENSITY_INDEX          
+            return self.__return_codes.CANNOT_CALCULATE_INTENSITY_INDEX      
 
-        print("Min intensity index: ", self.__min_intensity_index)
-        print("acquisition_numbers ", sorted(self.__d_files))
+        # print("=====MEMORY USAGE AFTER CALCULATING MIN INTENSITY AFTER CLEARING=====")
+        # print('RAM total memory excluding swap (GB):', psutil.virtual_memory()[0]/1000000000)
+        # print('RAM available memory (GB):', psutil.virtual_memory()[1]/1000000000)
+        # print('RAM memory % used:', psutil.virtual_memory()[2])
+        # print('RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
+        # print('RAM memory not used at and is readily available (GB):', psutil.virtual_memory()[4]/1000000000)    
     
         # Read the data, beginning from __min_intensity_index + 1, one time point at a time.
         # Calculate subtractions, and then MIPs for this time point. 
-
         try:               
-            print("Will load volume for minimum intensity index")
-            # series_reader = sitk.ImageSeriesReader()
+
             ret_value, base_image = self.__load_grasp_files(self.__min_intensity_index)
             if ret_value != self.__return_codes.NO_ERRORS:
                 return ret_value
 
-            print("Volume loaded")
-
             for acquisition_number in sorted(self.__d_files)[self.__min_intensity_index + 1:]:
-                    
-                print(" acquisition_number: ", acquisition_number)
-
 
                 ret_value, image = self.__load_grasp_files(acquisition_number)
                 if ret_value != self.__return_codes.NO_ERRORS:
                     return ret_value
-
-                print("AAA")
             
                 ret_value, subtracted_image = self.__subtract_images(base_image, image)
                 if ret_value != self.__return_codes.NO_ERRORS:
                     return ret_value
-
-                print("111")
             
                 ret_value, proj_image = self.__create_projections(subtracted_image)
                 if ret_value != self.__return_codes.NO_ERRORS:
                     return ret_value
-
-                print("222")
                 
                 ret_value = self.__save_processed_images(
                     acquisition_number,
@@ -155,8 +153,6 @@ class MRA:
                 if ret_value != self.__return_codes.NO_ERRORS:
                     return ret_value
 
-                print("333")
-
                 ret_value = self.__save_processed_images(
                     acquisition_number,
                     "sub",
@@ -166,31 +162,17 @@ class MRA:
                 if ret_value != self.__return_codes.NO_ERRORS:
                     return ret_value
 
-                print("555")
-
-
-
-                # indexes = self.__d_indexes[acquisition_number]
-                # series_file_names =  self.__d_files[acquisition_number]
-                # file_names = [x for _, x in sorted(zip(indexes, series_file_names))]
-                
-                # series_reader.SetFileNames(file_names)
-                # image = series_reader.Execute()
-                # self.__images.append(image)
-
-            
-
-
-
-
-            # self.__images.clear()
+                # print("=====MEMORY USAGE AFTER EACH LOOP=====")
+                # print('RAM available memory (GB):', psutil.virtual_memory()[1]/1000000000)
+                # print('RAM memory % used:', psutil.virtual_memory()[2])
+                # print('RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
+                # print('RAM memory not used at and is readily available (GB):', psutil.virtual_memory()[4]/1000000000)    
 
         except Exception as e:
             logger.exception(e, f"Problem reading DICOM files from {data_directory}.")
             return self.__return_codes.DICOM_READING_ERROR
 
         return self.__return_codes.NO_ERRORS
-
 
 
     def __load_grasp_files(self, acquisition_number):
@@ -215,13 +197,9 @@ class MRA:
                 "0020|0010",  # Study ID, for human consumption
             ]
 
-                        
-            print("__load_grasp_files 111")
             series_reader = sitk.ImageSeriesReader()
             series_reader.LoadPrivateTagsOn()
             series_reader.MetaDataDictionaryArrayUpdateOn()
-
-            # for series_ID in sorted(self.__d_files):
 
             indexes = self.__d_indexes[acquisition_number]
             series_file_names = self.__d_files[acquisition_number]
@@ -229,7 +207,6 @@ class MRA:
             
             series_reader.SetFileNames(file_names)
             image = series_reader.Execute()
-            print("__load_grasp_files 111a")
             direction = image.GetDirection()
             series_tag_values = [
                 (k, series_reader.GetMetaData(0, k))
@@ -249,52 +226,23 @@ class MRA:
                 ("0020|0037", '\\'.join(map(str, (direction[0], direction[3], direction[6], # Image Orientation (Patient)
                                                     direction[1], direction[4], direction[7])))),
             ]
-            print("__load_grasp_files 111b")
             self.__tags_to_save_dict[acquisition_number] = series_tag_values
             image = sitk.Cast(image, sitk.sitkFloat32)
-            # self.__images[acquisition_number] = image
-            print("__load_grasp_files 111c")
         except Exception as e:
             logger.exception(e, f"Problem loading DICOM files for acquisition number: {acquisition_number}.")
             return self.__return_codes.DICOM_READING_ERROR
-        print("__load_grasp_files AAA")
         return self.__return_codes.NO_ERRORS, image
 
-    # def __get_time_index_of_minimum_intensities(self):
-
-    #     intensities = []
-    #     try:
-    #         n_slices = self.__n_slices
-    #         for image in self.__images:
-    #             vol_n = sitk.GetArrayFromImage(image[:, :, :n_slices])
-    #             intensity = vol_n.sum()
-    #             intensities.append(intensity)
-
-    #         min_intensity_value = min(intensities)
-    #         if min_intensity_value == len(self.__images) - 1:
-    #             logger.exception("Error while calculating minimum intensity index.")
-    #             return self.__return_codes.INTENSITY_INDEX_SHOULD_BE_LESS_THAN_NUM_VOLUMES
-    #         self.__min_intensity_index = intensities.index(min_intensity_value) 
-    #         print("min_intensity_index ", self.__min_intensity_index)
-    #     except Exception as e:
-    #         logger.exception(e, "Error while calculating minimum intensity index.")
-    #         return self.__return_codes.CANNOT_CALCULATE_INTENSITY_INDEX
-    #     return self.__return_codes.NO_ERRORS
 
     def __subtract_images(self, base_image, image):
 
         try:
-            # n = len(self.__images)
-            # for acquisition_number in sorted(self.__images):
-            # self.__subtracted_images[acquisition_number] = self.__images[acquisition_number] - self.__images[self.__min_intensity_index]    
             subtracted_image = image - base_image
-                
-                # subtracted_image = sitk.Cast(subtracted_image, sitk.sitkFloat32)
-                # self.__subtracted_images.append(subtracted_image)
         except Exception as e:
             logger.exception(e, "Error while subtracting images.")
             return self.__return_codes.ERROR_CALCULATING_SUBTRACTED_IMAGES
         return self.__return_codes.NO_ERRORS, subtracted_image
+
 
     def __create_projections(self, image):
 
@@ -317,8 +265,6 @@ class MRA:
             rotation_angles = np.linspace(
                 0.0, max_angle, int(max_angle_degree / self.__angle_step)
             )
-            # for image in self.__subtracted_images:
-            # image =  self.__subtracted_images[acquisition_number]
             rotation_center = image.TransformContinuousIndexToPhysicalPoint(
                 [(index - 1) / 2.0 for index in image.GetSize()]
             )
@@ -386,7 +332,6 @@ class MRA:
                 slice_volume = sitk.JoinSeries(extracted_image)
                 slice_volume.SetOrigin((min_bounds + max_bounds) / 2)
                 proj_images.append(slice_volume)
-            # self.__processed_images[acquisition_number] = proj_images
         except Exception as e:
             logger.exception(e, "Error calculating projections.")
             return self.__return_codes.ERROR_CALCULATING_PROJECTIONS
@@ -402,13 +347,7 @@ class MRA:
 
             writer = sitk.ImageFileWriter()
             writer.KeepOriginalImageUIDOn()
-
-            # Different times
-            # t = acquisition_number # self.__min_intensity_index
-            # count = 0
-            # logger.info(f"size of processed images: {len(processed_images)}")
-            # for images in processed_images:
-                
+          
             series_tag_values = self.__tags_to_save_dict[acquisition_number]
 
             modification_date = time.strftime("%Y%m%d")
@@ -519,48 +458,13 @@ class MRA:
                     writer.SetFileName(path_name)
                     writer.Execute(image_slice)
                     i += 1
-            # t += 1
         except Exception as e:
             logger.exception(e, f"Error saving files in {output_dir_name}.")
             return self.__return_codes.ERROR_SAVING_FILES
         return self.__return_codes.NO_ERRORS
 
+
     def calculateMIPs(self):
 
         ret_value = self.__process_volume()
-        if ret_value != self.__return_codes.NO_ERRORS:
-            return ret_value
-
-        # ret_value = self.__load_grasp_files()
-        # if ret_value != self.__return_codes.NO_ERRORS:
-        #     return ret_value
-
-        # # ret_value = self.__get_time_index_of_minimum_intensities()
-        # # if ret_value != self.__return_codes.NO_ERRORS:
-        # #     return ret_value
-       
-        # ret_value = self.__subtract_images()
-        # if ret_value != self.__return_codes.NO_ERRORS:
-        #     return ret_value
-       
-        # ret_value = self.__create_projections()
-        # if ret_value != self.__return_codes.NO_ERRORS:
-        #     return ret_value
-        
-        # ret_value = self.__save_processed_images(
-        #     "mip",
-        #     self.__output_dir_name_mip,
-        #     self.__processed_images,
-        # )
-        # if ret_value != self.__return_codes.NO_ERRORS:
-        #     return ret_value
-
-        # ret_value = self.__save_processed_images(
-        #     "sub",
-        #     self.__output_dir_name_sub,
-        #     self.__subtracted_images,
-        # )
-        # if ret_value != self.__return_codes.NO_ERRORS:
-        #     return ret_value
-
-        return self.__return_codes.NO_ERRORS
+        return ret_value

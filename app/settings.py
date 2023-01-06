@@ -15,20 +15,22 @@ import environ
 
 env = environ.Env(
     # set casting, default value
-    DEBUG=(bool, True),
+    DEBUG=(bool, False),
     APPLIANCE_NAME=(str, "master"),
     DATA_FOLDER=(str, "/opt/gravis/data"),
     INCOMING_FOLDER=(str, "/opt/gravis/data/incoming"),
     CASES_FOLDER=(str, "/opt/gravis/data/cases"),
     ERROR_FOLDER=(str, "/opt/gravis/data/error"),
     INCOMING_SCAN_INTERVAL=(int, 1),
-    DB_BACKEND=(str, "sqlite"),
+    DB_BACKEND=(str, "postgres"),   
+    DB_USER=(str, "gravis")    
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 environ.Env.read_env(BASE_DIR / "gravis.env")
+environ.Env.read_env(BASE_DIR / "local.env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
@@ -44,6 +46,8 @@ INCOMING_FOLDER = env("INCOMING_FOLDER")
 CASES_FOLDER = env("CASES_FOLDER")
 ERROR_FOLDER = env("ERROR_FOLDER")
 INCOMING_SCAN_INTERVAL = env("INCOMING_SCAN_INTERVAL")
+TEST_FOLDER_PATH = env("TEST_FOLDER_PATH")
+
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = DATA_FOLDER
@@ -113,21 +117,13 @@ WSGI_APPLICATION = "app.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 DB_BACKEND = env("DB_BACKEND")
-
 BACKENDS = {
     "postgres":  {
         "ENGINE": "django.db.backends.postgresql",
-        "USER": "vagrant",
+        "USER": env("DB_USER"),
         "DBNAME": "gravis",
         "NAME": "gravis"
     },
-    "sqlite": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-        "OPTIONS": {
-            "timeout": 30,
-        }
-    }
 }
 DATABASES = {
     "default": BACKENDS[DB_BACKEND]

@@ -1,20 +1,30 @@
-from __future__ import print_function
+# from __future__ import print_function
 import time
 
 import SimpleITK as sitk
+
+import os
+os.environ['DJANGO_SETTINGS_MODULE'] = 'app.settings'
+import django
+django.setup()
+from django.conf import settings
 
 import sys, time, os
 from pathlib import Path
 from collections import defaultdict
 
+
+
 # Read the original series. First obtain the series file names using the
 # image series reader.
-data_directory = "/opt/gravis/data/cases/MF_GRASP_MRA#SSkyraCBI#F429595#M3267#D171018#T145156#GRASPMRAWHOLESAG_RGMW_YK8#P5_221018160934635/"
+data_directory = settings.TEST_FOLDER_PATH
+print(data_directory)
 
 t = 0
 tm = time.perf_counter()
 # 120 series IDs
 print("Calculating series_dic")
+
 
 
 

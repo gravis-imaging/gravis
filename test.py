@@ -7,6 +7,12 @@ from pathlib import Path
 import SimpleITK as sitk
 from collections import defaultdict
 
+import os
+os.environ['DJANGO_SETTINGS_MODULE'] = 'app.settings'
+import django
+django.setup()
+from django.conf import settings
+
 
 
 def load_grasp_files(dir_name: str):
@@ -16,6 +22,7 @@ def load_grasp_files(dir_name: str):
         sys.exit(1)
 
     data_directory = os.path.dirname(dir_name)
+
 
     print("data_directory ", data_directory)
 
@@ -323,8 +330,9 @@ def main():
 
     dir_name = "/opt/gravis/data/incoming"
     # input_dir_name = "/opt/gravis/data/cases/to_copy_full/"
-    input_dir_name = "/opt/gravis/data/cases/MF_GRASP_MRA#SSkyraCBI#F429595#M3267#D171018#T145156#GRASPMRAWHOLESAG_RGMW_YK8#P5_221018160934635/"
-
+    
+    input_dir_name = settings.TEST_FOLDER_PATH
+    print(input_dir_na
     if not Path(input_dir_name).exists():
         print("IN path does not exist")
         sys.exit(1)
