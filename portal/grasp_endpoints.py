@@ -1,6 +1,6 @@
 import json
 import math
-import numpy
+import numpy as np
 from loguru import logger
 import pydicom
 import os
@@ -14,7 +14,7 @@ from django.http import JsonResponse
 
 from portal.models import *
 
-cross = (lambda x,y:numpy.cross(x,y))
+cross = (lambda x,y:np.cross(x,y))
 
 # @login_required
 # def grasp_metadata(request, case, study):
@@ -46,23 +46,23 @@ def case_metadata(request, case, dicom_set, study=None):
 @login_required
 def timeseries_data(request, case, source_set):
     data = json.loads(request.body)
-    
-    # averages = numpy.zeros((120,1+len(data['annotations'])))
-    # averages[:,0] = numpy.asarray(range(120))
+    return JsonResponse(dict(data=[]))
+    # averages = np.zeros((120,1+len(data['annotations'])))
+    # averages[:,0] = np.asarray(range(120))
     averages = []
     
 
     chart_options = data.get('chart_options',{})        
     mode = chart_options.get('mode','mean')
-    summary_method = dict(mean=numpy.ma.mean,
-                median=numpy.ma.median,
-                ptp=numpy.ma.ptp)[mode]
+    summary_method = dict(mean=np.ma.mean,
+                median=np.ma.median,
+                ptp=np.ma.ptp)[mode]
 
     acquisition_seconds = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set=source_set).values("acquisition_seconds").distinct("acquisition_seconds")
     acquisition_timepoints = sorted(list((k['acquisition_seconds'] for k in acquisition_seconds)))
     # case = Case.objects.get(id=int(case))
     for i, annotation in enumerate(data['annotations']):
-        idx = numpy.abs(annotation['normal']).argmax()
+        idx = np.abs(annotation['normal']).argmax()
         orientation = ['SAG','COR','AX'][idx]
         dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/{orientation}").latest('processing_job__created_at')
         instances = dicom_set.instances
@@ -73,9 +73,9 @@ def timeseries_data(request, case, source_set):
         handles_absolute = [[handle[n] for n in axes_permutation] for handle in annotation["handles_indexes"]]
         print(view_information)
         print(handles_absolute[0])
-        normal = numpy.asarray(annotation["normal"])
-        viewUp = numpy.asarray(annotation["view_up"])
-        viewLeft = (lambda x,y:numpy.cross(x,y))(normal,viewUp) # workaround for numpy bug that makes Pylance think the rest of the code is unreachable
+        normal = np.asarray(annotation["normal"])
+        viewUp = np.asarray(annotation["view_up"])
+        viewLeft = (lambda x,y:np.cross(x,y))(normal,viewUp) # workaround for np bug that makes Pylance think the rest of the code is unreachable
 
         instance = instances.filter(slice_location=handles_absolute[0][0]).get()
         ds = pydicom.dcmread( Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location )
@@ -102,9 +102,9 @@ def timeseries_data(request, case, source_set):
             def masked(in_array):
                 # Not an entirely accurate ellipse especially for small ones
                 ry, rx = map(lambda x: (x-1)/2.0,in_array.shape[1:3])
-                y,x = numpy.ogrid[-ry: ry+1, -rx: rx+1]
+                y,x = np.ogrid[-ry: ry+1, -rx: rx+1]
                 mask = (x / rx)**2+(y / ry)**2 > 1 
-                v = in_array.view(numpy.ma.MaskedArray)
+                v = in_array.view(np.ma.MaskedArray)
                 v.mask = mask
                 return v
 
@@ -148,7 +148,7 @@ def timeseries_data(request, case, source_set):
         acquisition_timepoints = acquisition_timepoints[::len(acquisition_timepoints) // len(averages[0])]
     
     averages.insert(0,acquisition_timepoints)
-    return JsonResponse(dict(data=numpy.asarray(averages).T.tolist()))
+    return JsonResponse(dict(data=np.asarray(averages).T.tolist()))
 
 
 @login_required
@@ -158,6 +158,30 @@ def processed_results_json(request, case, category, source_set):
     # slices_lookup = {k: request.GET.get(k) for k in fields if k in request.GET}
     job = ProcessingJob.objects.filter(status="Success", case=case, dicom_set=source_set, category=category).latest("created_at")
     return JsonResponse(dict(result = job.json_result))
+
+@login_required
+def preview_urls(request, case, source_set, view, location):
+    case = Case.objects.get(id=int(case))
+    dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/{view}")
+    if source_set:
+        dicom_set = dicom_set.filter(processing_job__dicom_set=source_set)
+    location = np.asarray(list(map(int, location.split(","))))
+
+    instances = dicom_set.latest('processing_job__created_at').instances.order_by("slice_location").all()
+    im_orientation_patient = np.asarray(json.loads(instances[0].json_metadata)["00200037"]["Value"]).reshape((2,3))
+    im_orientation_mat = np.rint(np.vstack((im_orientation_patient,[cross(*im_orientation_patient)])))
+
+    print(location)
+    transformed_location = (np.linalg.inv(im_orientation_mat) @ location)
+    print(transformed_location)
+    slice_number = int(transformed_location[ [ "SAG", "COR", "AX"].index(view) ])
+    if slice_number < 0:
+        slice_number -= 1
+    instance = list(instances)[slice_number]
+
+    location = (Path(instance.dicom_set.set_location) / instance.instance_location).relative_to(settings.DATA_FOLDER)
+    wado_uri = "wadouri:"+str(Path(settings.MEDIA_URL) / location)
+    return JsonResponse(dict(urls=[ wado_uri +f"?frame={n}" for n in range(instance.num_frames)]))
 
 @login_required
 def processed_results_urls(request, case, case_type, source_set=None):

@@ -26,6 +26,12 @@ def do_job(View,id):
 def cross(*c) -> npt.ArrayLike:
     return np.cross(*c)
 
+def show_array(a):
+    print(f"""P2
+{a.shape[1]} {a.shape[0]}
+{a.max()}
+"""+"\n".join(" ".join([str(k) for k in r]) for r in a))
+
 @method_decorator(login_required, name='dispatch')
 class WorkJobView(View):
     type="GENERIC"
@@ -169,7 +175,7 @@ class TestJob(WorkJobView):
                          [  0, 0, -1 ],
                          [ -1, 0,  0 ]])):
                 if v.name in ("COR", "SAG"):
-                    v.flip_for_preview.append(3) # X axis in patient coordinates
+                    v.flip_for_preview.append(2) # X axis in patient coordinates
                 elif v.name == "AX":
                     v.flip_for_timeseries.append(2)
             # --- AXIAL
@@ -179,19 +185,19 @@ class TestJob(WorkJobView):
                          [ 0, 1, 0 ],
                          [ 0, 0, 1 ]])):
                 if v.name in ("COR", "SAG"):
-                    v.flip_for_preview.append(3) # Z axis in patient coordinates
+                    v.flip_for_preview.append(2) # Z axis in patient coordinates
                     v.flip_for_timeseries.append(1)
                 if v.name == "COR":
-                    v.flip_for_preview.append(1) # X axis in patient coordinates
+                    v.flip_for_preview.append(0) # X axis in patient coordinates
                     v.flip_for_timeseries.append(2)
             elif np.array_equal(im_orientation_mat, 
                     np.array(
                         [[ 0, 1,  0 ],
                          [ 1, 0,  0 ],
                          [ 0, 0, -1 ]])):
-                v.flip_for_preview.append(3) # Z axis in patient coordinates
+                v.flip_for_preview.append(2) # Z axis in patient coordinates
                 if v.name == "COR":
-                    v.flip_for_preview.append(2)
+                    v.flip_for_preview.append(1)
                     v.flip_for_timeseries.append(2)
             # -- CORONAL
             elif np.array_equal(im_orientation_mat, 
@@ -200,68 +206,144 @@ class TestJob(WorkJobView):
                          [ 0, 0, -1 ],
                          [ 0, 1,  0 ]])):
                 if v.name == "COR":
-                    v.flip_for_preview.append(1)
+                    v.flip_for_preview.append(0)
                     v.flip_for_timeseries.append(2)
 
         return views
 
     @classmethod
+    def mat_to_rotations(cls,mat):
+        rots = [
+            np.array([[1,0,0],
+                      [0,0,-1],
+                      [0,1,0]]),
+            np.array([[0,0,1],
+                      [0,1,0],
+                      [-1,0,0]]),
+            np.array([[0,-1,0],
+                      [1,0,0],
+                      [0,0,1]])
+        ]
+        rotations = []
+
+        n = 0
+        while (mat @ [1, 0, 0]).tolist() != [1, 0, 0] and n < 4:
+            mat = mat @ rots[2]
+            n += 1
+
+        if n and n < 4:
+            rotations += [(n,(2,1))]
+
+        if n == 4:
+            n = 0
+            while (mat @ [1, 0, 0]).tolist() != [1, 0, 0] and n < 4:
+                mat = mat @ rots[1]
+                n += 1
+            if n > 3:
+                raise Exception()
+            if n:
+                rotations += [(n,(0,2))] 
+
+        n = 0
+        while (mat @ [0, 1, 0]).tolist() != [0, 1, 0]:
+            mat = mat @ rots[0]
+            n += 1
+            if n > 3:
+                raise Exception("")
+        if n:
+            rotations += [(n,(1,0))]
+        
+        assert np.array_equal(mat,np.identity(3))
+        rotations.reverse()
+        return rotations
+
+    @classmethod
     def do_job(cls, job: ProcessingJob):
         instances = job.dicom_set.instances.all()
         im_orientation_patient = np.asarray(json.loads(instances[0].json_metadata)["00200037"]["Value"]).reshape((2,3))
-        views = cls.calc_views_for_set(im_orientation_patient)
+        im_orientation_mat = np.vstack((im_orientation_patient,[cross(*im_orientation_patient)]))
+        z_axis = im_orientation_mat[2]
+        # views = cls.calc_views_for_set(im_orientation_patient)
+
+        def get_position(instance):
+            return np.asarray(json.loads(instance.json_metadata)["00200032"]["Value"])
 
         series_uids = { k.series_uid for k in instances }
-        split_by_series = [ sorted([k for k in instances if k.series_uid == uid], key = lambda x:x.slice_location) for uid in series_uids ]
+        split_by_series = [ sorted([k for k in instances if k.series_uid == uid], key = lambda x:np.dot(z_axis,get_position(x))) for uid in series_uids ]
         files_by_series = [ [ Path(i.dicom_set.set_location) / i.instance_location for i in k] for k in sorted(split_by_series,key=lambda x:x[0].acquisition_seconds) ]
         
         random_name = str(uuid.uuid4())
-        for v in views:
-            location = Path(job.case.case_location) / "processed" / (v.name+"-"+random_name)
+        dicom_sets = []
+        for v in ("AX", "COR", "SAG"):
+            location = Path(job.case.case_location) / "processed" / (v+"-"+random_name)
             location.mkdir()
-            v.dicom_set = DICOMSet(
+            dicom_set = DICOMSet(
                 set_location = location,
-                type = f"CINE/{v.name}",
+                type = f"CINE/{v}",
                 case = job.case,
                 processing_job = job)
-            v.dicom_set.save()
+            dicom_set.save()
+            dicom_sets.append(dicom_set)
             # output_folder = Path(new_set.set_location)
 
         volume = None
         prototype_ds = None
-        for i, files in enumerate(files_by_series[::]):
+        undersample = 1
+        # num_series = len(files_by_series) 
+        # if num_series > 20:
+        #     if num_series % 20 == 0:
+        #         undersample = 20
+        #     elif num_series % 10 == 0:
+        #         undersample = 10
+        #     elif num_series % 5 == 0:
+        #         undersample = 5
+        for i, files in enumerate(files_by_series[::undersample]):
             for j, file in enumerate(files):
                 dcm = pydicom.dcmread(file)
                 array = dcm.pixel_array # [ row, column ] order
                 if volume is None:
-                    volume = np.empty_like(array,shape=(len(files_by_series[::]), *array.shape[::-1], len(files)))
-                    # [ time, column, row, slice ] order
+                    volume = np.empty_like(array,shape=(len(files_by_series) // undersample, len(files), *array.shape))
                     prototype_ds = dcm
                     print(volume.shape)
-                volume[i,:,:,j] = array.T
+                volume[i,j,:,:] = array
         assert volume is not None
-
+        orient = np.rint(np.vstack((im_orientation_patient,[cross(*im_orientation_patient)])))
+        rotations = cls.mat_to_rotations(orient)
+        for k,axes in rotations:
+            volume = np.rot90(volume,k=k, axes=[a+1 for a in axes])
+        print(volume.shape)
         # raise Exception("foo")
 #         print(f"""P2
 # {volume.shape[2]/2} {volume.shape[1]/2}
 # {volume[0].max()}
 # """+"\n".join(" ".join([str(k) for k in r]) for r in volume[0,::2,::2,100].T))
-        for v in views:
+
+        def get_index(axis,volume_slice, time=slice(None)):
+            return [(time,volume_slice,slice(None),slice(None)), # axial 
+                (time,slice(None,None,-1),volume_slice,slice(None,None,-1)), # coronal
+                (time,slice(None,None,-1),slice(None),volume_slice) # sagittal
+            ][axis]
+
+        # axial, coronal, sagittal = [volume[get_index(axis,volume.shape[axis+1]//2)] for axis in (0,1,2)]
+        # print(axial.shape, coronal.shape, sagittal.shape)
+        # try:
+        #     show_array(np.vstack([axial[0], coronal[0], sagittal[0]]))
+        # except:
+        #     show_array(np.hstack([axial[0], coronal[0], sagittal[0]]))
+        # exit()
+
+        for axis in (0,1,2):
             new_study_uid = pydicom.uid.generate_uid()
             new_series_uid = pydicom.uid.generate_uid()
             
-            t_array = volume[:]
-            for k in v.flip_for_preview:
-                t_array = np.flip(t_array,k)
-            t_array = t_array.transpose(*(0,*[1+x for x in v.transformed_axes]))
-            # t_array is now in [ time, normal, rows, columns ]
-
-            for i in range(t_array.shape[1]):
+            
+            for i in range(volume.shape[axis+1]):
+                t_array = volume[get_index(axis,i)]
                 ds = prototype_ds.copy()
                 ds.NumberOfFrames   = t_array.shape[0]
-                ds.Rows             = t_array.shape[2]
-                ds.Columns          = t_array.shape[3]
-                ds.PixelData        = t_array[:,i,:,:].tobytes()
+                ds.Rows             = t_array.shape[1]
+                ds.Columns          = t_array.shape[2]
+                ds.PixelData        = t_array.tobytes()
                 ds.SliceLocation    = str(i)+".0"
                 ds.SeriesNumber     = str(i)
 
@@ -269,15 +351,15 @@ class TestJob(WorkJobView):
                 ds.SeriesInstanceUID = new_series_uid
                 ds.SOPInstanceUID    = pydicom.uid.generate_uid()
 
-                ds.save_as(Path(v.dicom_set.set_location) / f"multiframe.{i}.dcm")
+                ds.save_as(Path(dicom_sets[axis].set_location) / f"multiframe.{i}.dcm")
                 new_instance = DICOMInstance.from_dataset(ds)
-                new_instance.dicom_set = v.dicom_set
+                new_instance.dicom_set = dicom_sets[axis]
                 new_instance.instance_location = f"multiframe.{i}.dcm"
                 new_instance.save()
 
         return (
-            {"views": {v.name: v.to_dict() for v in views}},
-            [v.dicom_set for v in views]
+            {}, # {"views": {v.name: v.to_dict() for v in views}},
+            dicom_sets
         )
 
 urls = [
