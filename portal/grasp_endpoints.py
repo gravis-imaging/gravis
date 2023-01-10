@@ -46,7 +46,7 @@ def case_metadata(request, case, dicom_set, study=None):
 @login_required
 def timeseries_data(request, case, source_set):
     data = json.loads(request.body)
-    return JsonResponse(dict(data=[]))
+
     # averages = np.zeros((120,1+len(data['annotations'])))
     # averages[:,0] = np.asarray(range(120))
     averages = []
@@ -61,31 +61,64 @@ def timeseries_data(request, case, source_set):
     acquisition_seconds = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set=source_set).values("acquisition_seconds").distinct("acquisition_seconds")
     acquisition_timepoints = sorted(list((k['acquisition_seconds'] for k in acquisition_seconds)))
     # case = Case.objects.get(id=int(case))
+
+    ax_instances = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/AX").latest('processing_job__created_at').instances
+    example_instance = ax_instances.first()
+    metadata = json.loads(example_instance.json_metadata)
+    im_orientation_patient = np.asarray(metadata["00200037"]["Value"]).reshape((2,3))
+    im_orientation_mat = np.rint(np.vstack((im_orientation_patient,[cross(*im_orientation_patient)])))
+
+    size = [ int(metadata["00280011"]["Value"][0]), int(metadata["00280010"]["Value"][0]), ax_instances.count() ]
+
+    print("size: x,y,z",size)
     for i, annotation in enumerate(data['annotations']):
         idx = np.abs(annotation['normal']).argmax()
         orientation = ['SAG','COR','AX'][idx]
         dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/{orientation}").latest('processing_job__created_at')
         instances = dicom_set.instances
         example_instance = instances.first()
+
         
-        view_information = dicom_set.processing_job.json_result["views"][orientation]
-        axes_permutation = view_information["transformed_axes"]
-        handles_absolute = [[handle[n] for n in axes_permutation] for handle in annotation["handles_indexes"]]
-        print(view_information)
-        print(handles_absolute[0])
-        normal = np.asarray(annotation["normal"])
-        viewUp = np.asarray(annotation["view_up"])
-        viewLeft = (lambda x,y:np.cross(x,y))(normal,viewUp) # workaround for np bug that makes Pylance think the rest of the code is unreachable
+        handles_transformed = [ (np.linalg.inv(im_orientation_mat) @ handle_location).tolist() for handle_location in annotation["handles_indexes"] ]
+        # view_information = dicom_set.processing_job.json_result["views"][orientation]
+        # axes_permutation = view_information["transformed_axes"]
+        # handles_absolute = [[handle[n] for n in axes_permutation] for handle in annotation["handles_indexes"]]
+        # print(view_information)
+        # print(handles_absolute[0])
+        # normal = np.asarray(annotation["normal"])
+        # viewUp = np.asarray(annotation["view_up"])
+        # viewLeft = (lambda x,y:np.cross(x,y))(normal,viewUp) # workaround for np bug that makes Pylance think the rest of the code is unreachable
 
-        instance = instances.filter(slice_location=handles_absolute[0][0]).get()
+        # print(size)
+
+        # size_transformed = (np.linalg.inv(im_orientation_mat) @ )
+        # for handle in handles_transformed
+        # for h in handles:
+        print(handles_transformed[0])
+        for h in handles_transformed:
+            if orientation in ("SAG", "COR"):
+                h[2] = -h[2]
+            if orientation == "COR":
+                h[0] = -h[0]
+            for n,v in enumerate(h):
+                if v < 0:
+                    h[n] = h[n]-1
+                h[n] = int(h[n])
+        print(handles_transformed[0])
+        print(size)
+        slice_number = int(handles_transformed[0][idx])
+        print(slice_number)
+        # if slice_number < 0:
+        #     slice_number -= 1
+
+        # print(handles_transformed[0])
+        # print( handles_transformed[0][:idx].tolist()  + handles_transformed[0][idx+1:].tolist())
+        instance = list(instances.order_by('slice_location').all())[slice_number]
         ds = pydicom.dcmread( Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location )
-
         pixel_array = ds.pixel_array
-        for flipped_axis in view_information["flip_for_timeseries"]:
-            for k in range(len(handles_absolute)):
-                handles_absolute[k][flipped_axis] = pixel_array.shape[flipped_axis] - handles_absolute[k][flipped_axis] - 1
 
         if annotation["tool"] == "GravisROI":
+            continue
             [[_, top, _], [_, bottom, _], [_,_,left], [_,_, right ]] = handles_absolute
 
             top, bottom = sorted([top, bottom])
@@ -115,22 +148,30 @@ def timeseries_data(request, case, source_set):
             subarray = subarray.astype('float32')
             values = summary_method(masked(subarray), (1,2)).flatten()
         elif annotation["tool"] == "Probe":
-            handle = handles_absolute[0][1:]
-            # print(handle)
+            # handle = handles_absolute[0][1:]
+            handle = handles_transformed[0][:idx]  + handles_transformed[0][idx+1:]
+            print(handle)
             # print(f"Handle {handle}: {pixel_array[0,handle[0], handle[1]]}")
-            if handle[1] < 0 or handle[1] > pixel_array.shape[2] or \
-                handle[0] < 0 or handle[0] > pixel_array.shape[1]:
-                averages.append([None] * pixel_array.shape[0])
-                continue
+
+            # if handle[1] < 0 or handle[1] > pixel_array.shape[2] or \
+            #     handle[0] < 0 or handle[0] > pixel_array.shape[1]:
+            #     averages.append([None] * pixel_array.shape[0])
+            #     continue
             
             # test_array = pixel_array[0,handle[0]:handle[0]+75,handle[1]:handle[1]+75]
 #             print(f"""P2
 # 75 75
 # {test_array.max()}
 # """+"\n".join(" ".join([str(k) for k in r]) for r in test_array))
-
-            values = pixel_array[:,handle[0], handle[1]]
-            values = values.astype('float32')
+            try:
+                if len(pixel_array.shape) == 3:
+                    values = pixel_array[:,handle[1], handle[0]]
+                else:
+                    values = np.asarray([pixel_array[handle[1], handle[0]]])
+                values = values.astype('float32')
+            except:
+                averages.append([None] * pixel_array.shape[0])
+                continue
         else:
             print(annotation["tool"])
             averages.append([None] * pixel_array.shape[0])
@@ -162,18 +203,17 @@ def processed_results_json(request, case, category, source_set):
 @login_required
 def preview_urls(request, case, source_set, view, location):
     case = Case.objects.get(id=int(case))
-    dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/{view}")
-    if source_set:
-        dicom_set = dicom_set.filter(processing_job__dicom_set=source_set)
+    dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/{view}").filter(processing_job__dicom_set=source_set)
+
     location = np.asarray(list(map(int, location.split(","))))
 
     instances = dicom_set.latest('processing_job__created_at').instances.order_by("slice_location").all()
     im_orientation_patient = np.asarray(json.loads(instances[0].json_metadata)["00200037"]["Value"]).reshape((2,3))
     im_orientation_mat = np.rint(np.vstack((im_orientation_patient,[cross(*im_orientation_patient)])))
 
-    print(location)
+    # print(location)
     transformed_location = (np.linalg.inv(im_orientation_mat) @ location)
-    print(transformed_location)
+    # print(transformed_location)
     slice_number = int(transformed_location[ [ "SAG", "COR", "AX"].index(view) ])
     if slice_number < 0:
         slice_number -= 1
