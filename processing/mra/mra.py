@@ -213,6 +213,8 @@ class MRA:
                 for k in patient_tags_to_copy
                 if series_reader.HasMetaDataKey(0, k)
             ] + [
+                ("0008|0021", series_reader.GetMetaData(0, "0008|0021")),  # Series Date
+                ("0008|0031", series_reader.GetMetaData(0, "0008|0031")),  # Series Time
                 (
                     "0008|103e",
                     series_reader.GetMetaData(0, "0008|103e") + " GRASP MIP Projections",
@@ -352,18 +354,19 @@ class MRA:
 
             modification_date = time.strftime("%Y%m%d")
             modification_time = time.strftime("%H%M%S")
-            seriesID = (
-                "1.2.276.0.7230010.3.1.3."
-                + modification_date
-                + ".1"
-                + modification_time
-                + f".{acquisition_number:03d}"
-            )
+           
             if type == "sub":
+                seriesID = (
+                    "1.2.276.0.7230010.3.1.3."
+                    + modification_date
+                    + ".1"
+                    + modification_time
+                    + f".{acquisition_number:03d}"
+                )
                 for i in range(images.GetDepth()):
                     image_slice = images[:, :, i]
                     image_slice = sitk.Cast(image_slice, sitk.sitkInt16)
-
+                    image_slice.SetMetaData("0020|0032", '\\'.join(map(str,images.TransformIndexToPhysicalPoint((0,0,i)))))  # image position patient
                     [
                         image_slice.SetMetaData(tag, value)
                         for tag, value in series_tag_values
@@ -385,12 +388,12 @@ class MRA:
                     image_slice.SetMetaData(
                         "0008|0013", time.strftime("%H%M%S")
                     )  # Instance Creation Time
-                    image_slice.SetMetaData(
-                        "0008|0021", modification_date
-                    )  # Series Date,
-                    image_slice.SetMetaData(
-                        "0008|0031", modification_time
-                    )  # Series Time
+                    # image_slice.SetMetaData(
+                    #     "0008|0021", modification_date
+                    # )  # Series Date,
+                    # image_slice.SetMetaData(
+                    #     "0008|0031", modification_time
+                    # )  # Series Time
                     image_slice.SetMetaData(
                         "0020|000e", seriesID
                     )  # Series Instance UID
@@ -407,6 +410,13 @@ class MRA:
                     writer.Execute(image_slice)
                     i += 1
             else:
+                seriesID = (
+                    "1.2.276.0.7230010.3.1.3."
+                    + modification_date
+                    + ".2"
+                    + modification_time
+                    + f".{acquisition_number:03d}"
+                )
                 # Different angles
                 i = 0
                 for image_slice in images:
@@ -433,12 +443,12 @@ class MRA:
                     image_slice.SetMetaData(
                         "0008|0013", time.strftime("%H%M%S")
                     )  # Instance Creation Time
-                    image_slice.SetMetaData(
-                        "0008|0021", modification_date
-                    )  # Series Date,
-                    image_slice.SetMetaData(
-                        "0008|0031", modification_time
-                    )  # Series Time
+                    # image_slice.SetMetaData(
+                    #     "0008|0021", modification_date
+                    # )  # Series Date,
+                    # image_slice.SetMetaData(
+                    #     "0008|0031", modification_time
+                    # )  # Series Time
                     image_slice.SetMetaData(
                         "0020|000e", seriesID
                     )  # Series Instance UID
