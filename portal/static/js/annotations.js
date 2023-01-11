@@ -28,12 +28,22 @@ class AnnotationManager {
         
         var seriesOptions = {}
         for (var annotation of annotations){
+            let handles_indexes = annotation.data.handles.points.map( pt=>cornerstone.utilities.transformWorldToIndex(this.viewer.volume.imageData, pt))
+            let out_of_bounds = false;
+            for (let h of handles_indexes) {
+                if (! cornerstone.utilities.indexWithinDimensions(h, this.viewer.volume.dimensions)) {
+                    out_of_bounds = true;
+                }
+            }
+            if (out_of_bounds) {
+                continue
+            }
             data.push( {
                 normal: annotation.metadata.viewPlaneNormal,
                 view_up: annotation.metadata.viewUp,
                 bounds: this.viewer.volume.imageData.getBounds(),
                 handles: annotation.data.handles.points,
-                handles_indexes: annotation.data.handles.points.map( pt=>cornerstone.utilities.transformWorldToIndex(this.viewer.volume.imageData, pt)),
+                handles_indexes: handles_indexes,
                 tool: annotation.metadata.toolName
             })
             labels.push(annotation.data.label)
