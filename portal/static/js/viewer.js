@@ -487,10 +487,11 @@ class GraspViewer {
         this.study_uid = study_uid;
         this.dicom_set = dicom_set;
         this.case_id = case_id
-        this.selected_time = 0;
+
         var graspVolumeInfo = await (await fetch(`/api/case/${case_id}/dicom_set/${dicom_set}/study/${study_uid}/metadata`, {
             method: 'GET',   credentials: 'same-origin'
         })).json()
+        this.selected_time = graspVolumeInfo[0].acquisition_seconds
         document.getElementById("volume-picker").setAttribute("min",0)
         document.getElementById("volume-picker").setAttribute("max",graspVolumeInfo.length-1)
         document.getElementById("volume-picker").setAttribute("value",0)
