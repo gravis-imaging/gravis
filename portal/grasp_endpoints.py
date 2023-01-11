@@ -15,7 +15,11 @@ from django.http import JsonResponse
 from portal.models import *
 
 cross = (lambda x,y:np.cross(x,y))
-
+def show_array(a):
+    print(f"""P2
+{a.shape[1]} {a.shape[0]}
+{a.max()}
+"""+"\n".join(" ".join([str(k) for k in r]) for r in a))
 # @login_required
 # def grasp_metadata(request, case, study):
 #     series = DICOMInstance.objects.filter(study_uid=study, dicom_set__case=case, dicom_set__type="ORI").values('series_uid','acquisition_seconds').order_by('acquisition_seconds').distinct()
@@ -60,7 +64,6 @@ def timeseries_data(request, case, source_set):
 
     acquisition_seconds = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set=source_set).values("acquisition_seconds").distinct("acquisition_seconds")
     acquisition_timepoints = sorted(list((k['acquisition_seconds'] for k in acquisition_seconds)))
-    # case = Case.objects.get(id=int(case))
 
     ax_instances = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/AX").latest('processing_job__created_at').instances
     example_instance = ax_instances.first()
@@ -70,31 +73,32 @@ def timeseries_data(request, case, source_set):
 
     size = [ int(metadata["00280011"]["Value"][0]), int(metadata["00280010"]["Value"][0]), ax_instances.count() ]
 
-    print("size: x,y,z",size)
+    # TODO: Calculate out-of-bounds properly. It's checked on the client, but still...
     for i, annotation in enumerate(data['annotations']):
         idx = np.abs(annotation['normal']).argmax()
         orientation = ['SAG','COR','AX'][idx]
         dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/{orientation}").latest('processing_job__created_at')
         instances = dicom_set.instances
         example_instance = instances.first()
-
-        
         handles_transformed = [ (np.linalg.inv(im_orientation_mat) @ handle_location).tolist() for handle_location in annotation["handles_indexes"] ]
-        # view_information = dicom_set.processing_job.json_result["views"][orientation]
-        # axes_permutation = view_information["transformed_axes"]
-        # handles_absolute = [[handle[n] for n in axes_permutation] for handle in annotation["handles_indexes"]]
-        # print(view_information)
-        # print(handles_absolute[0])
-        # normal = np.asarray(annotation["normal"])
-        # viewUp = np.asarray(annotation["view_up"])
-        # viewLeft = (lambda x,y:np.cross(x,y))(normal,viewUp) # workaround for np bug that makes Pylance think the rest of the code is unreachable
 
-        # print(size)
 
-        # size_transformed = (np.linalg.inv(im_orientation_mat) @ )
-        # for handle in handles_transformed
-        # for h in handles:
-        print(handles_transformed[0])
+        # This does not actually work:
+        # out_of_bounds = False
+        # rotated_size = np.linalg.inv(im_orientation_mat) @ np.asarray(size)
+        # print("rotated_size", rotated_size)
+        # for h in handles_transformed:
+        #     print(h)
+        #     for i,k in enumerate(h):
+
+        #         if ((rotated_size[i] > 0 and (k < 0 or k > rotated_size[i])) or
+        #             (rotated_size[i] < 0 and (k > 0 or k < rotated_size[i]))):
+        #                 out_of_bounds = True
+        #                 print(rotated_size[i], k)
+        # if out_of_bounds:
+        #     averages.append([None] * len(acquisition_timepoints))
+        #     continue
+
         for h in handles_transformed:
             if orientation in ("SAG", "COR"):
                 h[2] = -h[2]
@@ -103,35 +107,37 @@ def timeseries_data(request, case, source_set):
             for n,v in enumerate(h):
                 if v < 0:
                     h[n] = h[n]-1
-                h[n] = int(h[n])
-        print(handles_transformed[0])
-        print(size)
-        slice_number = int(handles_transformed[0][idx])
-        print(slice_number)
-        # if slice_number < 0:
-        #     slice_number -= 1
+                h[n] = int(h[n]) 
 
-        # print(handles_transformed[0])
-        # print( handles_transformed[0][:idx].tolist()  + handles_transformed[0][idx+1:].tolist())
+
+        # print("transformed fixed", handles_transformed[0])
+        slice_number = int(handles_transformed[0][idx])
+        for h in range(len(handles_transformed)):
+            handles_transformed[h] = handles_transformed[h][:idx]  + handles_transformed[h][idx+1:]
+        # print(slice_number)
+
         instance = list(instances.order_by('slice_location').all())[slice_number]
         ds = pydicom.dcmread( Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location )
         pixel_array = ds.pixel_array
-
+        if len(pixel_array.shape) == 2:
+            pixel_array = pixel_array[np.newaxis,:,:]
         if annotation["tool"] == "GravisROI":
-            continue
-            [[_, top, _], [_, bottom, _], [_,_,left], [_,_, right ]] = handles_absolute
+            [[_, top ], [_, bottom], [left, _], [right,_ ]] = handles_transformed
 
-            top, bottom = sorted([top, bottom])
-            left, right = sorted([right, left])
-            # print(f"t {top} b {bottom} r {right} l {left}")
-            if min(top,bottom) < 0 or max(top,bottom) > pixel_array.shape[1] or \
-                min(left, right) < 0 or max(left,right) > pixel_array.shape[2]:
+            # TODO: work out out-of-bounds properly
+            if max(abs(left),abs(right)) > pixel_array.shape[2] or \
+                 max(abs(top),abs(bottom)) > pixel_array.shape[1]:
                 averages.append([None] * pixel_array.shape[0])
                 continue
+            # if min(top,bottom) < 0 or max(top,bottom) > pixel_array.shape[1] or \
+            #     min(left, right) < 0 or max(left,right) > pixel_array.shape[2]:
+            #     averages.append([None] * pixel_array.shape[0])
+            #     continue
 
             # Pull out the rectangle described by the handles
             subarray = pixel_array[:,top:bottom,left:right]
 
+            # Mask out an ellipse
             def masked(in_array):
                 # Not an entirely accurate ellipse especially for small ones
                 ry, rx = map(lambda x: (x-1)/2.0,in_array.shape[1:3])
@@ -140,42 +146,30 @@ def timeseries_data(request, case, source_set):
                 v = in_array.view(np.ma.MaskedArray)
                 v.mask = mask
                 return v
-
-#             print(f"""P2
-# {subarray.shape[2]} {subarray.shape[1]}
-# {subarray[0].max()}
-# """+"\n".join(" ".join([str(k) for k in r]) for r in subarray[0]))
+            # show_array(subarray[0])
             subarray = subarray.astype('float32')
             values = summary_method(masked(subarray), (1,2)).flatten()
         elif annotation["tool"] == "Probe":
             # handle = handles_absolute[0][1:]
-            handle = handles_transformed[0][:idx]  + handles_transformed[0][idx+1:]
-            print(handle)
-            # print(f"Handle {handle}: {pixel_array[0,handle[0], handle[1]]}")
-
-            # if handle[1] < 0 or handle[1] > pixel_array.shape[2] or \
-            #     handle[0] < 0 or handle[0] > pixel_array.shape[1]:
-            #     averages.append([None] * pixel_array.shape[0])
-            #     continue
+            handle = handles_transformed[0]
+            # print(handle)
+            # TODO: actually detect being out of bounds
+            if abs(handle[1]) > pixel_array.shape[1] or \
+                 abs(handle[0]) > pixel_array.shape[2]:
+                averages.append([None] * pixel_array.shape[0])
+                continue
             
-            # test_array = pixel_array[0,handle[0]:handle[0]+75,handle[1]:handle[1]+75]
-#             print(f"""P2
-# 75 75
-# {test_array.max()}
-# """+"\n".join(" ".join([str(k) for k in r]) for r in test_array))
             try:
-                if len(pixel_array.shape) == 3:
-                    values = pixel_array[:,handle[1], handle[0]]
-                else:
-                    values = np.asarray([pixel_array[handle[1], handle[0]]])
+                values = pixel_array[:,handle[1], handle[0]]
                 values = values.astype('float32')
             except:
                 averages.append([None] * pixel_array.shape[0])
                 continue
         else:
-            print(annotation["tool"])
+            print("Unknown tool", annotation["tool"])
             averages.append([None] * pixel_array.shape[0])
             continue
+
         adj_mode = chart_options.get('adjust',None)
         if adj_mode == "zeroed":
             values = values - values[0]

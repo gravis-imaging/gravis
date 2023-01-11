@@ -271,7 +271,7 @@ class TestJob(WorkJobView):
         series_uids = { k.series_uid for k in instances }
         split_by_series = [ sorted([k for k in instances if k.series_uid == uid], key = lambda x:np.dot(z_axis,get_position(x))) for uid in series_uids ]
         files_by_series = [ [ Path(i.dicom_set.set_location) / i.instance_location for i in k] for k in sorted(split_by_series,key=lambda x:x[0].acquisition_seconds) ]
-        print(series_uids)
+
         random_name = str(uuid.uuid4())
         dicom_sets = []
         for v in ("AX", "COR", "SAG"):
