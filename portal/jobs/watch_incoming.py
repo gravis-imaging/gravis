@@ -16,7 +16,7 @@ import portal.jobs.docker_utils as docker_utils
 from portal.models import Case, ProcessingJob
 from common.generate_folder_name import generate_folder_name
 from common.constants import GravisNames, GravisFolderNames
-from .cine_generation import TestJob, do_job
+from .cine_generation import GeneratePreviewsJob, do_job
 
 import common.helper as helper
 
@@ -319,7 +319,7 @@ def trigger_queued_cases():
             job.save()
             result = django_rq.enqueue(
                 do_job,
-                args=(TestJob,job.id),
+                args=(GeneratePreviewsJob,job.id),
                 # job_timeout=60*60*4,
                 on_success=report_success,
                 on_failure=report_failure,
