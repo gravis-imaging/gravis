@@ -16,7 +16,7 @@ import portal.jobs.docker_utils as docker_utils
 from portal.models import Case, ProcessingJob
 from common.generate_folder_name import generate_folder_name
 from common.constants import GravisNames, GravisFolderNames
-from .cine_generation import TestJob, do_job
+from .cine_generation import GeneratePreviewsJob, do_job
 
 import common.helper as helper
 
@@ -351,6 +351,30 @@ def trigger_queued_cases():
         case.status = Case.CaseStatus.PROCESSING
         case.save()
         dicom_set = case.dicom_sets.get(origin="Incoming")
+        try:            
+            job = ProcessingJob(
+                status="CREATED", 
+                category="CINE", 
+                dicom_set=dicom_set,
+                case = case,
+                parameters={})
+            job.save()
+            result = django_rq.enqueue(
+                do_job,
+                args=(GeneratePreviewsJob,job.id),
+                # job_timeout=60*60*4,
+                on_success=report_success,
+                on_failure=report_failure,
+                ) 
+            job.rq_id = result.id
+            job.save()
+        except Exception as e:
+            case.status = Case.CaseStatus.ERROR
+            case.save()
+            logger.exception(
+                f"Exception creating a new cine generation processing job for {dicom_set.set_location} "
+            )
+            break
 
         try:
             
@@ -383,34 +407,6 @@ def trigger_queued_cases():
                 logger.exception(
                     f"Exception enqueueing a new processing job for {dicom_set.set_location} "
                 )
-
-        # try:            
-        #     job = ProcessingJob(
-        #         status="CREATED", 
-        #         category="CINE", 
-        #         dicom_set=dicom_set,
-        #         case = case,
-        #         parameters={})
-        #     job.save()
-        #     result = django_rq.enqueue(
-        #         do_job,
-        #         args=(TestJob,job.id),
-        #         # job_timeout=60*60*4,
-        #         on_success=report_success,
-        #         on_failure=report_failure,
-        #         ) 
-        #     job.rq_id = result.id
-        #     job.save()
-        # except Exception as e:
-        #     case.status = Case.CaseStatus.ERROR
-        #     case.save()
-        #     logger.exception(
-        #         f"Exception creating a new cine generation processing job for {dicom_set.set_location} "
-        #     )
-        #     break
-
-       
-
 
 
 def delete_cases():

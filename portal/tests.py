@@ -15,7 +15,6 @@ from pydicom.dataset import Dataset, FileMetaDataset
 
 from .models import *
 from .jobs import watch_incoming
-
 @pytest.fixture(autouse=True)
 def redis():
     django_rq.queues.get_redis_connection = FakeRedisConnSingleton()
@@ -40,6 +39,7 @@ def generate_ds(location):
     ds.NumberOfFrames = 1
     ds.StudyDate = ds.SeriesDate
     ds.StudyTime = ds.SeriesTime
+    ds.ImageType = [ "ORIGINAL", "PRIMARY" ]
     ds.StudyInstanceUID = pydicom.uid.generate_uid()
     ds.SeriesInstanceUID = pydicom.uid.generate_uid()
     ds.SOPInstanceUID = pydicom.uid.generate_uid()
@@ -47,6 +47,7 @@ def generate_ds(location):
     return ds
 
 def test_2(fs: FakeFilesystem):
+
     incoming = Path(settings.INCOMING_FOLDER) 
     cases = Path(settings.CASES_FOLDER) 
     fs.create_dir(incoming / "test" )
@@ -58,6 +59,7 @@ def test_2(fs: FakeFilesystem):
         "mrn": "12345",
         "acc": "00000",
         "case_type": "MRA",
+        "num_spokes": 10,
         "exam_time": "2022-01-01 01:01",
         "receive_time": "2022-01-01 01:01",
         "twix_id": "TWIXID",
@@ -88,4 +90,4 @@ def test_2(fs: FakeFilesystem):
     assert instance.dicom_set == set
 
     case = Case.objects.get()
-    assert set.case == case and set.processing_job == None
+    assert set.case == case and set.processing_job.category == "CopyDICOMSet" and set.processing_job.parameters["incoming_case"] == str(incoming / "test")
