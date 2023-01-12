@@ -294,14 +294,9 @@ def create_sub_previews(job, connection, result, *args, **kwargs):
         f"SUCCESS DOCKER job = {job}; result = {result}; connection = {connection}; args = {args}"
     )
 
-
-    logger.info(f"AAAAAAAAA {job.id}")
     processing_job = ProcessingJob.objects.get(rq_id=job.id)   
-    logger.info(f"BBBBBBBBBBBBBBBBB {processing_job.id}") 
     case = processing_job.case
-    logger.info(f"CCCCCCCCCCCCCC {case.id}")
     dicom_set_sub = case.dicom_sets.get(type="SUB")
-    logger.info(f"EEEEEEEEEEEEEEEEEEEEE {dicom_set_sub.id}")
 
     try:            
         job = ProcessingJob(
@@ -313,7 +308,7 @@ def create_sub_previews(job, connection, result, *args, **kwargs):
         job.save()
         result = django_rq.enqueue(
             do_job,
-            args=(TestJob,job.id),
+            args=(GeneratePreviewsJob,job.id),
             # job_timeout=60*60*4,
             on_success=report_success,
             on_failure=report_failure,
@@ -351,33 +346,8 @@ def trigger_queued_cases():
         case.status = Case.CaseStatus.PROCESSING
         case.save()
         dicom_set = case.dicom_sets.get(origin="Incoming")
+       
         try:            
-            job = ProcessingJob(
-                status="CREATED", 
-                category="CINE", 
-                dicom_set=dicom_set,
-                case = case,
-                parameters={})
-            job.save()
-            result = django_rq.enqueue(
-                do_job,
-                args=(GeneratePreviewsJob,job.id),
-                # job_timeout=60*60*4,
-                on_success=report_success,
-                on_failure=report_failure,
-                ) 
-            job.rq_id = result.id
-            job.save()
-        except Exception as e:
-            case.status = Case.CaseStatus.ERROR
-            case.save()
-            logger.exception(
-                f"Exception creating a new cine generation processing job for {dicom_set.set_location} "
-            )
-            break
-
-        try:
-            
             new_job = ProcessingJob(
                 docker_image="gravis-processing",
                 dicom_set=dicom_set,
@@ -407,6 +377,32 @@ def trigger_queued_cases():
                 logger.exception(
                     f"Exception enqueueing a new processing job for {dicom_set.set_location} "
                 )
+
+        try:            
+            job = ProcessingJob(
+                status="CREATED", 
+                category="CINE", 
+                dicom_set=dicom_set,
+                case = case,
+                parameters={})
+            job.save()
+            result = django_rq.enqueue(
+                do_job,
+                args=(GeneratePreviewsJob,job.id),
+                # job_timeout=60*60*4,
+                on_success=report_success,
+                on_failure=report_failure,
+                ) 
+            job.rq_id = result.id
+            job.save()
+        except Exception as e:
+            case.status = Case.CaseStatus.ERROR
+            case.save()
+            logger.exception(
+                f"Exception creating a new cine generation processing job for {dicom_set.set_location} "
+            )
+            
+
 
 
 def delete_cases():

@@ -100,10 +100,10 @@ class MRA:
             # it is expected to have a minimum intensity index in the [10:30] range.
             # if minimum intensity index is the last in the time series of [0: max_index_to_read]
             # # there might be a problem with the data.
-            # if min_intensity_value == len(beginning_times_volumes) - 1:
-            #     logger.exception("Error while calculating minimum intensity index.")
-            #     return self.__return_codes.INTENSITY_INDEX_SHOULD_BE_LESS_THAN_NUM_VOLUMES
-            self.__min_intensity_index = intensities.index(min_intensity_value) -2 
+            if min_intensity_value == len(beginning_times_volumes) - 1:
+                logger.exception("Error while calculating minimum intensity index.")
+                return self.__return_codes.INTENSITY_INDEX_SHOULD_BE_LESS_THAN_NUM_VOLUMES
+            self.__min_intensity_index = intensities.index(min_intensity_value) 
             # print("=====MEMORY USAGE AFTER CALCULATING MIN INTENSITY BEFORE CLEARING =====")
             # print('RAM total memory excluding swap (GB):', psutil.virtual_memory()[0]/1000000000)
             # print('RAM available memory (GB):', psutil.virtual_memory()[1]/1000000000)
