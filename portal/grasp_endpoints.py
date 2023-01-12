@@ -146,13 +146,11 @@ def timeseries_data(request, case, source_set):
     return JsonResponse(dict(data=numpy.asarray(averages).T.tolist()))
 
 @login_required
-def processed_results_urls(request, case, case_type, source_set=None):
+def processed_results_urls(request, case, case_type, source_set):
     fields = ["series_number", "slice_location", "acquisition_number"]
     case = Case.objects.get(id=int(case))
     slices_lookup = {k: request.GET.get(k) for k in fields if k in request.GET}
-    dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=case_type)
-    if source_set:
-        dicom_set = dicom_set.filter(processing_job__dicom_set=source_set)
+    dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=case_type, processing_job__dicom_set=source_set)
     instances = dicom_set.latest('processing_job__created_at').instances.filter(**slices_lookup).order_by("slice_location") # or "instance_number"
 
 

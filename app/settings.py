@@ -23,7 +23,8 @@ env = environ.Env(
     ERROR_FOLDER=(str, "/opt/gravis/data/error"),
     INCOMING_SCAN_INTERVAL=(int, 1),
     DB_BACKEND=(str, "postgres"),   
-    DB_USER=(str, "gravis")    
+    DB_USER=(str, "gravis"),
+    TEST_FOLDER_PATH = (str, "/tmp")    
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.

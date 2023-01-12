@@ -6,6 +6,7 @@ from pathlib import Path
 
 # Imports for loading, saving and manipulating DICOMs
 import SimpleITK as sitk
+import pydicom
 
 # import json
 import ast
@@ -98,11 +99,11 @@ class MRA:
             min_intensity_value = min(intensities)
             # it is expected to have a minimum intensity index in the [10:30] range.
             # if minimum intensity index is the last in the time series of [0: max_index_to_read]
-            # there might be a problem with the data.
-            if min_intensity_value == len(beginning_times_volumes) - 1:
-                logger.exception("Error while calculating minimum intensity index.")
-                return self.__return_codes.INTENSITY_INDEX_SHOULD_BE_LESS_THAN_NUM_VOLUMES
-            self.__min_intensity_index = intensities.index(min_intensity_value) 
+            # # there might be a problem with the data.
+            # if min_intensity_value == len(beginning_times_volumes) - 1:
+            #     logger.exception("Error while calculating minimum intensity index.")
+            #     return self.__return_codes.INTENSITY_INDEX_SHOULD_BE_LESS_THAN_NUM_VOLUMES
+            self.__min_intensity_index = intensities.index(min_intensity_value) -2 
             # print("=====MEMORY USAGE AFTER CALCULATING MIN INTENSITY BEFORE CLEARING =====")
             # print('RAM total memory excluding swap (GB):', psutil.virtual_memory()[0]/1000000000)
             # print('RAM available memory (GB):', psutil.virtual_memory()[1]/1000000000)
@@ -125,6 +126,24 @@ class MRA:
         # Read the data, beginning from __min_intensity_index + 1, one time point at a time.
         # Calculate subtractions, and then MIPs for this time point. 
         try:               
+
+            for acquisition_number in sorted(self.__d_files)[0:self.__min_intensity_index + 1]:
+                ret_value, image = self.__load_grasp_files(acquisition_number)
+                if ret_value != self.__return_codes.NO_ERRORS:
+                    return ret_value
+
+                ret_value, subtracted_image = self.__subtract_images(image, image)
+                if ret_value != self.__return_codes.NO_ERRORS:
+                    return ret_value
+
+                ret_value = self.__save_processed_images(
+                    acquisition_number,
+                    "sub",
+                    self.__output_dir_name_sub,
+                    subtracted_image,
+                )
+                if ret_value != self.__return_codes.NO_ERRORS:
+                    return ret_value
 
             ret_value, base_image = self.__load_grasp_files(self.__min_intensity_index)
             if ret_value != self.__return_codes.NO_ERRORS:
@@ -352,17 +371,11 @@ class MRA:
           
             series_tag_values = self.__tags_to_save_dict[acquisition_number]
 
-            modification_date = time.strftime("%Y%m%d")
-            modification_time = time.strftime("%H%M%S")
+            # modification_date = time.strftime("%Y%m%d")
+            # modification_time = time.strftime("%H%M%S")
            
             if type == "sub":
-                seriesID = (
-                    "1.2.276.0.7230010.3.1.3."
-                    + modification_date
-                    + ".1"
-                    + modification_time
-                    + f".{acquisition_number:03d}"
-                )
+                seriesID = pydicom.uid.generate_uid()
                 for i in range(images.GetDepth()):
                     image_slice = images[:, :, i]
                     image_slice = sitk.Cast(image_slice, sitk.sitkInt16)
@@ -410,13 +423,7 @@ class MRA:
                     writer.Execute(image_slice)
                     i += 1
             else:
-                seriesID = (
-                    "1.2.276.0.7230010.3.1.3."
-                    + modification_date
-                    + ".2"
-                    + modification_time
-                    + f".{acquisition_number:03d}"
-                )
+                seriesID = pydicom.uid.generate_uid()
                 # Different angles
                 i = 0
                 for image_slice in images:
