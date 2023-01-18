@@ -83,7 +83,10 @@ def index(request):
             }
         )
 
-    context = {"data": data}
+    context = {
+        "data": data,
+        "cases": Case.objects.filter(status = Case.CaseStatus.VIEWING)
+    }
     return render(request, "index.html", context)
 
 

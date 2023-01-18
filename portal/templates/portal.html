@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load portaltags %}
 
 {% block body %}
 
@@ -32,12 +33,15 @@
                         <i class="fas fa-images"></i>&nbsp;&nbsp;Viewing
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                          {% for item in cases %}
+                          {% for item in cases %}                         
                           <li>
+                            {% if request.resolver_match.url_name == "viewer" %}
+                                {% url_case_id request.get_full_path item.id as id %}
+                            {% endif %}
                             {% if item.num_spokes == "" %}
-                                <a class="dropdown-item" href="/viewer/{{ item.id }}">{{ item.patient_name }}</a>
+                                <a class="dropdown-item {% if request.resolver_match.url_name == "viewer" and id == item.id %}active{% endif %}" href="/viewer/{{ item.id }}">{{ item.patient_name }} id: {{item.id}}</a>
                             {% else %}
-                                <a class="dropdown-item" href="/viewer/{{ item.id }}">{{ item.patient_name }} ({{ item.num_spokes}} spokes)</a>
+                                <a class="dropdown-item {% if request.resolver_match.url_name == "viewer" and id == item.id %}active{% endif %}" href="/viewer/{{ item.id }}">{{ item.patient_name }} ({{ item.num_spokes}} spokes) id: {{item.id}}</a>
                             {% endif %}
                           </li>  
                           {% endfor %}                        
