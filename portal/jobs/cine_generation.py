@@ -215,14 +215,18 @@ class GeneratePreviewsJob(WorkJobView):
         volume = None
         prototype_ds = None
         undersample = 1
-        # num_series = len(files_by_series) 
-        # if num_series > 20:
-        #     if num_series % 20 == 0:
-        #         undersample = 20
-        #     elif num_series % 10 == 0:
-        #         undersample = 10
-        #     elif num_series % 5 == 0:
-        #         undersample = 5
+        num_series = len(files_by_series) 
+
+        if job.parameters.get("undersample",None) == True:
+            if num_series > 20:
+                if num_series % 20 == 0:
+                    undersample = 20
+                elif num_series % 10 == 0:
+                    undersample = 10
+                elif num_series % 5 == 0:
+                    undersample = 5
+        elif job.parameters.get("undersample", None):
+            undersample = job.parameters["undersample"]
         for i, files in enumerate(files_by_series[::undersample]):
             for j, file in enumerate(files):
                 dcm = pydicom.dcmread(file)

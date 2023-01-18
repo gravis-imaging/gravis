@@ -23,6 +23,8 @@ def do_docker_job(job_id):
         logger.exception(f"ProcessingJob with id {job_id} does not exist.")
         return False
 
+    input_folder = job.case.case_location + "/input/"
+
     try:
         docker_client = docker.from_env()
 
@@ -30,7 +32,6 @@ def do_docker_job(job_id):
         job.save()
         docker_tag = job.docker_image
 
-        input_folder = job.case.case_location + "/input/"
         # Volume for subtracted slices
         output_folder = job.case.case_location + "/processed/" + str(uuid4())
 

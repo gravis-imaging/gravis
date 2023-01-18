@@ -54,8 +54,8 @@ on htmx:afterRequest
     <div id="chart" style="background-color: black; color: white;"></div>
     <template x-if="viewer">
       <div>
-        <select x-model="viewer.chart_options['adjust']" @change="viewer.updateChart()"><option value="normal" autocomplete="off" selected>normal</option><option value="zeroed">zeroed</option><option value="normalized">normalized</option></select>
-        <select x-model="viewer.chart_options['mode']" @change="viewer.updateChart()"><option value="mean" autocomplete="off" selected>mean</option><option value="median">median</option><option value="ptp">ptp</option></select>
+        <select x-model="viewer.chart_options['adjust']" @change="viewer.annotation_manager.updateChart()"><option value="normal" autocomplete="off" selected>normal</option><option value="zeroed">zeroed</option><option value="normalized">normalized</option></select>
+        <select x-model="viewer.chart_options['mode']" @change="viewer.annotation_manager.updateChart()"><option value="mean" autocomplete="off" selected>mean</option><option value="median">median</option><option value="ptp">ptp</option></select>
       </div>
     </template>
   </div>

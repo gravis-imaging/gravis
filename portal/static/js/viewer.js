@@ -122,11 +122,11 @@ class GraspViewer {
         console.info("Saving state.")
         const state = this.getState()
         if (state)
-            localStorage.setItem(this.case_id, JSON.stringify(state));
+            localStorage.setItem(this.dicom_set, JSON.stringify(state));
     }
     loadState() {
         var state;
-        state = JSON.parse(localStorage.getItem(this.case_id));
+        state = JSON.parse(localStorage.getItem(this.dicom_set));
         if (!state) {
             return;
         }
@@ -184,7 +184,7 @@ class GraspViewer {
             const renderingEngineId = 'gravisRenderEngine';
             this.renderingEngine = new RenderingEngine(renderingEngineId);    
     
-            const { ORIENTATION } = cornerstone.CONSTANTS;
+            const ORIENTATION = cornerstone.CONSTANTS.MPR_CAMERA_VALUES;
     
             const preview_info = [["AX"],["SAG"],["COR"]]
             const [ previewViewports, previewViewportIds ] = this.createViewports("PREVIEW",preview_info, preview)
@@ -193,7 +193,7 @@ class GraspViewer {
                                 sliceNormal: [ 0, -1, 0 ],
                                 viewUp: [ 0, 0, 1 ]
             }],*/
-            const view_info = [["AX",ORIENTATION.AXIAL],["SAG",ORIENTATION.SAGITTAL],["COR",ORIENTATION.CORONAL],["CINE"]]
+            const view_info = [["AX",ORIENTATION.axial],["SAG",ORIENTATION.sagittal],["COR",ORIENTATION.coronal],["CINE"]]
             const [ viewViewports, viewportIds ] = this.createViewports("VIEW", view_info, main)
             this.renderingEngine.setViewports([...previewViewports, ...viewViewports])
     
@@ -491,12 +491,27 @@ class GraspViewer {
         var graspVolumeInfo = await (await fetch(`/api/case/${case_id}/dicom_set/${dicom_set}/study/${study_uid}/metadata`, {
             method: 'GET',   credentials: 'same-origin'
         })).json()
-        this.selected_time = graspVolumeInfo[0].acquisition_seconds
+
         document.getElementById("volume-picker").setAttribute("min",0)
         document.getElementById("volume-picker").setAttribute("max",graspVolumeInfo.length-1)
-        document.getElementById("volume-picker").setAttribute("value",0)
 
-        await this.setVolumeBySeries(graspVolumeInfo[0]["series_uid"]),
+        let selected_index = 0
+        console.log(`Selected time: ${this.selected_time}`)
+        if ( this.selected_time ) {
+            for (const [index, info] of graspVolumeInfo.entries()) { 
+                if ( Math.abs(info.selected_time - this.selected_time) < 0.001 ) {
+                    selected_index = index;
+                    this.selected_time = info.selected_time;
+                    break;
+                }
+            }
+        }
+        console.log(`Loading index ${selected_index}`)
+        console.log(graspVolumeInfo)
+        await this.setVolumeBySeries(graspVolumeInfo[selected_index]["series_uid"])
+        document.getElementById("volume-picker").setAttribute("value",selected_index)
+
+
         this.volume.load(()=>{ 
             console.log("Volume loaded");
             this.loadState();

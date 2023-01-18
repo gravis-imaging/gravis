@@ -64,8 +64,9 @@ def timeseries_data(request, case, source_set):
 
     acquisition_seconds = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set=source_set).values("acquisition_seconds").distinct("acquisition_seconds")
     acquisition_timepoints = sorted(list((k['acquisition_seconds'] for k in acquisition_seconds)))
+    ax_preview_set =  DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/AX",processing_job__dicom_set=source_set).latest('processing_job__created_at')
 
-    ax_instances = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/AX").latest('processing_job__created_at').instances
+    ax_instances = ax_preview_set.instances
     example_instance = ax_instances.first()
     metadata = json.loads(example_instance.json_metadata)
     im_orientation_patient = np.asarray(metadata["00200037"]["Value"]).reshape((2,3))
@@ -77,7 +78,7 @@ def timeseries_data(request, case, source_set):
     for i, annotation in enumerate(data['annotations']):
         idx = np.abs(annotation['normal']).argmax()
         orientation = ['SAG','COR','AX'][idx]
-        dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/{orientation}").latest('processing_job__created_at')
+        dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/{orientation}",processing_job__dicom_set=source_set).latest('processing_job__created_at')
         instances = dicom_set.instances
         example_instance = instances.first()
         handles_transformed = [ (np.linalg.inv(im_orientation_mat) @ handle_location).tolist() for handle_location in annotation["handles_indexes"] ]

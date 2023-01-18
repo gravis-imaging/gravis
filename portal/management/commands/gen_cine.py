@@ -26,7 +26,7 @@ class Command(BaseCommand):
                 category="CINE", 
                 dicom_set=dicom_set,
                 case = case,
-                parameters={})
+                parameters={"undersample":4})
             job.save()
             result = django_rq.enqueue(
                 do_job,
@@ -34,3 +34,21 @@ class Command(BaseCommand):
                 ) 
             job.rq_id = result.id
             job.save()
+            print("ORI processing job",job.id)
+
+
+            dicom_set_2 = case.dicom_sets.get(type="SUB")
+            job_2 = ProcessingJob(
+                status="CREATED", 
+                category="CINE", 
+                dicom_set=dicom_set_2,
+                case = case,
+                parameters={"undersample":4})
+            job_2.save()
+            result = django_rq.enqueue(
+                do_job,
+                args=(GeneratePreviewsJob,job_2.id),
+                ) 
+            job_2.rq_id = result.id
+            job_2.save()
+            print("SUB processing job",job_2.id)
