@@ -242,6 +242,7 @@ class GraspViewer {
         }
         return [viewportGrid, elements];
     }
+    
     createViewports( prefix, list, parent, background = [0,0,0] ) {
         const [viewportGrid, viewportElements] = this.createViewportGrid(4)
         parent.appendChild(viewportGrid);
