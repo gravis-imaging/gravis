@@ -1,4 +1,5 @@
 import { AnnotationManager } from "./annotations.js"
+import { StateManager } from "./state.js"
 import { doJob } from "./utils.js"
 
 const SOP_INSTANCE_UID = '00080018';
@@ -104,77 +105,7 @@ class GraspViewer {
             return this;
           })();   
          }
-    
-    getState() {
-        if (!this.viewports[0].getDefaultActor()) {
-            return;
-        }
-        const cameras = this.viewports.map(v=>v.getCamera());
-        const voi = this.getVolumeVOI(this.viewports[0]);
-        const annotations = this.annotation_manager.getAllAnnotations();
-        for (let a of annotations) {
-            a.data.cachedStats = {}
-        }
-        return { cameras, voi, annotations };
-    }
-    saveState() {
-        if (!this.case_id) return;
-        console.info("Saving state.")
-        const state = this.getState()
-        if (state)
-            localStorage.setItem(this.dicom_set, JSON.stringify(state));
-    }
-    loadState() {
-        var state;
-        state = JSON.parse(localStorage.getItem(this.dicom_set));
-        if (!state) {
-            return;
-        }
-        console.info("Loading state");
-        state.cameras.map((c,n)=> {
-            this.viewports[n].setCamera(c);
-        })
-        if ( state.voi ) {
-            const [ lower, upper ] = state.voi;
-            this.viewports[0].setProperties( { voiRange: {lower,upper}})
-        }
-        if ( state.annotations ) {
-            const annotationState = cornerstone.tools.annotation.state;
-            let old_annotations = []
-            for (let v of this.viewports.slice(0,3)) {
-                old_annotations = this.annotation_manager.getAllAnnotations(v);
-                if (!old_annotations) continue;
-                for (let a of old_annotations) {
-                    annotationState.removeAnnotation(a.annotationUID, v.element)
-                }
-            }
-            for (var a of Object.keys(this.annotation_manager.annotations)) {
-                delete this.annotation_manager.annotations[a];
-            }
-            for (var a of state.annotations) {
-                this.annotation_manager.annotations[a.annotationUID] = { uid: a.annotationUID, label: a.data.label, ...a.metadata }
-                annotationState.addAnnotation(this.viewports[0].element,a)
-            }
-        }
-        this.renderingEngine.renderViewports(this.viewportIds);
-        console.log(state);
-    }
-
-    backgroundSaveState(){ 
-        const saveStateSoon = () => {
-            requestIdleCallback(this.saveState.bind(this));
-        }
-        document.addEventListener('visibilitychange', ((event) => { 
-            if (document.visibilityState === 'hidden') {
-                this.saveState();
-            } else if (document.visibilityState === 'visible') {
-                this.loadState();
-            }
-        }).bind(this));
-        return setInterval(saveStateSoon.bind(this), 1000);
-    }
-
-    async initialize( main, preview ) {
+        async initialize( main, preview ) {
             const { RenderingEngine, Types, Enums, volumeLoader, CONSTANTS, setVolumesForViewports} = window.cornerstone; 
             const { ViewportType } = Enums;
             // Force cornerstone to try to use GPU rendering even if it thinks the GPU is weak.
@@ -203,6 +134,8 @@ class GraspViewer {
             this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c))
 
             this.annotation_manager = new AnnotationManager(this)
+            this.state_manager = new StateManager(this)
+
             cornerstone.tools.synchronizers.createVOISynchronizer("SYNC_CAMERAS");
             this.createTools();
             this.renderingEngine.renderViewports([...this.viewportIds, ...this.previewViewports]);
@@ -481,9 +414,8 @@ class GraspViewer {
         var [study_uid, dicom_set] = info;
 
         if (this.study_uid) {
-            if (this.background_save_interval) 
-                clearInterval(this.background_save_interval)
-            this.saveState();
+            this.state_manager.stopBackgroundSave();
+            this.state_manager.save();
         }
         this.study_uid = study_uid;
         this.dicom_set = dicom_set;
@@ -515,10 +447,8 @@ class GraspViewer {
 
         this.volume.load(()=>{ 
             console.log("Volume loaded");
-            this.loadState();
-            if ( !this.background_save_interval ) {
-                this.background_save_interval = this.backgroundSaveState()
-            }
+            this.state_manager.load();
+            this.state_manager.startBackgroundSave();
         })
         try {
             await this.updatePreview()
