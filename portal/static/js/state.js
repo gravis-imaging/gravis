@@ -1,7 +1,8 @@
 class StateManager {
     viewer;
     background_save_interval;
-
+    current_state;
+    
     constructor( viewer ) {
         this.viewer = viewer;
     }
@@ -11,31 +12,24 @@ class StateManager {
             return;
         }
         const cameras = this.viewer.viewports.map(v=>v.getCamera());
-        const voi = this.viewer.getVolumeVOI(this.viewer.viewports[0]);
+        const dicom_set_voi = this.viewer.getVolumeVOI(this.viewer.viewports[0]);
         const annotations = this.viewer.annotation_manager.getAllAnnotations();
         for (let a of annotations) {
             a.data.cachedStats = {}
         }
+
+        var voi = {[this.viewer.dicom_set]: dicom_set_voi};
+        if ( this.current_state && this.current_state.voi ) {
+            voi = { ...this.current_state.voi, [this.viewer.dicom_set]: dicom_set_voi}
+        } 
         return { cameras, voi, annotations };
     }
-    save() {
-        if (!this.viewer.case_id) return;
-        console.info("Saving state.")
-        const state = this._calcState()
-        if (state)
-            localStorage.setItem(this.viewer.dicom_set, JSON.stringify(state));
-    }
-    load() {
-        var state = JSON.parse(localStorage.getItem(this.viewer.dicom_set));
-        if (!state) {
-            return;
-        }
-        console.info("Loading state");
+    _applyState(state) {
         state.cameras.map((c,n)=> {
             this.viewer.viewports[n].setCamera(c);
         })
-        if ( state.voi ) {
-            const [ lower, upper ] = state.voi;
+        if ( state.voi && state.voi[this.viewer.dicom_set]) {
+            const [ lower, upper ] = state.voi[this.viewer.dicom_set];
             this.viewer.viewports[0].setProperties( { voiRange: {lower,upper}})
         }
         if ( state.annotations ) {
@@ -56,6 +50,25 @@ class StateManager {
                 annotationState.addAnnotation(this.viewer.viewports[0].element,a)
             }
         }
+        this.current_state = state;
+    }
+    save() {
+        if (!this.viewer.case_id) return;
+        console.info("Saving state.")
+        const state = this._calcState()
+        if (state) {
+            localStorage.setItem(this.viewer.case_id, JSON.stringify(state));
+            this.current_state = state;
+        }
+    }
+    load() {
+        if (!this.viewer.case_id) return;
+        var state = JSON.parse(localStorage.getItem(this.viewer.case_id));
+        if (!state) {
+            return;
+        }
+        console.info("Loading state");
+        this._applyState(state);
         this.viewer.renderingEngine.renderViewports(this.viewer.viewportIds);
     }
 

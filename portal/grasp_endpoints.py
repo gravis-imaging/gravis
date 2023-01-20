@@ -122,7 +122,7 @@ def timeseries_data(request, case, source_set):
         pixel_array = ds.pixel_array
         if len(pixel_array.shape) == 2:
             pixel_array = pixel_array[np.newaxis,:,:]
-        if annotation["tool"] == "GravisROI":
+        if annotation["tool"] == "EllipticalROI":
             [[_, top ], [_, bottom], [left, _], [right,_ ]] = handles_transformed
 
             # TODO: work out out-of-bounds properly
