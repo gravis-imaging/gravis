@@ -52,10 +52,10 @@ async function cacheMetadata(
     let imageIds = []
     for (var instanceMetaData of metadata) {
         let imageId = getImageId(instanceMetaData, wadoRsRoot);
-        cornerstone.cornerstoneWADOImageLoader.wadors.metaDataManager.add(
-          imageId,
-          instanceMetaData
-        );
+        // cornerstone.cornerstoneWADOImageLoader.wadors.metaDataManager.add(
+        //   imageId,
+        //   instanceMetaData
+        // );
         imageIds.push(imageId);
     }
     return { imageIds, metadata };
