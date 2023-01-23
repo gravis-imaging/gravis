@@ -204,6 +204,12 @@ class AnnotationManager {
             },
             
         );
+        const resizeObserver = new ResizeObserver(() => {
+            g.resize(1,300);
+            g.resize(viewer.chart.maindiv_.parentElement.offsetWidth,300)    // viewer.chart.resize(viewer.chart.maindiv_.parentElement.offsetWidth,500)    
+        });
+        resizeObserver.observe(g.maindiv_.parentElement.parentElement);
+    
         return g;
     }
 }

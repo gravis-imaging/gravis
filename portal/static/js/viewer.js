@@ -194,9 +194,6 @@ class GraspViewer {
     createViewports( prefix, list, parent, background = [0,0,0] ) {
         const [viewportGrid, viewportElements] = this.createViewportGrid(4)
         parent.appendChild(viewportGrid);
-
-        // element.classList.add("grid-fill")
-        // parent.appendChild(element);    
         var viewportInput = list.map(([viewportId, orientation],n) => {
             return {
                 viewportId: prefix + "_" + viewportId,
@@ -522,6 +519,7 @@ class GraspViewer {
 
 window.onload = async function() {
     window.addEventListener( "error", ( error ) => {
+        if (error.message.indexOf("ResizeObserver") != -1) { return;}
         alert(`Unexpected error! \n\n ${error.message}`)
     })
 }

@@ -28,35 +28,44 @@ on htmx:afterRequest
 
 
 {% block content %}
-<div style="height:calc(100vh - 6rem); display:grid; grid-template-rows: 0fr 0fr 1fr; grid-template-columns: min-content;" 
+<div style='height:calc(100vh - 6rem); display:grid; grid-template-rows: 0fr 0fr 1fr; grid-template-columns: 0fr 1fr; gap: 0.5em; grid-template-areas: 
+  "a b"
+  "c d"
+  "e d";'
   x-data="{ viewer: null, n_annotations: 0, previewing: false, switching: false, current_study: null, index: 0, loading: false, job_loading: null, case_id: {{case.id}} }" >
-  <div style="grid-area: 1 / 1 / span 1 / span 4;">
-    <div class="row mb-1" > 
-      <div class="col" >
-        <h5><i class="fas fa-angle-double-right text-primary text-primary"></i>&nbsp;&nbsp;Viewing: 
-          {% if case.num_spokes == "" %}
-            {{ case.patient_name }}
-          {% else %}
-            {{ case.patient_name }} ({{ case.num_spokes}} spokes)
-          {% endif %}
-        </h5>
-      </div>
-      <div class="col">
-        <div class="select-wrapper">
-          <select id="studies" name="studies" autocomplete="off" class="form-control" value="" :disabled="viewer == null" 
-          @change="loading=true; await $nextTick(); current_study = await viewer.switchStudy($event.target.value.split(':::'), case_id);  loading=false;">
-            <option value="" selected disabled hidden>Select study...</option>
-            {% for i in studies %}
-            <option value="{{i.0}}:::{{i.1}}">{{ i.2 }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-    </div>
+
+  <div>        
+    <h5><i class="fas fa-angle-double-right text-primary text-primary"></i>&nbsp;&nbsp;Viewing: 
+    {% if case.num_spokes == "" %}
+      {{ case.patient_name }}
+    {% else %}
+      {{ case.patient_name }} ({{ case.num_spokes}} spokes)
+    {% endif %}
+  </h5>
+  </div>
+  <div class="select-wrapper">
+    <select id="studies" name="studies" autocomplete="off" class="form-control" value="" :disabled="viewer == null" 
+    @change="loading=true; await $nextTick(); current_study = await viewer.switchStudy($event.target.value.split(':::'), case_id);  loading=false;">
+      <option value="" selected disabled hidden>Select study...</option>
+      {% for i in studies %}
+      <option value="{{i.0}}:::{{i.1}}">{{ i.2 }}</option>
+      {% endfor %}
+    </select>
   </div>
   
+  <div style="grid-area: c"> 
+    <div style="display: flex;">
+      <input id='volume-picker' type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
+      @mouseUp="previewing = false"
+      @input="if (!previewing) { viewer.startPreview(); previewing = true; }; index = $event.target.value; viewer.selected_time=current_study[index].acquisition_seconds; viewer.setPreview(index,current_study.length);"
+      @change="switching = true; viewer.selected_time=current_study[index].acquisition_seconds; await viewer.switchSeries(current_study[index].series_uid); current_time=viewer.selected_time; switching = false;"
+      :disabled="!current_study || !!loading">
+      </input>
+      <label for='volume-picker' x-text="viewer && viewer.selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>
+    </div>
+  </div>
 
-  <div x-cloak id="grasp-view-outer" class="grid-container h-100" style="max-width: calc(100vh - 6rem); grid-area: 2 / 1 / span 2 / span 3;" >
+  <div x-cloak id="grasp-view-outer" class="grid-container h-100" style="width: calc(100vh - 6rem); grid-area: e" >
     <div x-show="loading" style="z-index:10;" class="pointer-events-none grid-fill">
       <div style="display: flex;justify-content: center;align-items: center; height:100%">Loading...</div>
     </div>
@@ -109,37 +118,26 @@ on htmx:afterRequest
       </div>
     </div> 
     
-    <div> 
-      <div style="display: flex;">
-        <input id='volume-picker' type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
-        @mouseUp="previewing = false"
-        @input="if (!previewing) { viewer.startPreview(); previewing = true; }; index = $event.target.value; viewer.selected_time=current_study[index].acquisition_seconds; viewer.setPreview(index,current_study.length);"
-        @change="switching = true; viewer.selected_time=current_study[index].acquisition_seconds; await viewer.switchSeries(current_study[index].series_uid); current_time=viewer.selected_time; switching = false;"
-        :disabled="!current_study || !!loading">
-        </input>
-        <label for='volume-picker' x-text="viewer && viewer.selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>
-      </div>
-    </div>
   </div>
   
-  <div>
-    <div id="chart" style="background-color: black; color: white;"></div>
+  <div style="grid-area: d">
     <template x-if="viewer">
-      <div>
+      <div style="text-align:right;">
         <select x-model="viewer.chart_options['adjust']" @change="viewer.annotation_manager.updateChart()"><option value="normal" autocomplete="off" selected>normal</option><option value="zeroed">zeroed</option><option value="normalized">normalized</option></select>
         <select x-model="viewer.chart_options['mode']" @change="viewer.annotation_manager.updateChart()"><option value="mean" autocomplete="off" selected>mean</option><option value="median">median</option><option value="ptp">ptp</option></select>
       </div>
     </template>
+    <div id="chart" class="mt-2" style="background-color: black; color: white;"></div>
+    <div id="annotations" class = "mt-2" style="overflow-y: hidden; display: flex; flex-direction: column; flex-wrap: wrap;">
+      <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
+        <div x-show="!!viewer.annotation_manager.annotations[uid]">
+          <div x-text="viewer.annotation_manager.annotations[uid] ? viewer.annotation_manager.annotations[uid].label : 'Error'"></div>
+          <button class="btn-primary btn-large m-2" @click="await viewer.annotation_manager.deleteAnnotation(uid);">Delete</button>
+          <button class="btn-primary btn-large m-2" @click="await viewer.annotation_manager.goToAnnotation(uid);">Jump</button>
+        </div>
+      </template>  
+    </div>    
   </div>
-  <div id="annotations" style="overflow-y: hidden; display: flex; flex-direction: column; flex-wrap: wrap;">
-    <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
-      <div x-show="!!viewer.annotation_manager.annotations[uid]">
-        <div x-text="viewer.annotation_manager.annotations[uid] ? viewer.annotation_manager.annotations[uid].label : 'Error'"></div>
-        <button class="btn-primary btn-large m-2" @click="await viewer.annotation_manager.deleteAnnotation(uid);">Delete</button>
-        <button class="btn-primary btn-large m-2" @click="await viewer.annotation_manager.goToAnnotation(uid);">Jump</button>
-      </div>
-    </template>  
-  </div>  
 
 
 </div>
