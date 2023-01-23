@@ -92,13 +92,17 @@ def index(request):
 
 @login_required
 def user(request):
-    context = {}
+    context = {
+        "cases": Case.objects.filter(status = Case.CaseStatus.VIEWING)
+    }
     return render(request, "user.html", context)
 
 
 @login_required
 def config(request):
-    context = {}
+    context = {
+        "cases": Case.objects.filter(status = Case.CaseStatus.VIEWING)
+    }
     return render(request, "config.html", context)
 
 

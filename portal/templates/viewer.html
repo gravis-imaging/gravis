@@ -10,8 +10,6 @@
 {% endblock %}
 
 
-
-
 {% comment %} <form method="post" hx-post="/wado/populate-instances" _="
 def swap(attr1, attr2)
     add .{attr1}
@@ -28,6 +26,11 @@ on htmx:afterRequest
 
 
 {% block content %}
+{{ studies|json_script:"studies_data" }}
+<script type="text/javascript">
+  const studies_data_parsed = JSON.parse(document.getElementById('studies_data').textContent);    
+</script>
+
 <div style='height:calc(100vh - 6rem); display:grid; grid-template-rows: 0fr 0fr 1fr; grid-template-columns: 1fr 1fr 0.5fr; gap: 0.5em; grid-template-areas: 
   "a b g"
   "c c g"
@@ -35,19 +38,10 @@ on htmx:afterRequest
   "d f g";'
   x-data="{ viewer: null, n_annotations: 0, previewing: false, switching: false, current_study: null, index: 0, loading: false, job_loading: null, case_id: {{case.id}} }" >
 
-  <div>        
-    <h5><i class="fas fa-angle-double-right text-primary text-primary"></i>&nbsp;&nbsp;Viewing: 
-    {% if case.num_spokes == "" %}
-      {{ case.patient_name }}
-    {% else %}
-      {{ case.patient_name }} ({{ case.num_spokes}} spokes)
-    {% endif %}
-  </h5>
-  </div>
   <div class="select-wrapper">
     <select id="studies" name="studies" autocomplete="off" class="form-control" value="" :disabled="viewer == null" 
     @change="loading=true; await $nextTick(); current_study = await viewer.switchStudy($event.target.value.split(':::'), case_id);  loading=false;">
-      <option value="" selected disabled hidden>Select study...</option>
+      <!-- <option value="" selected disabled hidden>Select study...</option> -->
       {% for i in studies %}
       <option value="{{i.0}}:::{{i.1}}">{{ i.2 }}</option>
       {% endfor %}
@@ -70,7 +64,8 @@ on htmx:afterRequest
     <div x-show="loading" style="z-index:10;" class="pointer-events-none grid-fill">
       <div style="display: flex;justify-content: center;align-items: center; height:100%">Loading...</div>
     </div>
-    <div x-init="await $nextTick(); viewer = await new GraspViewer($refs.viewer_main, $refs.viewer_preview ); window.viewer = viewer" class="grid-fill grid-container h-100">
+    <div x-init="await $nextTick(); viewer = await new GraspViewer($refs.viewer_main, $refs.viewer_preview ); window.viewer = viewer; 
+    current_study = await viewer.switchStudy([studies_data_parsed[0][0], studies_data_parsed[0][1]], case_id);" class="grid-fill grid-container h-100">
       <div x-ref="viewer_preview" class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 1 : 0 }"></div>
       <div x-ref="viewer_main"  class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 0 : 1 }"></div>
     </div>

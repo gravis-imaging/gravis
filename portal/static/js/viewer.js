@@ -439,7 +439,7 @@ class GraspViewer {
         });
     }
     async switchStudy(info, case_id, keepCamera=true) {
-        var [study_uid, dicom_set] = info;
+        const [study_uid, dicom_set] = info;
 
         if (this.study_uid) {
             this.state_manager.stopBackgroundSave();
@@ -449,7 +449,7 @@ class GraspViewer {
         this.dicom_set = dicom_set;
         this.case_id = case_id
 
-        var graspVolumeInfo = await (await fetch(`/api/case/${case_id}/dicom_set/${dicom_set}/study/${study_uid}/metadata`, {
+        const graspVolumeInfo = await (await fetch(`/api/case/${case_id}/dicom_set/${dicom_set}/study/${study_uid}/metadata`, {
             method: 'GET',   credentials: 'same-origin'
         })).json()
 

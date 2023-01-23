@@ -186,8 +186,8 @@
                     action: function (e, dt, node, config) {
                         const row = case_data_table.row( {selected: true});
                         const case_id = row.data()[0];
-                        const d = JSON.parse(document.getElementById('cases_data').textContent)                         
-                        const c = d.filter((el) => el.case_id === case_id)[0]    
+                        const d = JSON.parse(document.getElementById('cases_data').textContent);                         
+                        const c = d.filter((el) => el.case_id === case_id)[0];    
                         document.getElementById("case_details_patient_name").innerText = c.patient_name;
                         document.getElementById("case_details_mrn").innerText = c.mrn;
                         document.getElementById("case_details_acc").innerText = c.acc;
@@ -202,9 +202,9 @@
                         document.getElementById("case_details_last_read_by_id").innerText = c.last_read_by_id;
                         document.getElementById("case_details_settings").innerText = JSON.stringify(c.settings, null, 4);
                         
-                        const myModalEl = document.getElementById('modal')
-                        const modal = new mdb.Modal(myModalEl)
-                        modal.show()
+                        const myModalEl = document.getElementById('modal');
+                        const modal = new mdb.Modal(myModalEl);
+                        modal.show();
                     }
                 },
                 {% if user.is_staff %}
