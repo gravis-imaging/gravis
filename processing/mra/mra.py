@@ -246,6 +246,7 @@ class MRA:
                 ("0020|0012", f"{acquisition_number:04d}"),  # Acquisition Number
                 ("0020|0037", '\\'.join(map(str, (direction[0], direction[3], direction[6], # Image Orientation (Patient)
                                                     direction[1], direction[4], direction[7])))),
+                ("0020|0052", series_reader.GetMetaData(0, "0020|0052")),  # Frame of Reference UID                
             ]
             self.__tags_to_save_dict[acquisition_number] = series_tag_values
             image = sitk.Cast(image, sitk.sitkFloat32)
