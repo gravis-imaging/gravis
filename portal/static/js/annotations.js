@@ -8,7 +8,7 @@ class AnnotationManager {
         this.viewer = viewer;
     }
     getAllAnnotations(viewport) {
-        return ["GravisROI","Probe"].flatMap(
+        return ["EllipticalROI","Probe"].flatMap(
             type => cornerstone.tools.annotation.state.getAnnotations((viewport || this.viewer.viewports[0]).element,type) || []
         );
     }
@@ -99,7 +99,7 @@ class AnnotationManager {
     getSelectedFilteredAnnotations() {
         let annotation_uids = cornerstone.tools.annotation.selection.getAnnotationsSelected() || []
         let annotations = annotation_uids.map(cornerstone.tools.annotation.state.getAnnotation)
-        return annotations.filter(x=> x && ["GravisROI", "Probe"].indexOf(x.metadata.toolName)>-1)
+        return annotations.filter(x=> x && ["EllipticalROI", "Probe"].indexOf(x.metadata.toolName)>-1)
     }
     deleteSelectedAnnotations() {
         for (let a of this.getSelectedFilteredAnnotations() ) {
@@ -125,7 +125,7 @@ class AnnotationManager {
         var viewport = this.viewer.viewports[viewport_n]
         var cam = viewport.getCamera()
         var center_point = viewport.worldToCanvas(cam.focalPoint)
-        if (tool_name == "GravisROI" )
+        if (tool_name == "EllipticalROI" )
             var points = [
                 [ center_point[0], center_point[1]-50 ], // top
                 [ center_point[0], center_point[1]+50 ], // bottom
@@ -135,7 +135,7 @@ class AnnotationManager {
         else if ( tool_name == "Probe") {
             var points = [viewport.canvasToWorld(center_point)];
         } else {
-            throw Error("Unknown annotation type.")
+            throw Error(`Unknown annotation type ${tool_name}`)
         }
         let new_annotation = this.createAnnotationTemplate();
         new_annotation.metadata = {
@@ -149,6 +149,8 @@ class AnnotationManager {
         }
         new_annotation.data.handles.points = points;
         cornerstone.tools.annotation.state.addAnnotation(viewport.element,new_annotation)
+        cornerstone.tools.annotation.selection.setAnnotationSelected(new_annotation.annotationUID, true, false);
+
         cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,[this.viewer.viewportIds[viewport_n]]) 
 
         this.annotations[new_annotation.annotationUID] = { uid: new_annotation.annotationUID, label: new_annotation.data.label, ...new_annotation.metadata }
@@ -175,6 +177,8 @@ class AnnotationManager {
             gridLineColor: 'white',
             hideOverlayOnMouseOut: false,
             labels: ['seconds', 'Random'],
+            highlightSeriesOpts: { strokeWidth: 3 },
+            highlightSeriesBackgroundAlpha: 1,
             axes: {
                 x: {
                     axisLabelFormatter: function(x) {

@@ -71,7 +71,7 @@ on htmx:afterRequest
           <div>
             <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2" 
             :disabled="switching || job_loading != null"
-            @click="viewer.annotation_manager.addAnnotationToViewport('GravisROI',i-1);"><i class="fa-regular fa-circle"></i>
+            @click="viewer.annotation_manager.addAnnotationToViewport('EllipticalROI',i-1);"><i class="fa-regular fa-circle"></i>
           </button><button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2" 
               :disabled="switching || job_loading != null"
               @click="viewer.annotation_manager.addAnnotationToViewport('Probe',i-1);"><i class="fa-solid fa-plus"></i>
@@ -114,7 +114,7 @@ on htmx:afterRequest
         <input id='volume-picker' type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
         @mouseUp="previewing = false"
         @input="if (!previewing) { viewer.startPreview(); previewing = true; }; index = $event.target.value; viewer.selected_time=current_study[index].acquisition_seconds; viewer.setPreview(index,current_study.length);"
-        @change="switching = true; await viewer.switchSeries(current_study[index].series_uid); current_time=viewer.selected_time; switching = false;"
+        @change="switching = true; viewer.selected_time=current_study[index].acquisition_seconds; await viewer.switchSeries(current_study[index].series_uid); current_time=viewer.selected_time; switching = false;"
         :disabled="!current_study || !!loading">
         </input>
         <label for='volume-picker' x-text="viewer && viewer.selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>

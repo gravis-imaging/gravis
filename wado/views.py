@@ -20,7 +20,7 @@ from django.contrib.staticfiles import views as static_views
 
 import pydicom
 from django.views import static
-
+import numpy as np
 
 @login_required
 def retrieve_instance(request, study, series, instance, case, frame=1):
@@ -90,6 +90,11 @@ def study_metadata(request, case, study):
 def series_metadata(request, case, study, series):
     instances = DICOMInstance.objects.filter(study_uid=study, series_uid=series, dicom_set__case=case)
     metadatas = [json.loads(k.json_metadata) for k in instances]
+   
+    # Sort the results in spatial order.
+    im_orientation_patient = np.asarray(metadatas[0]["00200037"]["Value"]).reshape((2,3))
+    metadatas = sorted(metadatas, key = lambda x:np.dot(np.cross(*im_orientation_patient),np.asarray(x["00200032"]["Value"])))
+
     return JsonResponse(metadatas, safe=False)
 
 
