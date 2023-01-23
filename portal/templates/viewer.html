@@ -31,10 +31,11 @@ on htmx:afterRequest
   const studies_data_parsed = JSON.parse(document.getElementById('studies_data').textContent);    
 </script>
 
-<div style='height:calc(100vh - 6rem); display:grid; grid-template-rows: 0fr 0fr 1fr; grid-template-columns: 0fr 1fr; gap: 0.5em; grid-template-areas: 
-  "a b"
-  "c d"
-  "e d";'
+<div style='height:calc(100vh - 6rem); display:grid; grid-template-rows: 0fr 0fr 1fr; grid-template-columns: 1fr 1fr 0.5fr; gap: 0.5em; grid-template-areas: 
+  "a b g"
+  "c c g"
+  "e e g"
+  "d f g";'
   x-data="{ viewer: null, n_annotations: 0, previewing: false, switching: false, current_study: null, index: 0, loading: false, job_loading: null, case_id: {{case.id}} }" >
 
   <div class="select-wrapper">
@@ -59,7 +60,7 @@ on htmx:afterRequest
     </div>
   </div>
 
-  <div x-cloak id="grasp-view-outer" class="grid-container h-100" style="width: calc(100vh - 6rem); grid-area: e" >
+  <div x-cloak id="grasp-view-outer" class="grid-container h-100" style="width: 100%; grid-area: e" >
     <div x-show="loading" style="z-index:10;" class="pointer-events-none grid-fill">
       <div style="display: flex;justify-content: center;align-items: center; height:100%">Loading...</div>
     </div>
@@ -70,7 +71,7 @@ on htmx:afterRequest
     </div>
 
     <div x-show="!!current_study" class="pointer-events-none grid-fill" style="z-index:1;">
-      <div style='display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; height:100%'>
+      <div class="viewer-grid">
         <template x-for="i in 3">
           <div>
             <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2" 
@@ -95,16 +96,9 @@ on htmx:afterRequest
               <path d="M7 2.5a.5.5 0 0 0-.939-.24l-6 11A.5.5 0 0 0 .5 14h6a.5.5 0 0 0 .5-.5v-11zm2.376-.484a.5.5 0 0 1 .563.245l6 11A.5.5 0 0 1 15.5 14h-6a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .376-.484zM10 4.46V13h4.658L10 4.46z"/>
             </svg>
           </button>
-
-
           <template x-if="viewer && viewer.getNativeViewports().indexOf(viewer.viewports[i-1].id) > -1"><div>Native</div></template>
           </div>
         </template>
-        <div>
-          <button style="pointer-events: auto" class="btn-primary btn-large ml-2 my-2" 
-          @click="viewer.viewports[3].setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/MIP?acquisition_number=35`)).json()).urls)">MIP
-          </button>
-        </div>
           <div>
             <div x-show="job_loading" style="height:100%;">
               <div style="display: flex;justify-content: center;align-items: center; height:100%; background-color:rgba(0, 0, 0, 0.5);">Loading...</div>
@@ -114,8 +108,12 @@ on htmx:afterRequest
     </div> 
     
   </div>
-  
-  <div style="grid-area: d">
+  <div style="grid-area: d" id="aux-container"><div style="position: absolute;left: 3em;z-index: 10;">
+    <button style="pointer-events: auto" class="btn-primary btn-large ml-2 my-2" 
+    @click="viewer.renderingEngine.getViewport('VIEW_CINE').setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/MIP?acquisition_number=35`)).json()).urls)">MIP
+    </button>
+  </div></div>
+  <div style="grid-area: f">
     <template x-if="viewer">
       <div style="text-align:right;">
         <select x-model="viewer.chart_options['adjust']" @change="viewer.annotation_manager.updateChart()"><option value="normal" autocomplete="off" selected>normal</option><option value="zeroed">zeroed</option><option value="normalized">normalized</option></select>
@@ -123,16 +121,16 @@ on htmx:afterRequest
       </div>
     </template>
     <div id="chart" class="mt-2" style="background-color: black; color: white;"></div>
-    <div id="annotations" class = "mt-2" style="overflow-y: hidden; display: flex; flex-direction: column; flex-wrap: wrap;">
-      <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
-        <div x-show="!!viewer.annotation_manager.annotations[uid]">
-          <div x-text="viewer.annotation_manager.annotations[uid] ? viewer.annotation_manager.annotations[uid].label : 'Error'"></div>
-          <button class="btn-primary btn-large m-2" @click="await viewer.annotation_manager.deleteAnnotation(uid);">Delete</button>
-          <button class="btn-primary btn-large m-2" @click="await viewer.annotation_manager.goToAnnotation(uid);">Jump</button>
-        </div>
-      </template>  
-    </div>    
   </div>
+  <div id="annotations" class = "mt-2" style="overflow-y: hidden; display: flex; flex-direction: column; flex-wrap: wrap; grid-area: g">
+    <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
+      <div x-show="!!viewer.annotation_manager.annotations[uid]">
+        <div x-text="viewer.annotation_manager.annotations[uid] ? viewer.annotation_manager.annotations[uid].label : 'Error'"></div>
+        <button class="btn-primary btn-large m-2" @click="await viewer.annotation_manager.deleteAnnotation(uid);">Delete</button>
+        <button class="btn-primary btn-large m-2" @click="await viewer.annotation_manager.goToAnnotation(uid);">Jump</button>
+      </div>
+    </template>  
+  </div>    
 
 
 </div>

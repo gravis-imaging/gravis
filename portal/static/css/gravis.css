@@ -12,6 +12,14 @@ h2 {
 .hidden {
     display:none !important;
 }
+
+.viewer-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr;
+    height:100%;
+}
+
 .dygraph-axis-label {
     color: white !important;
 }

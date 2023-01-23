@@ -224,7 +224,7 @@ def processed_results_urls(request, case, case_type, source_set):
     case = Case.objects.get(id=int(case))
     slices_lookup = {k: request.GET.get(k) for k in fields if k in request.GET}
     dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=case_type, processing_job__dicom_set=source_set)
-    instances = dicom_set.latest('processing_job__created_at').instances.filter(**slices_lookup).order_by("slice_location") # or "instance_number"
+    instances = dicom_set.latest('processing_job__created_at').instances.filter(**slices_lookup).order_by("slice_location","instance_location","series_number") # or "instance_number"
 
 
     urls = []

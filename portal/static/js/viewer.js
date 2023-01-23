@@ -128,11 +128,18 @@ class GraspViewer {
             
             const view_info = [["AX",ORIENTATION.axial],["SAG",ORIENTATION.sagittal],["COR",
             {"viewPlaneNormal": [0,1,0],
-                "viewUp": [0,0,1]}],["CINE"]]
+                "viewUp": [0,0,1]}]]
             const [ viewViewports, viewportIds ] = this.createViewports("VIEW", view_info, main)
-            this.renderingEngine.setViewports([...previewViewports, ...viewViewports])
+
+
+            const auxViewport = this.genViewportDescription("CINE", null, document.getElementById("aux-container"), "VIEW")
+
+            // const [ [auxViewport], [auxViewportId]] = this.createViewports("VIEW", [["CINE"]], document.getElementById("aux-container"))
+            // document.getElementById("aux-container").firstChild.style="grid-template-columns: 1fr"
+            // document.getElementById("aux-container")
+            this.renderingEngine.setViewports([...previewViewports,, ...viewViewports,  auxViewport])
     
-            this.viewportIds = viewportIds
+            this.viewportIds = [...viewportIds , auxViewport.viewportId]
             this.previewViewportIds = previewViewportIds
             this.viewports = viewportIds.map((c)=>this.renderingEngine.getViewport(c))
             this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c))
@@ -178,11 +185,11 @@ class GraspViewer {
     
     createViewportGrid(n=4) {
         const viewportGrid = document.createElement('div');
-        viewportGrid.style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; height:100%";
+        viewportGrid.className = 'viewer-grid';
         var elements = [];
-        let size = "50%"
         for (var i=0; i<n; i++) {
             var el = document.createElement('div');
+            el.className = "viewer-element"
             viewportGrid.appendChild(el);
             elements.push(el)
             resizeObserver.observe(el);
@@ -191,19 +198,24 @@ class GraspViewer {
         return [viewportGrid, elements];
     }
     
-    createViewports( prefix, list, parent, background = [0,0,0] ) {
-        const [viewportGrid, viewportElements] = this.createViewportGrid(4)
+    genViewportDescription(viewportId, orientation, element, prefix, background = [0,0,0]) {
+        return {
+            viewportId: prefix + "_" + viewportId,
+            type: orientation ? cornerstone.Enums.ViewportType.ORTHOGRAPHIC : cornerstone.Enums.ViewportType.STACK,
+            element: element,
+            defaultOptions: {
+                orientation,
+                background
+            },
+        }
+    }
+
+    createViewports( prefix, list, parent, background) {
+        const [viewportGrid, viewportElements] = this.createViewportGrid(list.length)
         parent.appendChild(viewportGrid);
         var viewportInput = list.map(([viewportId, orientation],n) => {
-            return {
-                viewportId: prefix + "_" + viewportId,
-                type: orientation ? cornerstone.Enums.ViewportType.ORTHOGRAPHIC : cornerstone.Enums.ViewportType.STACK,
-                element: viewportElements[n],
-                defaultOptions: {
-                    orientation,
-                    background
-                },
-            }});
+            return this.genViewportDescription(viewportId, orientation, viewportElements[n], prefix, background)
+            });
         return [ viewportInput, viewportInput.map((c)=>c.viewportId) ]
     }
 
