@@ -29,13 +29,13 @@
                         {% for item in data %}
                         <tr>
                             <td style="display:none;">{{ item.case_id }}</td>
-                            <td>{{ item.patient_name }}</td>
-                            <td>{{ item.mrn }}</td>
-                            <td>{{ item.acc }}</td>
+                            <td class="patient_info">{{ item.patient_name }}</td>
+                            <td class="patient_info">{{ item.mrn }}</td>
+                            <td class="patient_info">{{ item.acc }}</td>
                             <td>{{ item.num_spokes }}</td>
                             <td>{{ item.case_type }}</td>
-                            <td>{{ item.exam_time }}</td>
-                            <td>{{ item.receive_time }}</td>
+                            <td class="patient_info">{{ item.exam_time }}</td>
+                            <td class="patient_info">{{ item.receive_time }}</td>
                             {% if item.status == 'Received' %}
                                 <td><span class="badge bg-secondary">{{ item.status }}</span></td>
                             {% elif item.status == 'Queued' %}
@@ -78,15 +78,15 @@
                 <tbody>
                     <tr>
                         <td>Patient Name:</td>
-                        <td><span id="case_details_patient_name">&nbsp;</span></td>
+                        <td><span class="patient_info" id="case_details_patient_name">&nbsp;</span></td>
                     </tr>
                     <tr>
                         <td>MRN:</td>
-                        <td><span id="case_details_mrn">&nbsp;</span></td>
+                        <td><span class="patient_info" id="case_details_mrn">&nbsp;</span></td>
                     </tr>
                     <tr>
                         <td>ACC:</td>
-                        <td><span id="case_details_acc">&nbsp;</span></td>
+                        <td><span class="patient_info" id="case_details_acc">&nbsp;</span></td>
                     </tr>
                     <tr>
                         <td>Number of Spokes:</td>
@@ -98,11 +98,11 @@
                     </tr>
                     <tr>
                         <td>Exam Time:</td>
-                        <td><span id="case_details_exam_time">&nbsp;</span></td>
+                        <td><span class="patient_info" id="case_details_exam_time">&nbsp;</span></td>
                     </tr>
                     <tr>
                         <td>Receive Time:</td>
-                        <td><span id="case_details_receive_time">&nbsp;</span></td>
+                        <td><span class="patient_info" id="case_details_receive_time">&nbsp;</span></td>
                     </tr>
                     <tr>
                         <td>Status:</td>
@@ -114,7 +114,7 @@
                     </tr>
                     <tr>
                         <td>Case Location:</td>
-                        <td><span id="case_details_case_location">&nbsp;</span></td>
+                        <td><span class="patient_info" id="case_details_case_location">&nbsp;</span></td>
                     </tr>
                     <tr>
                         <td>Viewed by ID:</td>
@@ -193,7 +193,7 @@
                         document.getElementById("case_details_acc").innerText = c.acc;
                         document.getElementById("case_details_num_spokes").innerText = c.num_spokes;
                         document.getElementById("case_details_case_type").innerText = c.case_type;
-                        document.getElementById("case_details_exam_time").innerText = c.exam_type;
+                        document.getElementById("case_details_exam_time").innerText = c.exam_time;
                         document.getElementById("case_details_receive_time").innerText = c.receive_time;
                         document.getElementById("case_details_status").innerText = c.status;
                         document.getElementById("case_details_twix_id").innerText = c.twix_id;

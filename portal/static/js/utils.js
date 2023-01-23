@@ -1,3 +1,14 @@
+function setCookie(name,value,days) {
+    var expires = "";
+    if (days) {
+        var date = new Date();
+        date.setTime(date.getTime() + (days*24*60*60*1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + value + expires + "; path=/";
+}
+
+
 function getCookie(name) {
     let cookieValue = null;
 
@@ -28,7 +39,7 @@ function HSLToRGB (h, s, l) {
     const f = n =>
       l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
     return [255 * f(0), 255 * f(8), 255 * f(4)];
-  };
+}
 
   
 async function doJob(type, case_, params) {
@@ -43,6 +54,7 @@ async function doJob(type, case_, params) {
     }
     return;
 }
+
 
 async function doFetch(url, body) {
     let raw_result = await fetch(url, {
@@ -63,6 +75,8 @@ async function doFetch(url, body) {
         throw e
     }
 }
+
+
 async function startJob(type, case_, params) {
     var body = {
         case: case_,
@@ -103,15 +117,19 @@ function parseDicomTime(date, timestamp) {
     return new Date(p.year,p.month,p.day,p.hour,p.minute,p.second,p.millisecond)
 }
 
+
 async function getJob(job, id) {
     var result = await (await fetch(`/job/${job}?id=${id}`, {
         method: 'GET',   credentials: 'same-origin'
     })).json()
     return result
 }
+
+
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
 
 function getJobInstances(result, case_id) {
     var urls = []
@@ -129,4 +147,4 @@ function getJobInstances(result, case_id) {
     return urls;
 }
 
-export { HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances };
+export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances };

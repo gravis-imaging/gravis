@@ -39,9 +39,9 @@
                                 {% url_case_id request.get_full_path as id %}      
                             {% endif %}                      
                             {% if item.num_spokes == "" %}
-                                <a class="dropdown-item {% if request.resolver_match.url_name == "viewer" and id == item.id %}active{% endif %}" href="/viewer/{{ item.id }}">{{ item.patient_name }} id: {{item.id}}</a>
+                                <a class="patient_info blur dropdown-item {% if request.resolver_match.url_name == "viewer" and id == item.id %}active{% endif %}" href="/viewer/{{ item.id }}">{{ item.patient_name }} id: {{item.id}}</a>
                             {% else %}
-                                <a class="dropdown-item {% if request.resolver_match.url_name == "viewer" and id == item.id %}active{% endif %}" href="/viewer/{{ item.id }}">{{ item.patient_name }} ({{ item.num_spokes}} spokes) id: {{item.id}}</a>
+                                <a class="patient_info blur dropdown-item {% if request.resolver_match.url_name == "viewer" and id == item.id %}active{% endif %}" href="/viewer/{{ item.id }}">{{ item.patient_name }} ({{ item.num_spokes}} spokes) id: {{item.id}}</a>
                             {% endif %}                            
                           </li>  
                           {% endfor %}                        
@@ -52,9 +52,9 @@
                             {% url_case_id request.get_full_path as id %}
                             {% case_info cases id as case %}
                             {% if case.num_spokes == "" %}
-                                <h5 class="nav-link">{{ case.patient_name }} id: {{case.id}} </h5>
+                                <h5 class="patient_info nav-link blur">{{ case.patient_name }} id: {{case.id}} </h5>
                             {% else %}
-                                <h5 class="nav-link">{{ case.patient_name }} ({{ case.num_spokes}} spokes) id: {{case.id}} </h5>
+                                <h5 class="patient_info nav-link blur">{{ case.patient_name }} ({{ case.num_spokes}} spokes) id: {{case.id}} </h5>
                             {% endif %}                         
                         </li>  
                     {% endif %}                    
@@ -94,5 +94,16 @@
         </div>
     </div>
 </main>
+
+<script type="module">
+    import { getCookie } from "/static/js/utils.js";
+    if (getCookie('privacy_mode') == 1) {
+        Array.from(document.getElementsByClassName('patient_info')).forEach(e => e.classList.add("blur"));
+    }
+    else {
+        Array.from(document.getElementsByClassName('patient_info')).forEach(e => e.classList.remove("blur"));
+    }    
+</script>
+
 
 {% endblock %}
