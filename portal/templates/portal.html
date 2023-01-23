@@ -36,22 +36,28 @@
                           {% for item in cases %}                         
                           <li>
                             {% if request.resolver_match.url_name == "viewer" %}
-                                {% url_case_id request.get_full_path as id %}
-                            {% endif %}
+                                {% url_case_id request.get_full_path as id %}      
+                            {% endif %}                      
                             {% if item.num_spokes == "" %}
                                 <a class="dropdown-item {% if request.resolver_match.url_name == "viewer" and id == item.id %}active{% endif %}" href="/viewer/{{ item.id }}">{{ item.patient_name }} id: {{item.id}}</a>
                             {% else %}
                                 <a class="dropdown-item {% if request.resolver_match.url_name == "viewer" and id == item.id %}active{% endif %}" href="/viewer/{{ item.id }}">{{ item.patient_name }} ({{ item.num_spokes}} spokes) id: {{item.id}}</a>
-                            {% endif %}
+                            {% endif %}                            
                           </li>  
                           {% endfor %}                        
                         </ul>
-                    </li>
-                    {% if user.is_staff %}
-                    <li class="nav-item menuitems-top">
-                        <a class="nav-link {% if request.resolver_match.url_name == "config" %}active{% endif %}" href="/config/"><i class="fas fa-wrench"></i>&nbsp;&nbsp;Configuration</a>
-                    </li>
-                    {% endif %}
+                    </li>  
+                    {% if request.resolver_match.url_name == "viewer" %}                  
+                        <li class="nav-item menuitems-top" style="margin-left:70px; pointer-events: none;">                        
+                            {% url_case_id request.get_full_path as id %}
+                            {% case_info cases id as case %}
+                            {% if case.num_spokes == "" %}
+                                <h5 class="nav-link">{{ case.patient_name }} id: {{case.id}} </h5>
+                            {% else %}
+                                <h5 class="nav-link">{{ case.patient_name }} ({{ case.num_spokes}} spokes) id: {{case.id}} </h5>
+                            {% endif %}                         
+                        </li>  
+                    {% endif %}                    
                 </ul>
                 <ul class="navbar-nav">
                     <li class="nav-item dropdown">
@@ -63,6 +69,11 @@
                             <li>
                                 <a class="dropdown-item" href="/user/"><i class="fas fa-cog"></i>&nbsp;&nbsp;Settings</a>
                             </li>
+                            {% if user.is_staff %}
+                            <li>
+                                <a class="dropdown-item" href="/config/"><i class="fas fa-wrench"></i>&nbsp;&nbsp;Configuration</a>
+                            </li>
+                            {% endif %}
                             <li><hr class="dropdown-divider" /></li>
                             <li>
                                 <a class="dropdown-item" href="/logout"><i class="fas fa-sign-out-alt"></i>&nbsp;&nbsp;Logout</a>
