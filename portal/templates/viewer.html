@@ -28,6 +28,11 @@ on htmx:afterRequest
 
 
 {% block content %}
+{{ studies|json_script:"studies_data" }}
+<script type="text/javascript">
+  const studies_data_parsed = JSON.parse(document.getElementById('studies_data').textContent);    
+</script>
+
 <div style='height:calc(100vh - 6rem); display:grid; grid-template-rows: 0fr 0fr 1fr; grid-template-columns: 0fr 1fr; gap: 0.5em; grid-template-areas: 
   "a b"
   "c d"
@@ -43,10 +48,11 @@ on htmx:afterRequest
     {% endif %}
   </h5>
   </div>
+  
   <div class="select-wrapper">
     <select id="studies" name="studies" autocomplete="off" class="form-control" value="" :disabled="viewer == null" 
     @change="loading=true; await $nextTick(); current_study = await viewer.switchStudy($event.target.value.split(':::'), case_id);  loading=false;">
-      <option value="" selected disabled hidden>Select study...</option>
+      <!-- <option value="" selected disabled hidden>Select study...</option> -->
       {% for i in studies %}
       <option value="{{i.0}}:::{{i.1}}">{{ i.2 }}</option>
       {% endfor %}
@@ -69,7 +75,8 @@ on htmx:afterRequest
     <div x-show="loading" style="z-index:10;" class="pointer-events-none grid-fill">
       <div style="display: flex;justify-content: center;align-items: center; height:100%">Loading...</div>
     </div>
-    <div x-init="await $nextTick(); viewer = await new GraspViewer($refs.viewer_main, $refs.viewer_preview ); window.viewer = viewer" class="grid-fill grid-container h-100">
+    <div x-init="await $nextTick(); viewer = await new GraspViewer($refs.viewer_main, $refs.viewer_preview ); window.viewer = viewer; 
+    current_study = await viewer.switchStudy([studies_data_parsed[0][0], studies_data_parsed[0][1]], case_id);" class="grid-fill grid-container h-100">
       <div x-ref="viewer_preview" class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 1 : 0 }"></div>
       <div x-ref="viewer_main"  class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 0 : 1 }"></div>
     </div>

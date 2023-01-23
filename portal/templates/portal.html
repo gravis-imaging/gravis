@@ -36,7 +36,7 @@
                           {% for item in cases %}                         
                           <li>
                             {% if request.resolver_match.url_name == "viewer" %}
-                                {% url_case_id request.get_full_path item.id as id %}
+                                {% url_case_id request.get_full_path as id %}
                             {% endif %}
                             {% if item.num_spokes == "" %}
                                 <a class="dropdown-item {% if request.resolver_match.url_name == "viewer" and id == item.id %}active{% endif %}" href="/viewer/{{ item.id }}">{{ item.patient_name }} id: {{item.id}}</a>
