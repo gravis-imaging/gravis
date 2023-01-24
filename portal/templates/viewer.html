@@ -31,7 +31,7 @@ on htmx:afterRequest
   const studies_data_parsed = JSON.parse(document.getElementById('studies_data').textContent);    
 </script>
 
-<div style='height:calc(100vh - 6rem); display:grid; grid-template-rows: 0fr 0fr 1fr; grid-template-columns: 1fr 1fr 0.5fr; gap: 0.5em; grid-template-areas: 
+<div style='overflow-x: hidden; height:calc(100vh - 6rem); display:grid; grid-template-rows: 0fr 0fr 1fr; grid-template-columns: 1fr 1fr 0.5fr; gap: 0.5em; grid-template-areas: 
   "a b g"
   "c c g"
   "e e g"
@@ -67,13 +67,13 @@ on htmx:afterRequest
     <div x-init="await $nextTick(); viewer = await new GraspViewer($refs.viewer_main, $refs.viewer_preview ); window.viewer = viewer; 
     current_study = await viewer.switchStudy([studies_data_parsed[0][0], studies_data_parsed[0][1]], case_id);" class="grid-fill grid-container h-100">
       <div x-ref="viewer_preview" class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 1 : 0 }"></div>
-      <div x-ref="viewer_main"  class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 0 : 1 }"></div>
+      <div x-ref="viewer_main" class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 0 : 1 }"></div>
     </div>
 
     <div x-show="!!current_study" class="pointer-events-none grid-fill" style="z-index:1;">
       <div class="viewer-grid">
         <template x-for="i in 3">
-          <div>
+          <div class="viewport-overlay" :id="'viewport-overlay-'+i" :style="`grid-row: 1; grid-column: ${i}`">
             <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2" 
             :disabled="switching || job_loading != null"
             @click="viewer.annotation_manager.addAnnotationToViewport('EllipticalROI',i-1);"><i class="fa-regular fa-circle"></i>
@@ -108,7 +108,8 @@ on htmx:afterRequest
     </div> 
     
   </div>
-  <div style="grid-area: d" id="aux-container"><div style="position: absolute;left: 3em;z-index: 10;">
+  <div style="grid-area: d" id="aux-container">
+    <div x-show="!!current_study" class="viewport-overlay" style="position: absolute; left: 3em;z-index: 10;">
     <button style="pointer-events: auto" class="btn-primary btn-large ml-2 my-2" 
     @click="viewer.renderingEngine.getViewport('VIEW_CINE').setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/MIP?acquisition_number=35`)).json()).urls)">MIP
     </button>

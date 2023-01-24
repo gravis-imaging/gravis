@@ -26,8 +26,6 @@ h2 {
 .dygraph-legend {
     color: white !important;
     background-color: rgba(0, 0, 0, 0.5) !important;
-    left: calc(100% - 250px) !important;
-    top: 100% !important;
     pointer-events: none;
 }
 .dygraph-legend > span {

@@ -70,7 +70,7 @@ const resizeObserver = new ResizeObserver(() => {
     console.log('Size changed');
     let renderingEngine = window.cornerstone.getRenderingEngine('gravisRenderEngine');
     if (renderingEngine) {
-      renderingEngine.resize(true, false);
+      renderingEngine.resize(true, true);
     }
   });
   
@@ -107,38 +107,69 @@ class GraspViewer {
           })();   
          }
         async initialize( main, preview ) {
-            const { RenderingEngine, Types, Enums, volumeLoader, CONSTANTS, setVolumesForViewports} = window.cornerstone; 
-            const { ViewportType } = Enums;
             // Force cornerstone to try to use GPU rendering even if it thinks the GPU is weak.
             cornerstone.setUseCPURendering(false);
             await cornerstone.helpers.initDemo(); 
             // Instantiate a rendering engine
             const renderingEngineId = 'gravisRenderEngine';
-            this.renderingEngine = new RenderingEngine(renderingEngineId);    
+            this.renderingEngine = new cornerstone.RenderingEngine(renderingEngineId);    
     
             const ORIENTATION = cornerstone.CONSTANTS.MPR_CAMERA_VALUES;
     
             const preview_info = [["AX"],["SAG"],["COR"]]
             const [ previewViewports, previewViewportIds ] = this.createViewports("PREVIEW",preview_info, preview)
-            /*
-            ["COR",{
-                                sliceNormal: [ 0, -1, 0 ],
-                                viewUp: [ 0, 0, 1 ]
-            }],*/
             
-            const view_info = [["AX",ORIENTATION.axial],["SAG",ORIENTATION.sagittal],["COR",
-            {"viewPlaneNormal": [0,1,0],
-                "viewUp": [0,0,1]}]]
+            const view_info = [["AX",  ORIENTATION.axial],
+                               ["SAG", ORIENTATION.sagittal],
+                               ["COR", {"viewPlaneNormal": [0,1,0],
+                                        "viewUp": [0,0,1]}]]
             const [ viewViewports, viewportIds ] = this.createViewports("VIEW", view_info, main)
-
+            
+            for (const [index, v] of viewViewports.entries()){
+                v.element.ondblclick = e => {
+                    let el = v.element;
+                    let pre_el = this.renderingEngine.getViewport("PRE"+v.viewportId).element
+                    let overlay_el = document.getElementById(`viewport-overlay-${index+1}`)
+                    if (el.getAttribute("fullscreen") != "true") {
+                        [...document.getElementsByClassName("viewport-overlay")].map(
+                                el => { if (el!=overlay_el) el.style.display = "none" }
+                            )
+                        el.setAttribute("fullscreen", "true");
+                        el.setAttribute("orig-column", el.style.gridColumn)
+                        for (const _el of [el,pre_el,overlay_el]) {
+                            _el.style.zIndex = 1;
+                            _el.style.gridArea = "1 / 1 / 1 / 4";
+                            document.getElementById("grasp-view-outer").style.gridArea = "3 / 1 / 5 / 3"
+                        }
+                    } else {
+                        el.removeAttribute("fullscreen");
+                        for (const _el of [el,pre_el,overlay_el]) {
+                            _el.style.gridArea = "";
+                            _el.style.gridRow = 1;
+                            _el.style.gridColumn = el.getAttribute("orig-column");
+                            _el.style.zIndex = 0;
+                        }
+                        [...document.getElementsByClassName("viewport-overlay")].map(el => el.style.display = "block")
+                        document.getElementById("grasp-view-outer").style.gridArea = "e"
+                    }
+                }
+            }
 
             const auxViewport = this.genViewportDescription("CINE", null, document.getElementById("aux-container"), "VIEW")
 
-            // const [ [auxViewport], [auxViewportId]] = this.createViewports("VIEW", [["CINE"]], document.getElementById("aux-container"))
-            // document.getElementById("aux-container").firstChild.style="grid-template-columns: 1fr"
-            // document.getElementById("aux-container")
-            this.renderingEngine.setViewports([...previewViewports,, ...viewViewports,  auxViewport])
-    
+            auxViewport.element.ondblclick = e => {
+                const el = auxViewport.element;
+                if (el.getAttribute("fullscreen") != "true") {
+                    el.setAttribute("fullscreen", "true");
+                    el.style.gridArea = "3 / 1 / 5 / 3";
+                    el.style.zIndex = 1;
+                } else {
+                    el.removeAttribute("fullscreen");
+                    el.style.gridArea = "d";
+                    el.style.zIndex = 0;
+                }
+            }
+            this.renderingEngine.setViewports([...previewViewports, ...viewViewports, auxViewport])
             this.viewportIds = [...viewportIds , auxViewport.viewportId]
             this.previewViewportIds = previewViewportIds
             this.viewports = viewportIds.map((c)=>this.renderingEngine.getViewport(c))
@@ -155,8 +186,7 @@ class GraspViewer {
             cornerstone.eventTarget.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_MODIFIED",debounce(100, (evt) => {
                 this.annotation_manager.updateChart()
             }));
-            cornerstone.eventTarget.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_SELECTION_CHANGE",(evt) => {
-                // console.log();
+            cornerstone.eventTarget.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_SELECTION_CHANGE", (evt) => {
                 const detail = evt.detail;
                 if (detail.selection.length == 1) {
                     const uid = detail.selection[0];
@@ -193,6 +223,8 @@ class GraspViewer {
             viewportGrid.appendChild(el);
             elements.push(el)
             resizeObserver.observe(el);
+            el.style.gridColumn = i+1;
+            el.style.gridRow = 1;
             el.oncontextmenu = e=>e.preventDefault();
         }
         return [viewportGrid, elements];
