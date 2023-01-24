@@ -17,10 +17,13 @@
                 <i class="fas fa-bars"></i>
             </button>
             <div class="collapse navbar-collapse" id="navbarText">
+                
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <!-- Browser -->
                     <li class="nav-item menuitems-top">
                         <a class="nav-link {% if request.resolver_match.url_name == "index" %}active{% endif %}" aria-current="page" href="/"><i class="fa-solid fa-table"></i>&nbsp;&nbsp;Browser</a>
                     </li>
+                    <!-- Viewer -->
                     <li class="nav-item dropdown">
                         <a
                           class="nav-link dropdown-toggle {% if request.resolver_match.url_name == "viewer" %}active{% endif %}"
@@ -39,26 +42,30 @@
                                 {% url_case_id request.get_full_path as id %}      
                             {% endif %}                      
                             {% if item.num_spokes == "" %}
-                                <a class="dropdown-item {% if request.resolver_match.url_name == "viewer" and id == item.id %}active{% endif %}" href="/viewer/{{ item.id }}">{{ item.patient_name }} id: {{item.id}}</a>
+                                <a class="patient_info blur dropdown-item {% if request.resolver_match.url_name == "viewer" and id == item.id %}active{% endif %}" href="/viewer/{{ item.id }}">{{ item.patient_name }} id: {{item.id}}</a>
                             {% else %}
-                                <a class="dropdown-item {% if request.resolver_match.url_name == "viewer" and id == item.id %}active{% endif %}" href="/viewer/{{ item.id }}">{{ item.patient_name }} ({{ item.num_spokes}} spokes) id: {{item.id}}</a>
+                                <a class="patient_info blur dropdown-item {% if request.resolver_match.url_name == "viewer" and id == item.id %}active{% endif %}" href="/viewer/{{ item.id }}">{{ item.patient_name }} ({{ item.num_spokes}} spokes) id: {{item.id}}</a>
                             {% endif %}                            
                           </li>  
                           {% endfor %}                        
                         </ul>
-                    </li>  
-                    {% if request.resolver_match.url_name == "viewer" %}                  
-                        <li class="nav-item menuitems-top" style="margin-left:70px; pointer-events: none;">                        
-                            {% url_case_id request.get_full_path as id %}
-                            {% case_info cases id as case %}
-                            {% if case.num_spokes == "" %}
-                                <h5 class="nav-link">{{ case.patient_name }} id: {{case.id}} </h5>
-                            {% else %}
-                                <h5 class="nav-link">{{ case.patient_name }} ({{ case.num_spokes}} spokes) id: {{case.id}} </h5>
-                            {% endif %}                         
-                        </li>  
-                    {% endif %}                    
+                    </li>                              
                 </ul>
+                <!-- Patient name for the current case -->
+                {% if request.resolver_match.url_name == "viewer" %}  
+                <ul class="nav navbar-nav mx-auto">
+                    <li class="nav-item menuitems-top" style="pointer-events: none;">                                             
+                        {% url_case_id request.get_full_path as id %}
+                        {% case_info cases id as case %}
+                        {% if case.num_spokes == "" %}
+                            <h5 class="patient_info nav-link blur">{{ case.patient_name }} id: {{case.id}} </h5>
+                        {% else %}
+                            <h5 class="patient_info nav-link blur">{{ case.patient_name }} ({{ case.num_spokes}} spokes) id: {{case.id}} </h5>
+                        {% endif %}  
+                    </li>
+                </ul>
+                {% endif %}  
+                <!-- User Settings and Configuration -->
                 <ul class="navbar-nav">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="/user/" id="navbarDropdownMenuLink" role="button"
@@ -94,5 +101,16 @@
         </div>
     </div>
 </main>
+
+<script type="module">
+    import { getCookie } from "/static/js/utils.js";
+    if (getCookie('privacy_mode') == 1) {
+        Array.from(document.getElementsByClassName('patient_info')).forEach(e => e.classList.add("blur"));
+    }
+    else {
+        Array.from(document.getElementsByClassName('patient_info')).forEach(e => e.classList.remove("blur"));
+    }    
+</script>
+
 
 {% endblock %}

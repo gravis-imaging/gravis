@@ -48,6 +48,7 @@ on htmx:afterRequest
     </select>
   </div>
   
+  <!-- volume picker -->
   <div style="grid-area: c"> 
     <div style="display: flex;">
       <input id='volume-picker' type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
@@ -70,44 +71,57 @@ on htmx:afterRequest
       <div x-ref="viewer_main" class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 0 : 1 }"></div>
     </div>
 
+    <!-- AX/COR/SAG viewer -->
     <div x-show="!!current_study" class="pointer-events-none grid-fill" style="z-index:1;">
       <div class="viewer-grid">
         <template x-for="i in 3">
           <div class="viewport-overlay" :id="'viewport-overlay-'+i" :style="`grid-row: 1; grid-column: ${i}`">
             <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2" 
-            :disabled="switching || job_loading != null"
-            @click="viewer.annotation_manager.addAnnotationToViewport('EllipticalROI',i-1);"><i class="fa-regular fa-circle"></i>
-          </button><button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2" 
-              :disabled="switching || job_loading != null"
-              @click="viewer.annotation_manager.addAnnotationToViewport('Probe',i-1);"><i class="fa-solid fa-plus"></i>
-          </button><button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
-              :disabled="switching || job_loading != null"
-              @click="viewer.viewports[i-1].setZoom(1);viewer.viewports[i-1].setPan([0,0]);  viewer.viewports[i-1].render();"><i class="fa-solid fa-arrows-to-circle"></i>
-          </button><button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
-            :disabled="switching || job_loading != null"
-            @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
-          </button><button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
-            :disabled="switching || job_loading != null"
-            @click="viewer.annotation_manager.deleteSelectedAnnotations();"><i class="fa-solid fa-trash"></i>
-          </button><button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
-            :disabled="switching || job_loading != null"
-            @click="viewer.annotation_manager.flipSelectedAnnotations();">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-symmetry-vertical" viewBox="0 0 16 16">
-              <path d="M7 2.5a.5.5 0 0 0-.939-.24l-6 11A.5.5 0 0 0 .5 14h6a.5.5 0 0 0 .5-.5v-11zm2.376-.484a.5.5 0 0 1 .563.245l6 11A.5.5 0 0 1 15.5 14h-6a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .376-.484zM10 4.46V13h4.658L10 4.46z"/>
-            </svg>
-          </button>
-          <template x-if="viewer && viewer.getNativeViewports().indexOf(viewer.viewports[i-1].id) > -1"><div>Native</div></template>
+                :disabled="switching || job_loading != null"
+                @click="viewer.annotation_manager.addAnnotationToViewport('EllipticalROI',i-1);"><i class="fa-regular fa-circle"></i>
+            </button>
+            <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2" 
+                :disabled="switching || job_loading != null"
+                @click="viewer.annotation_manager.addAnnotationToViewport('Probe',i-1);"><i class="fa-solid fa-plus"></i>
+            </button>
+            <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
+                :disabled="switching || job_loading != null"
+                @click="viewer.viewports[i-1].setZoom(1);viewer.viewports[i-1].setPan([0,0]);  viewer.viewports[i-1].render();"><i class="fa-solid fa-arrows-to-circle"></i>
+            </button>
+            <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
+                :disabled="switching || job_loading != null"
+                @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
+            </button>
+            <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
+                :disabled="switching || job_loading != null"
+                @click="viewer.annotation_manager.deleteSelectedAnnotations();"><i class="fa-solid fa-trash"></i>
+            </button>
+            <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
+                :disabled="switching || job_loading != null"
+                @click="viewer.annotation_manager.flipSelectedAnnotations();">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-symmetry-vertical" viewBox="0 0 16 16">
+                <path d="M7 2.5a.5.5 0 0 0-.939-.24l-6 11A.5.5 0 0 0 .5 14h6a.5.5 0 0 0 .5-.5v-11zm2.376-.484a.5.5 0 0 1 .563.245l6 11A.5.5 0 0 1 15.5 14h-6a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .376-.484zM10 4.46V13h4.658L10 4.46z"/>
+              </svg>
+            </button>
+            <template x-if="viewer && viewer.getNativeViewports().indexOf(viewer.viewports[i-1].id) > -1">
+              <div>
+                Native
+              </div>
+            </template>
           </div>
         </template>
-          <div>
-            <div x-show="job_loading" style="height:100%;">
-              <div style="display: flex;justify-content: center;align-items: center; height:100%; background-color:rgba(0, 0, 0, 0.5);">Loading...</div>
+        <div>
+          <div x-show="job_loading" style="height:100%;">
+            <div style="display: flex;justify-content: center;align-items: center; height:100%; background-color:rgba(0, 0, 0, 0.5);">
+              Loading...
             </div>
           </div>
+        </div>
       </div>
-    </div> 
-    
+    </div>     
   </div>
+
+  <!-- MIP viewer -->
   <div style="grid-area: d" id="aux-container">
     <div x-show="!!current_study" class="viewport-overlay" style="position: absolute; left: 3em;z-index: 10;">
     <button style="pointer-events: auto" class="btn-primary btn-large ml-2 my-2" 

@@ -168,4 +168,9 @@ select,.select-wrapper::after {
 .modal.is-open {
     display: block;
 }
+
+.blur {
+    filter: blur(5px);
+    -webkit-filter: blur(5px);
+}
   
