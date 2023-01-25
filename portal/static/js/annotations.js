@@ -7,6 +7,7 @@ class AnnotationManager {
     constructor( viewer ) {
         this.viewer = viewer;
     }
+
     getAllAnnotations(viewport) {
         return ["EllipticalROI","Probe"].flatMap(
             type => cornerstone.tools.annotation.state.getAnnotations((viewport || this.viewer.viewports[0]).element,type) || []
@@ -59,6 +60,7 @@ class AnnotationManager {
             return
         }
     }
+
     createAnnotationTemplate() {
         var idx = Math.max(0,...Object.values(this.annotations).map(a => a.idx+1));
         return {
@@ -73,7 +75,7 @@ class AnnotationManager {
             },
             data: {
                 cachedStats: {},
-                label: `Annotation ${idx+1}`,
+                label: `ROI ${idx+1}`,
                 handles: {
                     textBox:{"hasMoved":false,"worldPosition":[0,0,0],"worldBoundingBox":{"topLeft":[0,0,0],"topRight":[0,0,0],"bottomLeft":[0,0,0],"bottomRight":[0,0,0]}},
                     activeHandleIndex: null
@@ -81,6 +83,7 @@ class AnnotationManager {
             }
         }
     }
+
     duplicateSelectedAnnotation() {
         for (let a of this.getSelectedFilteredAnnotations() ) {
             if (!a) { continue }
@@ -97,11 +100,13 @@ class AnnotationManager {
             this.annotations[new_a.annotationUID] = { uid: new_a.annotationUID, label: new_a.data.label, ...new_a.metadata }
         }
     }
+
     getSelectedFilteredAnnotations() {
         let annotation_uids = cornerstone.tools.annotation.selection.getAnnotationsSelected() || []
         let annotations = annotation_uids.map(cornerstone.tools.annotation.state.getAnnotation)
         return annotations.filter(x=> x && ["EllipticalROI", "Probe"].indexOf(x.metadata.toolName)>-1)
     }
+
     deleteSelectedAnnotations() {
         for (let a of this.getSelectedFilteredAnnotations() ) {
             if (!a) { continue }
@@ -111,6 +116,7 @@ class AnnotationManager {
         }
         this.updateChart();
     }
+
     flipSelectedAnnotations() {
         let [ left, right ] = this.viewer.volume.imageData.getBounds().slice(0,2);
         let midpoint = (left + right) / 2;
@@ -122,6 +128,7 @@ class AnnotationManager {
             cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,[a.metadata.viewportId]) 
         }
     }
+
     addAnnotationToViewport(tool_name,viewport_n) {
         var viewport = this.viewer.viewports[viewport_n]
         var cam = viewport.getCamera()
@@ -156,6 +163,7 @@ class AnnotationManager {
 
         this.annotations[new_annotation.annotationUID] = { uid: new_annotation.annotationUID, label: new_annotation.data.label, ...new_annotation.metadata }
     }
+
     async deleteAnnotation(uid) {
         let annotation_info = this.annotations[uid];
         const viewport = this.viewer.viewports.find( x => x.id == annotation_info.viewportId);
@@ -164,19 +172,24 @@ class AnnotationManager {
         delete this.annotations[annotation_info.uid];
         await this.updateChart()
     }
+
     goToAnnotation(uid) {
         let annotation_info = this.annotations[uid];
         const viewport = this.viewer.viewports.find( x => x.id == annotation_info.viewportId);
         viewport.setCamera(annotation_info.cam);
         this.viewer.renderingEngine.renderViewports([annotation_info.viewportId]);
     }
-    initChart() {
-        var g = new Dygraph(document.getElementById("chart"), [],
+
+    initChart() {    
+
+        const div = document.getElementById("chart");
+
+        var g = new Dygraph(div, [],
         {
             // legend: 'always',
             // valueRange: [0.0, 1000],
             gridLineColor: 'white',
-            hideOverlayOnMouseOut: false,
+            // hideOverlayOnMouseOut: true,
             labels: ['seconds', 'Random'],
             highlightSeriesOpts: { strokeWidth: 3 },
             highlightSeriesBackgroundAlpha: 1,
@@ -188,7 +201,7 @@ class AnnotationManager {
                         return ''
                     }
                   }
-            },
+            },           
             underlayCallback: (function(canvas, area, g) {
                 if (! this.viewer.study_uid ) {
                     return
@@ -197,17 +210,23 @@ class AnnotationManager {
                 var left = bottom_left[0];
                 canvas.fillStyle = "rgba(255, 255, 102, 1.0)";
                 canvas.fillRect(left-2, area.y, 4, area.h);
-              }).bind(this),
+            }).bind(this),
               pointClickCallback: function(event, p) {
+            }
+        });
 
-             }
-    
-            },
-            
-        );
+        div.addEventListener('mouseenter', () => {
+            g.updateOptions({legend: 'follow'});
+        });
+
+        div.addEventListener('mouseleave', () => {
+            g.updateOptions({legend: 'none'});
+        });
+
         const resizeObserver = new ResizeObserver(() => {
-            g.resize(1,1);
-            g.resize(viewer.chart.maindiv_.parentElement.offsetWidth,viewer.chart.maindiv_.parentElement.offsetHeight)    // viewer.chart.resize(viewer.chart.maindiv_.parentElement.offsetWidth,500)    
+            g.resize(1,1); 
+            // The above makes the chart small so offsetWidth etc reflects a nearly-empty parent div
+            g.resize(viewer.chart.maindiv_.parentElement.offsetWidth,viewer.chart.maindiv_.parentElement.offsetHeight);
         });
         resizeObserver.observe(g.maindiv_.parentElement.parentElement);
     
