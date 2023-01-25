@@ -34,7 +34,7 @@ on htmx:afterRequest
 <div style='overflow-x: hidden; height:calc(100vh - 6rem); display:grid; grid-template-rows: 0fr 1fr 0.9fr; grid-template-columns: 1.2fr 1.8fr 0.2fr 0.2fr 0.5fr; gap: 0.5em; grid-template-areas: 
   "c c . a g"
   "e e e e g"
-  "d f f b g";'
+  "d f f f g";'
   x-data="{ viewer: null, n_annotations: 0, previewing: false, switching: false, current_study: null, index: 0, loading: false, job_loading: null, case_id: {{case.id}} }" >
 
   <div style="grid-area: a" class="select-wrapper">
@@ -121,7 +121,7 @@ on htmx:afterRequest
   </div>
 
   <!-- MIP viewer -->
-  <div style="grid-area: d" id="aux-container">
+  <div style="grid-area: d" class="mb-2" id="aux-container">
     <div x-show="!!current_study" class="viewport-overlay" style="position: absolute; left: 3em;z-index: 10;">
       <button style="pointer-events: auto" class="btn-primary btn-large ml-2 my-2" 
         @click="viewer.renderingEngine.getViewport('VIEW_CINE').setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/MIP?acquisition_number=35`)).json()).urls)">MIP
@@ -130,13 +130,13 @@ on htmx:afterRequest
   </div>
 
   <!-- Chart -->
-  <div style="grid-area: f">
+  <div style="grid-area: f" class="mb-2">
     <div id="chart" style="background-color: black; color: white;">
     </div>
   </div>
-  <div style="grid-area: b">
+  <div style="grid-area: f">
     <template x-if="viewer">    
-      <div style="text-align:right;">
+      <div style="text-align:right; position:relative;">
         <select style="width:100px;" x-model="viewer.chart_options['adjust']" @change="viewer.annotation_manager.updateChart()">
           <option value="normal" autocomplete="off" selected>normal</option>
           <option value="zeroed">zeroed</option>

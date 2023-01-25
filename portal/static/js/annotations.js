@@ -91,7 +91,7 @@ class AnnotationManager {
             let new_a = this.createAnnotationTemplate();
             new_a.metadata = { ...a.metadata, idx: new_a.metadata.idx };
             new_a.data.handles.points = a.data.handles.points.slice().map(p=>p.slice());
-            cornerstone.tools.annotation.state.addAnnotation(this.viewer.viewports.find(x=>x.id=new_a.metadata.viewportId).element,new_a)
+            cornerstone.tools.annotation.state.addAnnotation(this.viewer.viewports.find(x=>x.id == new_a.metadata.viewportId).element,new_a)
             cornerstone.tools.annotation.selection.setAnnotationSelected(a.annotationUID, false, true);
             cornerstone.tools.annotation.selection.setAnnotationSelected(new_a.annotationUID, true, true);
 

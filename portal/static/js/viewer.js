@@ -139,8 +139,8 @@ class GraspViewer {
                         for (const _el of [el,pre_el,overlay_el]) {
                             _el.style.zIndex = 1;
                             _el.style.gridArea = "1 / 1 / 1 / 4";
-                            document.getElementById("grasp-view-outer").style.gridArea = "3 / 1 / 5 / 3"
                         }
+                        document.getElementById("grasp-view-outer").style.gridArea = "e / e / f / f"
                     } else {
                         el.removeAttribute("fullscreen");
                         for (const _el of [el,pre_el,overlay_el]) {
@@ -161,13 +161,14 @@ class GraspViewer {
                 const el = auxViewport.element;
                 if (el.getAttribute("fullscreen") != "true") {
                     el.setAttribute("fullscreen", "true");
-                    el.style.gridArea = "3 / 1 / 5 / 3";
+                    el.style.gridArea = "e / e / f / f";
                     el.style.zIndex = 1;
                 } else {
                     el.removeAttribute("fullscreen");
                     el.style.gridArea = "d";
                     el.style.zIndex = 0;
                 }
+                this.renderingEngine.resize(true, true);
             }
             this.renderingEngine.setViewports([...previewViewports, ...viewViewports, auxViewport])
             this.viewportIds = [...viewportIds , auxViewport.viewportId]
