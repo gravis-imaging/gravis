@@ -7,6 +7,7 @@ class AnnotationManager {
     constructor( viewer ) {
         this.viewer = viewer;
     }
+
     getAllAnnotations(viewport) {
         return ["EllipticalROI","Probe"].flatMap(
             type => cornerstone.tools.annotation.state.getAnnotations((viewport || this.viewer.viewports[0]).element,type) || []
@@ -59,6 +60,7 @@ class AnnotationManager {
             return
         }
     }
+
     createAnnotationTemplate() {
         var idx = Math.max(0,...Object.values(this.annotations).map(a => a.idx+1));
         return {
@@ -81,6 +83,7 @@ class AnnotationManager {
             }
         }
     }
+
     duplicateSelectedAnnotation() {
         for (let a of this.getSelectedFilteredAnnotations() ) {
             if (!a) { continue }
@@ -96,11 +99,13 @@ class AnnotationManager {
             this.annotations[new_a.annotationUID] = { uid: new_a.annotationUID, label: new_a.data.label, ...new_a.metadata }
         }
     }
+
     getSelectedFilteredAnnotations() {
         let annotation_uids = cornerstone.tools.annotation.selection.getAnnotationsSelected() || []
         let annotations = annotation_uids.map(cornerstone.tools.annotation.state.getAnnotation)
         return annotations.filter(x=> x && ["EllipticalROI", "Probe"].indexOf(x.metadata.toolName)>-1)
     }
+
     deleteSelectedAnnotations() {
         for (let a of this.getSelectedFilteredAnnotations() ) {
             if (!a) { continue }
@@ -110,6 +115,7 @@ class AnnotationManager {
         }
         this.updateChart();
     }
+
     flipSelectedAnnotations() {
         let [ left, right ] = this.viewer.volume.imageData.getBounds().slice(0,2);
         let midpoint = (left + right) / 2;
@@ -121,6 +127,7 @@ class AnnotationManager {
             cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,[a.metadata.viewportId]) 
         }
     }
+
     addAnnotationToViewport(tool_name,viewport_n) {
         var viewport = this.viewer.viewports[viewport_n]
         var cam = viewport.getCamera()
@@ -155,6 +162,7 @@ class AnnotationManager {
 
         this.annotations[new_annotation.annotationUID] = { uid: new_annotation.annotationUID, label: new_annotation.data.label, ...new_annotation.metadata }
     }
+
     async deleteAnnotation(uid) {
         let annotation_info = this.annotations[uid];
         const viewport = this.viewer.viewports.find( x => x.id == annotation_info.viewportId);
@@ -163,13 +171,15 @@ class AnnotationManager {
         delete this.annotations[annotation_info.uid];
         await this.updateChart()
     }
+
     goToAnnotation(uid) {
         let annotation_info = this.annotations[uid];
         const viewport = this.viewer.viewports.find( x => x.id == annotation_info.viewportId);
         viewport.setCamera(annotation_info.cam);
         this.viewer.renderingEngine.renderViewports([annotation_info.viewportId]);
     }
-    initChart() {
+
+    initChart() {        
         var g = new Dygraph(document.getElementById("chart"), [],
         {
             // legend: 'always',
