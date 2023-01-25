@@ -75,7 +75,7 @@ class AnnotationManager {
             },
             data: {
                 cachedStats: {},
-                label: `Annotation ${idx+1}`,
+                label: `ROI ${idx+1}`,
                 handles: {
                     textBox:{"hasMoved":false,"worldPosition":[0,0,0],"worldBoundingBox":{"topLeft":[0,0,0],"topRight":[0,0,0],"bottomLeft":[0,0,0],"bottomRight":[0,0,0]}},
                     activeHandleIndex: null
@@ -179,13 +179,16 @@ class AnnotationManager {
         this.viewer.renderingEngine.renderViewports([annotation_info.viewportId]);
     }
 
-    initChart() {        
-        var g = new Dygraph(document.getElementById("chart"), [],
+    initChart() {    
+
+        const div = document.getElementById("chart");
+
+        var g = new Dygraph(div, [],
         {
             // legend: 'always',
             // valueRange: [0.0, 1000],
             gridLineColor: 'white',
-            hideOverlayOnMouseOut: false,
+            // hideOverlayOnMouseOut: true,
             labels: ['seconds', 'Random'],
             highlightSeriesOpts: { strokeWidth: 3 },
             highlightSeriesBackgroundAlpha: 1,
@@ -197,7 +200,7 @@ class AnnotationManager {
                         return ''
                     }
                   }
-            },
+            },           
             underlayCallback: (function(canvas, area, g) {
                 if (! this.viewer.study_uid ) {
                     return
@@ -206,17 +209,22 @@ class AnnotationManager {
                 var left = bottom_left[0];
                 canvas.fillStyle = "rgba(255, 255, 102, 1.0)";
                 canvas.fillRect(left-2, area.y, 4, area.h);
-              }).bind(this),
+            }).bind(this),
               pointClickCallback: function(event, p) {
+            }
+        });
 
-             }
-    
-            },
-            
-        );
+        div.addEventListener('mouseenter', () => {
+            g.updateOptions({legend: 'follow'});
+        });
+
+        div.addEventListener('mouseleave', () => {
+            g.updateOptions({legend: 'none'});
+        });
+
         const resizeObserver = new ResizeObserver(() => {
-            g.resize(1,300);
-            g.resize(viewer.chart.maindiv_.parentElement.offsetWidth,300)    // viewer.chart.resize(viewer.chart.maindiv_.parentElement.offsetWidth,500)    
+            // g.resize(1,300);
+            g.resize(viewer.chart.maindiv_.parentElement.offsetWidth,viewer.chart.maindiv_.parentElement.offsetHeight);    // viewer.chart.resize(viewer.chart.maindiv_.parentElement.offsetWidth,500)    
         });
         resizeObserver.observe(g.maindiv_.parentElement.parentElement);
     
