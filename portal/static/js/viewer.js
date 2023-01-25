@@ -138,7 +138,7 @@ class GraspViewer {
                         el.setAttribute("orig-column", el.style.gridColumn)
                         for (const _el of [el,pre_el,overlay_el]) {
                             _el.style.zIndex = 1;
-                            _el.style.gridArea = "1 / 1 / 1 / 4";
+                            _el.style.gridArea = "1 / 1 / 1 / -1";
                         }
                         document.getElementById("grasp-view-outer").style.gridArea = "e / e / f / f"
                     } else {
