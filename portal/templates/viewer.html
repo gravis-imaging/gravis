@@ -163,7 +163,7 @@ on htmx:afterRequest
       @change="await viewer.annotation_manager.goToAnnotation($event.target.value);">
         <option value="" selected disabled hidden>Select annotation</option>
         <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
-          <option x-text="viewer.annotation_manager.annotations[uid].label" :value="uid"></option>
+          <option x-text="(viewer.annotation_manager.annotations[uid] || {}).label" :value="uid"></option>
         </template>
       </select>
     </div>
