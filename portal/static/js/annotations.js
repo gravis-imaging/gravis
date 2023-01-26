@@ -177,7 +177,10 @@ class AnnotationManager {
         let annotation_info = this.annotations[uid];
         const viewport = this.viewer.viewports.find( x => x.id == annotation_info.viewportId);
         viewport.setCamera(annotation_info.cam);
+        cornerstone.tools.annotation.selection.setAnnotationSelected(uid, true, false);
         this.viewer.renderingEngine.renderViewports([annotation_info.viewportId]);
+        cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,[annotation_info.viewportId]) 
+
     }
 
     initChart() {    

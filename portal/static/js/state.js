@@ -7,16 +7,20 @@ class StateManager {
         this.viewer = viewer;
     }
 
+    _calcAnnotations() {
+        const annotations = this.viewer.annotation_manager.getAllAnnotations();
+        for (let a of annotations) {
+            a.data.cachedStats = {}
+        }
+        return annotations;
+    }
     _calcState() {
         if (!this.viewer.viewports[0].getDefaultActor()) {
             return;
         }
         const cameras = this.viewer.viewports.map(v=>v.getCamera());
         const dicom_set_voi = this.viewer.getVolumeVOI(this.viewer.viewports[0]);
-        const annotations = this.viewer.annotation_manager.getAllAnnotations();
-        for (let a of annotations) {
-            a.data.cachedStats = {}
-        }
+        const annotations = this._calcAnnotations();
 
         var voi = {[this.viewer.dicom_set]: dicom_set_voi};
         if ( this.current_state && this.current_state.voi ) {

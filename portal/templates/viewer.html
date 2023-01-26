@@ -97,6 +97,10 @@ on htmx:afterRequest
             </button>
             <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
                 :disabled="switching || job_loading != null"
+                @click="viewer.storeFinding(i-1);"><i class="fa-solid fa-camera"></i>
+            </button>
+            <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
+                :disabled="switching || job_loading != null"
                 @click="viewer.annotation_manager.flipSelectedAnnotations();">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-symmetry-vertical" viewBox="0 0 16 16">
                 <path d="M7 2.5a.5.5 0 0 0-.939-.24l-6 11A.5.5 0 0 0 .5 14h6a.5.5 0 0 0 .5-.5v-11zm2.376-.484a.5.5 0 0 1 .563.245l6 11A.5.5 0 0 1 15.5 14h-6a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .376-.484zM10 4.46V13h4.658L10 4.46z"/>
@@ -154,13 +158,16 @@ on htmx:afterRequest
  
   <!-- Annotations -->
   <div id="annotations" style="overflow-y: hidden; display: flex; flex-direction: column; flex-wrap: wrap; grid-area: g">
-    <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
-      <div x-show="!!viewer.annotation_manager.annotations[uid]">
-        <div x-text="viewer.annotation_manager.annotations[uid] ? viewer.annotation_manager.annotations[uid].label : 'Error'"></div>
-        <button class="btn-primary btn-large m-2" @click="await viewer.annotation_manager.deleteAnnotation(uid);">Delete</button>
-        <button class="btn-primary btn-large m-2" @click="await viewer.annotation_manager.goToAnnotation(uid);">Jump</button>
-      </div>
-    </template>  
+    <div class="select-wrapper">
+      <select id="annotations_select" name="annotations" autocomplete="off" class="form-control" value="" :disabled="viewer == null" 
+      @change="await viewer.annotation_manager.goToAnnotation($event.target.value);">
+        <option value="" selected disabled hidden>Select annotation</option>
+        <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
+          <option x-text="viewer.annotation_manager.annotations[uid].label" :value="uid"></option>
+        </template>
+      </select>
+    </div>
+
   </div>    
 
 

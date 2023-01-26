@@ -1,6 +1,6 @@
 import { AnnotationManager } from "./annotations.js"
 import { StateManager } from "./state.js"
-import { doJob } from "./utils.js"
+import { doJob, viewportToImage } from "./utils.js"
 
 const SOP_INSTANCE_UID = '00080018';
 const STUDY_DATE = '00080020';
@@ -353,6 +353,18 @@ class GraspViewer {
                 mouseButton: Enums.MouseBindings.Primary,
             }],
         });
+        toolGroupAux.setToolActive(Tools.PanTool.toolName, {
+            bindings: [{ 
+                mouseButton: Enums.MouseBindings.Primary,
+                modifierKey: Enums.KeyboardBindings.Alt,
+            }],
+        });
+        toolGroupAux.setToolActive(Tools.ZoomTool.toolName, {
+            bindings: [{ 
+                mouseButton: Enums.MouseBindings.Secondary,
+                modifierKey: Enums.KeyboardBindings.Alt,
+            }],
+        });
         toolGroupMain.setToolPassive(Tools.ProbeTool.toolName, {
             bindings: [
             {
@@ -558,7 +570,11 @@ class GraspViewer {
         }
         return native_viewports;
     }
-    
+    async storeFinding(n){
+        const image = await viewportToImage(this.viewports[n]);
+        const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`, {image_data: image});
+
+    }
 }
 
 
@@ -570,4 +586,4 @@ window.onload = async function() {
 }
 
 
-export { GraspViewer, doJob };
+export { GraspViewer, doJob, viewportToImage };
