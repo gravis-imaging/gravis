@@ -24,6 +24,7 @@
                         <a class="nav-link {% if request.resolver_match.url_name == "index" %}active{% endif %}" aria-current="page" href="/"><i class="fa-solid fa-table"></i>&nbsp;&nbsp;Browser</a>
                     </li>
                     <!-- Viewer -->
+                    {% if cases %}    
                     <li class="nav-item dropdown">
                         <a
                           class="nav-link dropdown-toggle {% if request.resolver_match.url_name == "viewer" %}active{% endif %}"
@@ -50,6 +51,7 @@
                           {% endfor %}                        
                         </ul>
                     </li>                              
+                    {% endif %}                            
                 </ul>
                 <!-- Patient name for the current case -->
                 {% if request.resolver_match.url_name == "viewer" %}  

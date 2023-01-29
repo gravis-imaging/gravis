@@ -14,7 +14,7 @@ from pathlib import Path
 import environ
 
 env = environ.Env(
-    # set casting, default value
+    GRAVIS_VERSION=(str, "DEV"),
     DEBUG=(bool, False),
     APPLIANCE_NAME=(str, "master"),
     DATA_FOLDER=(str, "/opt/gravis/data"),
@@ -48,7 +48,7 @@ CASES_FOLDER = env("CASES_FOLDER")
 ERROR_FOLDER = env("ERROR_FOLDER")
 INCOMING_SCAN_INTERVAL = env("INCOMING_SCAN_INTERVAL")
 TEST_FOLDER_PATH = env("TEST_FOLDER_PATH")
-
+GRAVIS_VERSION=env("GRAVIS_VERSION")
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = DATA_FOLDER

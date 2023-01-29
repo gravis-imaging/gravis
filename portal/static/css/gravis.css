@@ -167,7 +167,7 @@ select,.select-wrapper::after {
 
 .browserbuttons button:disabled
 {
-    color: #e5dcdc;
+    color: #575757;
     background-color: transparent;
 }
 
@@ -208,3 +208,11 @@ select,.select-wrapper::after {
     -webkit-filter: blur(5px);
 }
   
+button {
+    border-style: none;
+    /* border-width: 1px; */
+}
+
+button:focus:not(:focus-visible) {
+    box-shadow: none;
+}

@@ -48,7 +48,7 @@ def login_request(request):
         else:
             messages.error(request, "Invalid username or password.")
     form = AuthenticationForm()
-    return render(request, "login.html", context={"form": form})
+    return render(request, "login.html", context={"form": form, "build_version": settings.GRAVIS_VERSION})
 
 
 def logout_request(request):
