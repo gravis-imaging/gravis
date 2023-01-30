@@ -1,7 +1,7 @@
 import json
-import math
+import uuid
 import numpy as np
-from loguru import logger
+from urllib.request import urlopen
 import pydicom
 import os
 from pathlib import Path
@@ -237,6 +237,26 @@ def processed_results_urls(request, case, case_type, source_set):
             urls.append(wado_uri)
     return JsonResponse(dict(urls=urls))
 
+@login_required
+def store_finding(request, case, source_set):
+    dicom_set = DICOMSet.objects.get(id=int(source_set))
+    if request.method == 'GET':
+        results = [f.to_dict() for f in dicom_set.findings.all() if f.file_location]
+        return JsonResponse(dict(findings=results))
+    elif request.method == 'POST':
+        data = json.loads(request.body.decode("utf-8"))
+        with urlopen(data["image_data"]) as response:
+            image_data = response.read()
+        directory = Path(dicom_set.case.case_location) / "findings" / str(uuid.uuid4())
+        directory.mkdir()
+        filename = directory / f"finding.png"
+        filename.touch()
+        print(filename)
+        with open(filename,"wb") as f:
+            f.write(image_data)
+        finding = Finding(created_by = request.user, dicom_set = dicom_set, file_location = filename.relative_to(Path(dicom_set.case.case_location)))
+        finding.save()
+        return JsonResponse(finding.to_dict())
 # @login_required
 # def preview_data(request, case, view, index):
 #     instance = DICOMInstance.objects.get(slice_location=index, dicom_set__case=case, dicom_set__type=f"CINE/{view.upper()}",dicom_set__processing_job__status="Success",dicom_set__processing_job__dicom_set__origin="Incoming")

@@ -12,7 +12,9 @@ h2 {
 .hidden {
     display:none !important;
 }
-
+.img-thumbnail {
+    background-color: inherit;
+}
 .viewer-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
