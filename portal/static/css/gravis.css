@@ -77,6 +77,33 @@ h2 {
     grid-area: 1 / 1 / 2 / 2;
 }
 
+.grid {
+    display:grid; 
+    overflow-x: hidden; 
+    height:calc(100vh - 6rem); 
+    grid-template-rows: 0fr 1fr 0.9fr; 
+    grid-template-columns: 1.0fr 2.0fr 0.5fr; 
+    gap: 0.5em; 
+    grid-template-areas: 
+    "c c g"
+    "e e g"
+    "d f g";
+}
+   
+.toolbar-area {
+    display: grid;
+    grid-column: c / c;
+    grid-row: c / c;
+    grid-template-columns: 3fr 0.1fr 0.5fr 0.1fr 0.5fr;
+    grid-template-areas: "k . l . m";
+}
+  
+  /* .subitem {
+    grid-column: 3 / 6;
+    grid-row: 1 / 3;
+  } 
+       */
+
 /* Fix for bug in MDBootstrap dark mode, affecting input boxes */
 .form-outline .form-control~.form-notch div {
     border-top-color: #bdbdbd;
@@ -142,7 +169,7 @@ select,.select-wrapper::after {
 
 .browserbuttons button:disabled
 {
-    color: #e5dcdc;
+    color: #575757;
     background-color: transparent;
 }
 
@@ -183,3 +210,11 @@ select,.select-wrapper::after {
     -webkit-filter: blur(5px);
 }
   
+button {
+    border-style: none;
+    /* border-width: 1px; */
+}
+
+button:focus:not(:focus-visible) {
+    box-shadow: none;
+}

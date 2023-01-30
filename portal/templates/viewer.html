@@ -31,24 +31,14 @@ on htmx:afterRequest
   const studies_data_parsed = JSON.parse(document.getElementById('studies_data').textContent);    
 </script>
 
-<div style='overflow-x: hidden; height:calc(100vh - 6rem); display:grid; grid-template-rows: 0fr 1fr 0.9fr; grid-template-columns: 1.2fr 1.8fr 0.2fr 0.2fr 0.5fr; gap: 0.5em; grid-template-areas: 
-  "c c . a g"
-  "e e e e h"
-  "d f f f h";' 
+<div class="grid"
   x-data="{ viewer: null, n_annotations: 0, previewing: false, switching: false, current_study: null, index: 0, loading: false, job_loading: null, case_id: {{case.id}} }" >
-
-  <div style="grid-area: a" class="select-wrapper">
-    <select id="studies" name="studies" autocomplete="off" class="form-control" value="" :disabled="viewer == null" 
-    @change="loading=true; await $nextTick(); current_study = await viewer.switchStudy($event.target.value.split(':::'), case_id);  loading=false;">
-      <!-- <option value="" selected disabled hidden>Select study...</option> -->
-      {% for i in studies %}
-      <option value="{{i.0}}:::{{i.1}}">{{ i.2 }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  
+   
+  <!-- dicom set selector -->
+  <div class="toolbar-area">
+    
   <!-- volume picker -->
-  <div style="grid-area: c"> 
+  <div style="grid-area: k"> 
     <div style="display: flex;">
       <input id='volume-picker' type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
       @mouseUp="previewing = false"
@@ -59,6 +49,33 @@ on htmx:afterRequest
       <label for='volume-picker' x-text="viewer && viewer.selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>
     </div>
   </div>
+
+  <!-- dicom set selection -->
+  <div style="grid-area: l" class="select-wrapper">
+    <select id="studies" name="studies" autocomplete="off" class="form-control" value="" :disabled="viewer == null" 
+    @change="loading=true; await $nextTick(); current_study = await viewer.switchStudy($event.target.value.split(':::'), case_id);  loading=false;">
+      <!-- <option value="" selected disabled hidden>Select study...</option> -->
+      {% for i in studies %}
+      <option value="{{i.0}}:::{{i.1}}">{{ i.2 }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  
+  <!-- Annotations -->
+  <div id="annotations" style="grid-area: m; overflow-y: hidden; display: flex; flex-direction: column; flex-wrap: wrap;">
+    <div class="select-wrapper">
+      <select id="annotations_select" name="annotations" autocomplete="off" class="form-control" value="" :disabled="viewer == null" 
+      @change="await viewer.annotation_manager.goToAnnotation($event.target.value);">
+        <option value="" selected disabled hidden>Select ROI</option>
+        <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
+          <option x-text="(viewer.annotation_manager.annotations[uid] || {}).label" :value="uid"></option>
+        </template>
+      </select>
+    </div>
+  </div>  
+  
+</div>
 
   <div x-cloak id="grasp-view-outer" class="grid-container h-100" style="width: 100%; grid-area: e" >
     <div x-show="loading" style="z-index:10;" class="pointer-events-none grid-fill">
@@ -155,19 +172,8 @@ on htmx:afterRequest
     </template>
   </div>
    
-  <!-- Annotations -->
-  <div id="annotations" style="grid-area: g">
-    <div class="select-wrapper">
-      <select id="annotations_select" name="annotations" autocomplete="off" class="form-control" value="" :disabled="viewer == null" 
-      @change="await viewer.annotation_manager.goToAnnotation($event.target.value);">
-        <option value="" selected disabled hidden>Select annotation</option>
-        <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
-          <option x-text="(viewer.annotation_manager.annotations[uid] || {}).label" :value="uid"></option>
-        </template>
-      </select>
-    </div>
-  </div>
-  <div id="findings" style="overflow-y: auto; display: flex; flex-direction: column; flex-wrap: nowrap; grid-area: h">
+  <!-- Findings -->
+  <div id="findings" style="overflow-y: auto; display: flex; flex-direction: column; flex-wrap: nowrap; grid-area: g">
     <template x-for="finding in viewer? viewer.findings : []">
       <div class="mb-2 img-thumbnail">
         <span x-text="finding.name"></span>

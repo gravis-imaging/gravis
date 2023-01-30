@@ -159,6 +159,9 @@
             select: {
                 style: 'single'
             },
+            language: {
+                "emptyTable": "No cases available on server."
+            },
             filter: true,
             buttons: [
                 {
@@ -173,6 +176,7 @@
                     }
                 },
                 {
+                    extend: "selectedSingle",
                     text: '<i class="fas fa-lock-open"></i>',
                     titleAttr: 'Unlock case',
                     action: function (e, dt, node, config) {
@@ -287,7 +291,6 @@
             const link = '/viewer/'+case_id
             window.open(link);
         });
-
         
         $('#casetable tbody').on('click', 'tr', function () {
             if ($(this).hasClass('selected')) {
