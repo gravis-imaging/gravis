@@ -1,9 +1,7 @@
 {% extends 'base.html' %}
 {% load portaltags %}
 
-
 {% block body %}
-
 <header class="mb-5">
     <nav class="navbar navbar-expand-lg  fixed-top navbar-dark bg-dark mb-4 shadow-2-strong">
         <div class="container-fluid">
@@ -121,11 +119,4 @@
         Array.from(document.getElementsByClassName('patient_info')).forEach(e => e.classList.remove("blur"));
     }    
 </script>
-
-<script type="module">
-    import { showPopup } from "/static/js/popup.js";
-    window.showPopup = showPopup;
-</script>
-
-
 {% endblock %}

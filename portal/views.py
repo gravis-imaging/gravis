@@ -1,9 +1,9 @@
 import logging
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.views.static import serve
@@ -107,7 +107,7 @@ def config(request):
 
 @login_required
 def viewer(request, case):
-    case = Case.objects.get(id=case)
+    case = get_object_or_404(Case, id=case)
     
     case.viewed_by = request.user
     case.last_read_by = request.user
@@ -131,3 +131,61 @@ def add_case(request):
         "cases": [(k.id) for k in cases],
     }
     return render(request, "portal.html", context)
+
+
+@login_required
+def browser_get_all_cases(request):
+    '''
+    Returns a JSON object containing information on all cases stored in the database.
+    '''
+    case_data = []
+    all_cases = Case.objects.all()
+    for case in all_cases:
+        case_data.append(
+            {
+                "case_id": str(case.id),
+                "patient_name": case.patient_name,
+                "mrn": case.mrn,
+                "acc": case.acc,
+                "num_spokes": case.num_spokes,
+                "case_type": case.case_type,
+                "exam_time": case.exam_time.strftime("%Y-%m-%d %H:%M"),
+                "receive_time": case.receive_time.strftime("%Y-%m-%d %H:%M"),
+                "status": Case.CaseStatus(case.status).name.title(),
+                "twix_id": case.twix_id,
+                "case_location": case.case_location,
+                "settings": case.settings,
+                "last_read_by_id": case.last_read_by.username if case.last_read_by_id else "",
+                "viewed_by_id": case.viewed_by.username if case.viewed_by_id else "",
+            }
+        )
+
+    return JsonResponse({"data": case_data}, safe=False)
+
+
+@login_required
+def browser_get_case(request, case):
+    '''
+    Returns information about the given case in JSON format. Returns 404 page if
+    case ID does not exist
+    '''
+    case = get_object_or_404(Case, id=case)
+
+    json_data = {
+        "case_id": str(case.id),
+        "patient_name": case.patient_name,
+        "mrn": case.mrn,
+        "acc": case.acc,
+        "num_spokes": case.num_spokes,
+        "case_type": case.case_type,
+        "exam_time": case.exam_time.strftime("%Y-%m-%d %H:%M"),
+        "receive_time": case.receive_time.strftime("%Y-%m-%d %H:%M"),
+        "status": Case.CaseStatus(case.status).name.title(),
+        "twix_id": case.twix_id,
+        "case_location": case.case_location,
+        "settings": case.settings,
+        "last_read_by_id": case.last_read_by.username if case.last_read_by_id else "",
+        "viewed_by_id": case.viewed_by.username if case.viewed_by_id else "",
+    }
+    return JsonResponse(json_data, safe=False)
+

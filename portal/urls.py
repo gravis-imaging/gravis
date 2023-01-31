@@ -8,18 +8,21 @@ from .rest import CaseView
 
 urlpatterns = [
     path("", views.index, name="index"),
+    path("browser/get_all_cases", views.browser_get_all_cases),
+    path("browser/get_case/<str:case>", views.browser_get_case),
+    path("login/", views.login_request, name="login"),
+    path("logout/", views.logout_request, name="logout"),
+
     # path("docker_job/", views.docker_job),
     # path("work_test/", views.work_queue_test),
     # path("work_status/<int:id>/", views.work_status),
     path("viewer/<str:case>", views.viewer, name="viewer"),
-    path("login/", views.login_request, name="login"),
-    path("logout/", views.logout_request, name="logout"),
     path("config/", views.config, name="config"),
     path("user/", views.user, name="user"),
     path("cases/", CaseView()),
     path("media/<path:path>", views.serve_media),
-    path("api/case/<str:case>/dicom_set/<str:source_set>/timeseries",grasp_endpoints.timeseries_data),
 
+    path("api/case/<str:case>/dicom_set/<str:source_set>/timeseries",grasp_endpoints.timeseries_data),
     path("api/case/<str:case>/dicom_set/<str:source_set>/preview/<str:view>/<str:location>", grasp_endpoints.preview_urls),
     path("api/case/<str:case>/dicom_set/<str:source_set>/processed_results/<path:case_type>", grasp_endpoints.processed_results_urls),
     path("api/case/<str:case>/dicom_set/<str:source_set>/processed_json/<str:category>", grasp_endpoints.processed_results_json),

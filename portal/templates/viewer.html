@@ -187,11 +187,11 @@ on htmx:afterRequest
         <img class="mb-2 img-fluid" :src="finding.url" width="100%"/>
       </div>
     </template>
-
   </div>    
-
-
 </div>
+
+{% include "case_information_modal.html" %}
+
 <script defer type="module">
   import { GraspViewer, doJob } from "/static/js/viewer.js"
   import { doFetch } from "/static/js/utils.js"
@@ -200,6 +200,4 @@ on htmx:afterRequest
   window.doFetch = doFetch;
 </script>
 
-
-{% include "popup.html" %}
 {% endblock %}
