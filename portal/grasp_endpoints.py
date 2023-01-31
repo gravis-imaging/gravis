@@ -1,16 +1,20 @@
+import io
 import json
 import uuid
 import numpy as np
-from urllib.request import urlopen
 import pydicom
 import os
 from pathlib import Path
+from urllib.request import urlopen
+
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.conf import settings
-
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+
+from PIL import Image
+import highdicom as hd
 
 from portal.models import *
 
@@ -237,6 +241,26 @@ def processed_results_urls(request, case, case_type, source_set):
             urls.append(wado_uri)
     return JsonResponse(dict(urls=urls))
 
+def sc_from_ref(reference_dataset, pixel_array):
+    sc = hd.sc.SCImage.from_ref_dataset(
+        ref_dataset=reference_dataset,
+        pixel_array=pixel_array,
+        photometric_interpretation=hd.PhotometricInterpretationValues.RGB,
+        bits_allocated=8,
+        coordinate_system=hd.CoordinateSystemNames.PATIENT,
+        series_instance_uid=hd.UID(),
+        sop_instance_uid=hd.UID(),
+        series_number=getattr(reference_dataset, "SeriesNumber", 0),
+        instance_number=getattr(reference_dataset, "InstanceNumber", 0),
+        manufacturer="Gravis",
+        pixel_spacing=None,
+        patient_orientation=getattr(reference_dataset, "PatientOrientation", ("L", "P")),
+    )
+    # sc.ImageOrientationPatient = reference_dataset.ImageOrientationPatient
+    # sc.SpacingBetweenSlices = reference_dataset.SpacingBetweenSlices
+    # sc.ImagePositionPatient = reference_dataset.ImagePositionPatient
+    sc.FrameOfReferenceUID = reference_dataset.FrameOfReferenceUID
+    return sc
 
 @login_required
 def store_finding(request, case, source_set):
@@ -252,10 +276,24 @@ def store_finding(request, case, source_set):
         directory.mkdir()
         filename = directory / f"finding.png"
         filename.touch()
-        print(filename)
+
         with open(filename,"wb") as f:
             f.write(image_data)
-        finding = Finding(created_by = request.user, dicom_set = dicom_set, file_location = filename.relative_to(Path(dicom_set.case.case_location)))
+        
+        im_frame = Image.open(io.BytesIO(image_data))
+        im_array = np.array(im_frame.getdata(),dtype=np.uint8)[:,:3]
+        im_array = im_array.reshape([*im_frame.size[::-1],3])
+    
+        related_instance = dicom_set.instances.first() # TODO: pick which instance?
+        related_ds = pydicom.dcmread(Path(dicom_set.set_location) / related_instance.instance_location,stop_before_pixels=True)
+        sc = sc_from_ref(related_ds,im_array)
+        sc.save_as(directory / "finding.dcm")
+        
+        finding = Finding(
+                created_by = request.user, 
+                dicom_set = dicom_set,
+                file_location = filename.relative_to(Path(dicom_set.case.case_location)),
+                data = data.get("info",None))
         finding.save()
         return JsonResponse(finding.to_dict())
         

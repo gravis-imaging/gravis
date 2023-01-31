@@ -70,7 +70,7 @@ on htmx:afterRequest
   <!-- Annotations -->
     <div class="select-wrapper" style="margin-left: 1em">
       <select id="annotations_select" name="annotations" autocomplete="off" class="form-control" value="" :disabled="viewer == null" 
-      @change="await viewer.annotation_manager.goToAnnotation($event.target.value);">
+      @change="let annotation_select = $event.target.value; $event.target.value = ''; await viewer.annotation_manager.goToAnnotation(annotation_select);">
         <option value="" selected disabled hidden>Select ROI</option>
         <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
           <option x-text="(viewer.annotation_manager.annotations[uid] || {}).label" :value="uid"></option>
