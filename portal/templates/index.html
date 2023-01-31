@@ -2,11 +2,8 @@
 
 {% block content %}
 <div class="row mb-3">
-    <div class="col-11">
+    <div class="col">
         <h2><i class="fas fa-angle-double-right text-primary text-primary"></i>&nbsp;&nbsp;Case Browser</h2>
-    </div>
-    <div class="col-1 float-right">
-        <button class="btn btn-primary btn-lg btn-floating float-end" onclick="window.location.reload();"><i class="fas fa-sync"></i></button>
     </div>
 </div>
 <div>
@@ -148,7 +145,6 @@
 {% endblock %}
 
 {% block addedscripts %}
-<!--script src="/static/js/jquery-3.5.1.min.js" crossorigin></script-->
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js" crossorigin></script>
 <script type="text/javascript" src="/static/js/datatables.min.js" crossorigin></script>
 {{ data|json_script:"cases_data" }}
@@ -259,6 +255,13 @@
                     }
                 },
                 {% endif %}
+                {
+                    text: '<i class="fa-solid fa-sync"></i>',
+                    titleAttr: 'Refresh',
+                    action: function (e, dt, node, config) {
+                        window.location.reload();
+                    }
+                },
                 {
                     extend: 'spacer',
                     style: 'empty'

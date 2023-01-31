@@ -218,3 +218,9 @@ button {
 button:focus:not(:focus-visible) {
     box-shadow: none;
 }
+
+::selection {
+    color: none;
+    background: none;
+}
+ 
