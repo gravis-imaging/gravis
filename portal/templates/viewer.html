@@ -42,11 +42,16 @@ on htmx:afterRequest
   <div class="toolbar-area">
     
   <!-- volume picker -->
-  <input id='volume-picker' type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
+  <!-- x-model="value" x-ref="input" x-on:focus="() => { $refs.input.focus() }"  -->
+  <input id='volume-picker' tabindex='1' 
+      type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
       @mouseUp="previewing = false"
       @input="if (!previewing) { viewer.startPreview(); previewing = true; }; index = $event.target.value; viewer.selected_time=current_study[index].acquisition_seconds; viewer.setPreview(index,current_study.length);"
       @change="switching = true; viewer.selected_time=current_study[index].acquisition_seconds; await viewer.switchSeries(current_study[index].series_uid); current_time=viewer.selected_time; switching = false;"
-      :disabled="!current_study || !!loading">
+      :disabled="!current_study || !!loading"
+      @keydown.left=""
+      @keydown.right=""
+      >
       </input>
       <label for='volume-picker' x-text="viewer && viewer.selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>
 
@@ -199,6 +204,10 @@ on htmx:afterRequest
   window.doJob = doJob;
   window.doFetch = doFetch;
 </script>
+<!-- 
+<script type="text/javascript">
+  document.getElementById('volume-picker').focus();
+</script> -->
 
 
 {% include "popup.html" %}
