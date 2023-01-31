@@ -38,20 +38,16 @@ on htmx:afterRequest
   <div class="toolbar-area">
     
   <!-- volume picker -->
-  <div style="grid-area: k"> 
-    <div style="display: flex;">
-      <input id='volume-picker' type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
+  <input id='volume-picker' type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
       @mouseUp="previewing = false"
       @input="if (!previewing) { viewer.startPreview(); previewing = true; }; index = $event.target.value; viewer.selected_time=current_study[index].acquisition_seconds; viewer.setPreview(index,current_study.length);"
       @change="switching = true; viewer.selected_time=current_study[index].acquisition_seconds; await viewer.switchSeries(current_study[index].series_uid); current_time=viewer.selected_time; switching = false;"
       :disabled="!current_study || !!loading">
       </input>
       <label for='volume-picker' x-text="viewer && viewer.selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>
-    </div>
-  </div>
 
   <!-- dicom set selection -->
-  <div style="grid-area: l" class="select-wrapper">
+  <div class="select-wrapper" style="margin-left: 1em">
     <select id="studies" name="studies" autocomplete="off" class="form-control" value="" :disabled="viewer == null" 
     @change="loading=true; await $nextTick(); current_study = await viewer.switchStudy($event.target.value.split(':::'), case_id);  loading=false;">
       <!-- <option value="" selected disabled hidden>Select study...</option> -->
@@ -63,8 +59,7 @@ on htmx:afterRequest
 
   
   <!-- Annotations -->
-  <div id="annotations" style="grid-area: m; overflow-y: hidden; display: flex; flex-direction: column; flex-wrap: wrap;">
-    <div class="select-wrapper">
+    <div class="select-wrapper" style="margin-left: 1em">
       <select id="annotations_select" name="annotations" autocomplete="off" class="form-control" value="" :disabled="viewer == null" 
       @change="await viewer.annotation_manager.goToAnnotation($event.target.value);">
         <option value="" selected disabled hidden>Select ROI</option>
@@ -73,10 +68,8 @@ on htmx:afterRequest
         </template>
       </select>
     </div>
-  </div>  
 
   <!-- Image manipulation buttons -->
-  <div style="grid-area: n;">
     <button title="Duplicate Selected Annotation" style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
         :disabled="switching || job_loading != null"
         @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
@@ -100,9 +93,6 @@ on htmx:afterRequest
         @click="viewer.annotation_manager.deleteAllAnnotations();">
         <i class="fa-solid fa-trash"></i>
     </button>
-  </div>
-            
-  
 </div>
 
   <div x-cloak id="grasp-view-outer" class="grid-container h-100" style="width: 100%; grid-area: e" >

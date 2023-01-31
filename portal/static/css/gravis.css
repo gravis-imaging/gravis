@@ -91,11 +91,9 @@ h2 {
 }
    
 .toolbar-area {
-    display: grid;
-    grid-column: c / c;
-    grid-row: c / c;
-    grid-template-columns: 3fr 0.1fr 0.4fr 0.1fr 0.6fr 0.1fr 0.9fr;
-    grid-template-areas: "k . l . m . n";
+    grid-area: c;
+    display: flex;
+    align-items: center; 
 }
   
   /* .subitem {
@@ -129,6 +127,7 @@ select,.select-wrapper::after {
 }
 .select-wrapper > .form-control {
     background-color: rgb(48, 48, 48);
+    margin-right: 1.5em;
 }
 
 #casetable > thead > tr > th {
