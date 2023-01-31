@@ -2,160 +2,106 @@
 
 {% block content %}
 <div class="row mb-3">
-    <div class="col">
-        <h2><i class="fas fa-angle-double-right text-primary"></i>&nbsp;&nbsp;Configuration</h2>        
-    </div>
+  <div class="col">
+    <h2><i class="fas fa-angle-double-right text-primary"></i>&nbsp;&nbsp;Configuration</h2>
+  </div>
 </div>
 
 <div class="row">
-    <div class="col-12 col-md-2 pb-4">
-      <!-- Tab navs -->
-      <div
-        class="nav flex-column nav-pills text-center"
-        id="v-pills-tab"
-        role="tablist"
-        aria-orientation="vertical"
-      >
-        <a
-          class="nav-link active"
-          id="v-pills-home-tab"
-          data-mdb-toggle="pill"
-          href="#v-pills-home"
-          role="tab"
-          aria-controls="v-pills-home"
-          aria-selected="true"
-          ><i class="fas fa-cog"></i>&nbsp;&nbsp;General</a
-        >
-        <a
-          class="nav-link"
-          id="v-pills-profile-tab"
-          data-mdb-toggle="pill"
-          href="#v-pills-profile"
-          role="tab"
-          aria-controls="v-pills-profile"
-          aria-selected="false"
-          ><i class="fas fa-user-friends"></i>&nbsp;&nbsp;Accounts</a
-        >
-        <a
-          class="nav-link"
-          id="v-pills-messages-tab"
-          data-mdb-toggle="pill"
-          href="#v-pills-messages"
-          role="tab"
-          aria-controls="v-pills-messages"
-          aria-selected="false"
-          ><i class="fas fa-power-off"></i>&nbsp;&nbsp;System Status</a
-        >
-        <a
-          class="nav-link"
-          id="v-pills-messages-tab"
-          data-mdb-toggle="pill"
-          href="#v-pills-messages"
-          role="tab"
-          aria-controls="v-pills-messages"
-          aria-selected="false"
-          ><i class="fas fa-box-open"></i>&nbsp;&nbsp;GRASP MRA</a
-        >
-        <a
-          class="nav-link"
-          id="v-pills-messages-tab"
-          data-mdb-toggle="pill"
-          href="#v-pills-messages"
-          role="tab"
-          aria-controls="v-pills-messages"
-          aria-selected="false"
-          ><i class="fas fa-box-open"></i>&nbsp;&nbsp;GRASP Onco</a
-        >
-      </div>
-      <!-- Tab navs -->
+  <div class="col-12 col-md-2 pb-4">
+    <!-- Tab navs -->
+    <div class="nav flex-column nav-pills text-center" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+      <a class="nav-link active" id="v-pills-status-tab" data-mdb-toggle="pill" href="#v-pills-status" role="tab"
+        aria-controls="v-pills-status" aria-selected="false"><i class="fas fa-power-off"></i>&nbsp;&nbsp;System
+        Status</a>
+      <a class="nav-link " id="v-pills-home-tab" data-mdb-toggle="pill" href="#v-pills-home" role="tab"
+        aria-controls="v-pills-home" aria-selected="true"><i class="fas fa-cog"></i>&nbsp;&nbsp;General</a>
+      <a class="nav-link" id="v-pills-profile-tab" data-mdb-toggle="pill" href="#v-pills-profile" role="tab"
+        aria-controls="v-pills-profile" aria-selected="false"><i
+          class="fas fa-user-friends"></i>&nbsp;&nbsp;Accounts</a>
+      <a class="nav-link" id="v-pills-messages-tab" data-mdb-toggle="pill" href="#v-pills-messages" role="tab"
+        aria-controls="v-pills-messages" aria-selected="false"><i class="fas fa-box-open"></i>&nbsp;&nbsp;GRASP MRA</a>
+      <a class="nav-link" id="v-pills-messages-tab" data-mdb-toggle="pill" href="#v-pills-messages" role="tab"
+        aria-controls="v-pills-messages" aria-selected="false"><i class="fas fa-box-open"></i>&nbsp;&nbsp;GRASP Onco</a>
     </div>
-  
-    <div class="col-12 col-md-10">
-      <!-- Tab content -->
-      <div class="tab-content ms-md-3" id="v-pills-tabContent">
-        <div
-          class="tab-pane fade show active"
-          id="v-pills-home"
-          role="tabpanel"
-          aria-labelledby="v-pills-home-tab"
-        >
+    <!-- Tab navs -->
+  </div>
+
+  <div class="col-12 col-md-10">
+    <!-- Tab content -->
+    <div class="tab-content ms-md-3" id="v-pills-tabContent">
+      <div class="tab-pane fade show active" id="v-pills-status" role="tabpanel" aria-labelledby="v-pills-status-tab">
+        TODO
+      </div>
+      <div class="tab-pane fade" id="v-pills-home" role="tabpanel" aria-labelledby="v-pills-home-tab">
         <h4>General Settings</h4>
         <form>
-            <!-- 2 column grid layout with text inputs for the first and last names -->
-            <div class="row mb-4">
-              <div class="col">
-                <div class="form-outline">
-                  <input type="text" id="form6Example1" class="form-control" />
-                  <label class="form-label" for="form6Example1">First name</label>
-                </div>
-              </div>
-              <div class="col">
-                <div class="form-outline">
-                  <input type="text" id="form6Example2" class="form-control" />
-                  <label class="form-label" for="form6Example2">Last name</label>
-                </div>
+          <!-- 2 column grid layout with text inputs for the first and last names -->
+          <div class="row mb-4">
+            <div class="col">
+              <div class="form-outline">
+                <input type="text" id="form6Example1" class="form-control" />
+                <label class="form-label" for="form6Example1">First name</label>
               </div>
             </div>
-          
-            <!-- Text input -->
-            <div class="form-outline mb-4">
-              <input type="text" id="form6Example3" class="form-control" />
-              <label class="form-label" for="form6Example3">Company name</label>
+            <div class="col">
+              <div class="form-outline">
+                <input type="text" id="form6Example2" class="form-control" />
+                <label class="form-label" for="form6Example2">Last name</label>
+              </div>
             </div>
-          
-            <!-- Text input -->
-            <div class="form-outline mb-4">
-              <input type="text" id="form6Example4" class="form-control" />
-              <label class="form-label" for="form6Example4">Address</label>
-            </div>
-          
-            <!-- Email input -->
-            <div class="form-outline mb-4">
-              <input type="email" id="form6Example5" class="form-control" />
-              <label class="form-label" for="form6Example5">Email</label>
-            </div>
-          
-            <!-- Number input -->
-            <div class="form-outline mb-4">
-              <input type="number" id="form6Example6" class="form-control" />
-              <label class="form-label" for="form6Example6">Phone</label>
-            </div>
-          
-            <!-- Message input -->
-            <div class="form-outline mb-4">
-              <textarea class="form-control" id="form6Example7" rows="4"></textarea>
-              <label class="form-label" for="form6Example7">Additional information</label>
-            </div>
-          
-            <!-- Checkbox -->
-            <div class="form-check d-flex justify-content-center mb-4">
-              <input class="form-check-input me-2" type="checkbox" value="" id="form6Example8" checked />
-              <label class="form-check-label" for="form6Example8"> Create an account? </label>
-            </div>
-          
-            <!-- Submit button -->
-            <button type="submit" class="btn btn-primary btn-block mb-4">Place order</button>
-          </form>
-        </div>
-        <div
-          class="tab-pane fade"
-          id="v-pills-profile"
-          role="tabpanel"
-          aria-labelledby="v-pills-profile-tab"
-        >
-          Profile content
-        </div>
-        <div
-          class="tab-pane fade"
-          id="v-pills-messages"
-          role="tabpanel"
-          aria-labelledby="v-pills-messages-tab"
-        >
-          Messages content
-        </div>
+          </div>
+
+          <!-- Text input -->
+          <div class="form-outline mb-4">
+            <input type="text" id="form6Example3" class="form-control" />
+            <label class="form-label" for="form6Example3">Company name</label>
+          </div>
+
+          <!-- Text input -->
+          <div class="form-outline mb-4">
+            <input type="text" id="form6Example4" class="form-control" />
+            <label class="form-label" for="form6Example4">Address</label>
+          </div>
+
+          <!-- Email input -->
+          <div class="form-outline mb-4">
+            <input type="email" id="form6Example5" class="form-control" />
+            <label class="form-label" for="form6Example5">Email</label>
+          </div>
+
+          <!-- Number input -->
+          <div class="form-outline mb-4">
+            <input type="number" id="form6Example6" class="form-control" />
+            <label class="form-label" for="form6Example6">Phone</label>
+          </div>
+
+          <!-- Message input -->
+          <div class="form-outline mb-4">
+            <textarea class="form-control" id="form6Example7" rows="4"></textarea>
+            <label class="form-label" for="form6Example7">Additional information</label>
+          </div>
+
+          <!-- Checkbox -->
+          <div class="form-check d-flex justify-content-center mb-4">
+            <input class="form-check-input me-2" type="checkbox" value="" id="form6Example8" checked />
+            <label class="form-check-label" for="form6Example8"> Create an account? </label>
+          </div>
+
+          <!-- Submit button -->
+          <button type="submit" class="btn btn-primary btn-block mb-4">Place order</button>
+        </form>
       </div>
-      <!-- Tab content -->
+      <div class="tab-pane fade" id="v-pills-profile" role="tabpanel" aria-labelledby="v-pills-profile-tab">
+        TODO
+      </div>
+      <div class="tab-pane fade" id="v-pills-messages" role="tabpanel" aria-labelledby="v-pills-messages-tab">
+        TODO
+      </div>
     </div>
+    <!-- Tab content -->
   </div>
-  <!-- Tabs content -->
-{% endblock %}  
+</div>
+<!-- Tabs content -->
+{% endblock %}
+
