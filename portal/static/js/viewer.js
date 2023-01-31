@@ -577,8 +577,14 @@ class GraspViewer {
         return result.findings;
     }
     async storeFinding(n){
-        const image = await viewportToImage(this.viewports[n]);
-        const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`, {image_data: image});
+        const viewport = this.viewports[n];
+        const image = await viewportToImage(viewport);
+
+        const info = {
+            cam: viewport.getCamera(),
+            center_index: cornerstone.utilities.transformWorldToIndex(viewport.getDefaultImageData(), cam.focalPoint),
+        }
+        const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`, {image_data: image, info: data});
         this.findings.push(result);
     }
 }
