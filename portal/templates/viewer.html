@@ -27,8 +27,12 @@ on htmx:afterRequest
 
 {% block content %}
 {{ studies|json_script:"studies_data" }}
+{{ current_case|json_script:"case_data" }}
 <script type="text/javascript">
   const studies_data_parsed = JSON.parse(document.getElementById('studies_data').textContent);    
+</script>
+<script type="text/javascript">
+  const current_case_parsed = JSON.parse(document.getElementById('case_data').textContent);    
 </script>
 
 <div class="grid"
@@ -195,4 +199,7 @@ on htmx:afterRequest
   window.doJob = doJob;
   window.doFetch = doFetch;
 </script>
+
+
+{% include "popup.html" %}
 {% endblock %}

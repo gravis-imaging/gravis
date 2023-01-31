@@ -582,9 +582,9 @@ class GraspViewer {
 
         const info = {
             cam: viewport.getCamera(),
-            center_index: cornerstone.utilities.transformWorldToIndex(viewport.getDefaultImageData(), cam.focalPoint),
+            // center_index: cornerstone.utilities.transformWorldToIndex(viewport.getDefaultImageData(), viewport.getCamera().focalPoint),
         }
-        const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`, {image_data: image, info: data});
+        const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`, {image_data: image, info: info});
         this.findings.push(result);
     }
 }

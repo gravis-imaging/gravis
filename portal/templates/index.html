@@ -65,6 +65,7 @@
     </div>
 </div>
 
+{% include "popup.html" %}
 
 {% endblock %}
 
@@ -73,6 +74,7 @@
 {% endblock %}
 
 {% block addedscripts %}
+<!--script src="/static/js/jquery-3.5.1.min.js" crossorigin></script-->
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js" crossorigin></script>
 <script type="text/javascript" src="/static/js/datatables.min.js" crossorigin></script>
 {{ data|json_script:"cases_data" }}
@@ -119,23 +121,7 @@
                         const case_id = row.data()[0];
                         const d = JSON.parse(document.getElementById('cases_data').textContent);                         
                         const c = d.filter((el) => el.case_id === case_id)[0];    
-                        document.getElementById("case_details_patient_name").innerText = c.patient_name;
-                        document.getElementById("case_details_mrn").innerText = c.mrn;
-                        document.getElementById("case_details_acc").innerText = c.acc;
-                        document.getElementById("case_details_num_spokes").innerText = c.num_spokes;
-                        document.getElementById("case_details_case_type").innerText = c.case_type;
-                        document.getElementById("case_details_exam_time").innerText = c.exam_time;
-                        document.getElementById("case_details_receive_time").innerText = c.receive_time;
-                        document.getElementById("case_details_status").innerText = c.status;
-                        document.getElementById("case_details_twix_id").innerText = c.twix_id;
-                        document.getElementById("case_details_case_location").innerText = c.case_location;
-                        document.getElementById("case_details_viewed_by_id").innerText = c.viewed_by_id;
-                        document.getElementById("case_details_last_read_by_id").innerText = c.last_read_by_id;
-                        document.getElementById("case_details_settings").innerText = JSON.stringify(c.settings, null, 4);
-                        
-                        const myModalEl = document.getElementById('modal');
-                        const modal = new mdb.Modal(myModalEl);
-                        modal.show();
+                        showPopup(c);                        
                     }
                 },
                 {% if user.is_staff %}
@@ -184,13 +170,6 @@
                 },
                 {% endif %}
                 {
-                    text: '<i class="fa-solid fa-sync"></i>',
-                    titleAttr: 'Refresh',
-                    action: function (e, dt, node, config) {
-                        window.location.reload();
-                    }
-                },
-                {
                     extend: 'spacer',
                     style: 'empty'
                 },
@@ -237,6 +216,11 @@
         
     } );
     
+</script>
+
+<script type="module">
+    import { showPopup } from "/static/js/popup.js";
+    window.showPopup = showPopup;
 </script>
 
 {% endblock %}
