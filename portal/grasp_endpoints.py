@@ -1,5 +1,6 @@
 import io
 import json
+import shutil
 import uuid
 import numpy as np
 import pydicom
@@ -263,11 +264,16 @@ def sc_from_ref(reference_dataset, pixel_array):
     return sc
 
 @login_required
-def store_finding(request, case, source_set):
+def store_finding(request, case, source_set, id=None):
     dicom_set = DICOMSet.objects.get(id=int(source_set))
     if request.method == 'GET':
         results = [f.to_dict() for f in dicom_set.findings.all() if f.file_location]
         return JsonResponse(dict(findings=results))
+    elif request.method == "DELETE":
+        finding = Finding.objects.get(id=id)
+        shutil.rmtree((Path(dicom_set.case.case_location) / finding.file_location).parent)
+        finding.delete()
+        return JsonResponse({})
     elif request.method == 'POST':
         data = json.loads(request.body.decode("utf-8"))
         with urlopen(data["image_data"]) as response:

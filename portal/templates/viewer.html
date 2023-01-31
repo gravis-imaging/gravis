@@ -181,9 +181,11 @@ on htmx:afterRequest
    
   <!-- Findings -->
   <div id="findings" style="overflow-y: auto; display: flex; flex-direction: column; flex-wrap: nowrap; grid-area: g">
-    <template x-for="finding in viewer? viewer.findings : []">
+    <template x-for="finding in viewer? viewer.findings : []" :key="finding.id">
       <div class="mb-2 img-thumbnail">
-        <span x-text="finding.name"></span>
+        <button title="Delete" class="btn-dark btn-large ms-2 my-2" style="float:right;"
+        @click="viewer.deleteFinding(finding.id);"><i class="fa-solid fa-trash"></i>
+      </button>
         <img class="mb-2 img-fluid" :src="finding.url" width="100%"/>
       </div>
     </template>
