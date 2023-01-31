@@ -212,5 +212,4 @@ class Vector {
     }
 
 }
-
 export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, Vector };

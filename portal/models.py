@@ -7,14 +7,13 @@ from pydicom import Dataset, valuerep
 from datetime import datetime
 from django.conf import settings
 
-
 class Case(models.Model):
     """
     A model to represent a Gravis case.
     A case contains a GRASP data set and its processing results.
     A case's location: /opt/gravis/data/cases/[UID]
     """
-
+        
     # TODO: create a config file that have settings (docker etc) for each case types
     class CaseType(models.TextChoices):
         MRA = "MRA", "GRASP MRA"
@@ -146,6 +145,7 @@ class Finding(models.Model):
 
     def to_dict(self):
         return dict(
+            id = self.id,
             url=str( Path(settings.MEDIA_URL) / Path(self.dicom_set.case.case_location).relative_to(settings.DATA_FOLDER) / self.file_location),
             name=self.name,
             created_at=self.created_at.timestamp()
