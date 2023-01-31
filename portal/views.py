@@ -1,19 +1,17 @@
 import logging
-
 from django.http import HttpResponse
 from django.conf import settings
-
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import redirect, render
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.views.static import serve
+# from django.contrib.staticfiles import views as static_views
 
 from .models import Case, DICOMInstance
 
 logger = logging.getLogger(__name__)
-# from django.contrib.staticfiles import views as static_views
 
 
 @login_required

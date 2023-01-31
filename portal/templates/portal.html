@@ -6,12 +6,12 @@
 <header class="mb-5">
     <nav class="navbar navbar-expand-lg  fixed-top navbar-dark bg-dark mb-4 shadow-2-strong">
         <div class="container-fluid">
-            <a class="navbar-brand" style="margin-left: 10px;" href="#">
+            <div class="navbar-brand" style="margin-left: 10px;" >
                 <div class="d-flex align-items-center">
                     <i class="fas fa-cubes me-2 text-primary"></i>
                     <span class="h3 fw-bold mb-0 text-light">GRAVIS</span>
                 </div>
-            </a>
+            </div>
             <button class="navbar-toggler" type="button" data-mdb-toggle="collapse" data-mdb-target="#navbarText"
                 aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
                 <i class="fas fa-bars"></i>
@@ -65,6 +65,13 @@
                             <h5 class="patient_info nav-link blur">{{ case.patient_name }} ({{ case.num_spokes}} spokes) id: {{case.id}} </h5>
                         {% endif %}  
                     </li>
+                    <li class="nav-item menuitems-top">                                             
+                        {% url_case_id request.get_full_path as id %}
+                        {% case_info cases id as case %}
+                        <button title="Case Info" style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
+                            @click="viewer.annotation_manager.deleteSelectedAnnotations();"><i class="fa-solid fa-tags"></i>
+                            </button> 
+                    </li>
                 </ul>
                 {% endif %}  
                 <!-- User Settings and Configuration -->
@@ -99,6 +106,79 @@
     <div class="container-fluid pt-4">
         <div class="maincontent px-4 mt-4">
             {% block content %}
+                
+            <!-- Modal -->
+            <div class="modal fade" id="modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">Case Info</h5>
+                        <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <td>Patient Name:</td>
+                                    <td><span class="patient_info" id="case_details_patient_name">&nbsp;</span></td>
+                                </tr>
+                                <tr>
+                                    <td>MRN:</td>
+                                    <td><span class="patient_info" id="case_details_mrn">&nbsp;</span></td>
+                                </tr>
+                                <tr>
+                                    <td>ACC:</td>
+                                    <td><span class="patient_info" id="case_details_acc">&nbsp;</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Number of Spokes:</td>
+                                    <td><span id="case_details_num_spokes">&nbsp;</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Case Type:</td>
+                                    <td><span id="case_details_case_type">&nbsp;</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Exam Time:</td>
+                                    <td><span class="patient_info" id="case_details_exam_time">&nbsp;</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Receive Time:</td>
+                                    <td><span class="patient_info" id="case_details_receive_time">&nbsp;</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Status:</td>
+                                    <td><span id="case_details_status">&nbsp;</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Twix ID:</td>
+                                    <td><span id="case_details_twix_id">&nbsp;</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Case Location:</td>
+                                    <td><span class="patient_info" id="case_details_case_location">&nbsp;</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Viewed by ID:</td>
+                                    <td><span id="case_details_viewed_by_id">&nbsp;</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Last Read by ID:</td>
+                                    <td><span id="case_details_last_read_by_id">&nbsp;</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Settings:</td>
+                                    <td><span id="case_details_settings">&nbsp;</span></td>
+                                </tr>
+                            </tbody>
+                            </table>         
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" data-mdb-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             {% endblock %}
         </div>
     </div>
@@ -112,6 +192,8 @@
     else {
         Array.from(document.getElementsByClassName('patient_info')).forEach(e => e.classList.remove("blur"));
     }    
+
+
 </script>
 
 

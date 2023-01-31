@@ -1,14 +1,9 @@
 from django.urls import path
-
 from .jobs import cine_generation
-
 from . import views, grasp_endpoints
-
 from django.conf import settings
 from django.conf.urls.static import static
-
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
-
 from .rest import CaseView
 
 urlpatterns = [

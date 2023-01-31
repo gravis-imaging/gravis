@@ -34,6 +34,3 @@ class DockerReturnCodes(Enum):
 
     def toDict():       
         return {k: v.value for k, v in DockerReturnCodes.__members__.items()}
-
-
-

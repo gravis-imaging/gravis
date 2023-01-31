@@ -134,6 +134,7 @@ class DICOMSet(models.Model):
     class Meta:
         db_table = "gravis_dicom_set"
 
+
 class Finding(models.Model):
     dicom_set = models.ForeignKey(DICOMSet, on_delete=models.CASCADE, related_name="findings")
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -151,6 +152,8 @@ class Finding(models.Model):
         )
     class Meta:
         db_table = "gravis_finding"
+
+
 class DICOMInstance(models.Model):
     """
     A model to represent a single DICOM slice.
@@ -224,3 +227,11 @@ class DICOMInstance(models.Model):
 #     reader
 #     case
 #     action
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)  
+    privacy_mode = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.user.username

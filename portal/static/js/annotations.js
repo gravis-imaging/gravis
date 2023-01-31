@@ -61,7 +61,7 @@ class AnnotationManager {
         }
     }
 
-    createAnnotationTemplate() {
+    createAnnotationTemplate(tool_name) {
         var idx = Math.max(0,...Object.values(this.annotations).map(a => a.idx+1));
         return {
             chartColor: `rgb(${HSLToRGB(idx*(360/1.618033988),50,50).join(",")})`,
@@ -75,7 +75,7 @@ class AnnotationManager {
             },
             data: {
                 cachedStats: {},
-                label: `ROI ${idx+1}`,
+                label: `${tool_name} ${idx+1}`,
                 handles: {
                     textBox:{"hasMoved":false,"worldPosition":[0,0,0],"worldBoundingBox":{"topLeft":[0,0,0],"topRight":[0,0,0],"bottomLeft":[0,0,0],"bottomRight":[0,0,0]}},
                     activeHandleIndex: null
@@ -116,6 +116,34 @@ class AnnotationManager {
         }
         this.updateChart();
     }
+    
+    deleteAllAnnotations() {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "Do you really want to delete all annotations?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete all!'
+            }).then((result) => {
+            if (result.isConfirmed) {
+                
+                let annotations = this.getAllAnnotations();
+                if ( !annotations ) {
+                    return;
+                }
+                for (var a of annotations) {
+                    if (!a) { continue }
+                    cornerstone.tools.annotation.state.removeAnnotation(a.annotationUID)
+                    cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,[a.metadata.viewportId]) 
+                    delete this.annotations[a.annotationUID];
+                    
+                    this.updateChart();
+                }                    
+            }
+        })        
+    }
 
     flipSelectedAnnotations() {
         let [ left, right ] = this.viewer.volume.imageData.getBounds().slice(0,2);
@@ -146,7 +174,7 @@ class AnnotationManager {
         } else {
             throw Error(`Unknown annotation type ${tool_name}`)
         }
-        let new_annotation = this.createAnnotationTemplate();
+        let new_annotation = this.createAnnotationTemplate(tool_name);
         new_annotation.metadata = {
             ...new_annotation.metadata,
             viewportId: this.viewer.viewportIds[viewport_n],

@@ -3,13 +3,11 @@ import time
 import pydicom
 import numpy as np
 import sys
-start_time = time.time() 
 
+start_time = time.time() 
 timepoints = 120
 slices_per_volume = 144
 slices = list(Path("/opt/gravis/data/cases/e37501cf-dcf6-4d5b-9c76-5ce99d606267/input").glob("**/*.dcm"))
-
-
 k = None
 prototype_ds = None
 
