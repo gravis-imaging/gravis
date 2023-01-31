@@ -146,6 +146,7 @@ LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/"
 
 RQ_SHOW_ADMIN_LINK = True
+RQ_API_TOKEN = "api"
 RQ_QUEUES = {
     "default": {
         "HOST": "localhost",
