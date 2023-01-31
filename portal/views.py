@@ -56,30 +56,31 @@ def logout_request(request):
 
 # TODO: Status viewer from django rq - Case Information button is clicked
 
+def extract_case(object):
+
+    return { 
+        'case_id': str(object.id),
+        "patient_name": object.patient_name,
+        "mrn": object.mrn,
+        "acc": object.acc,
+        "num_spokes": object.num_spokes,
+        "case_type": object.case_type,
+        "exam_time": object.exam_time.strftime("%Y-%m-%d %H:%M"),
+        "receive_time": object.receive_time.strftime("%Y-%m-%d %H:%M"),
+        "status": Case.CaseStatus(object.status).name.title(),
+        "twix_id": object.twix_id,
+        "case_location": object.case_location,
+        "settings": object.settings,
+        "last_read_by_id": object.last_read_by.username if object.last_read_by_id else "",
+        "viewed_by_id": object.viewed_by.username if object.viewed_by_id else "",
+    }
 
 @login_required
 def index(request):
     data = []
     objects = Case.objects.all()
     for object in objects:
-        data.append(
-            {
-                'case_id': str(object.id),
-                "patient_name": object.patient_name,
-                "mrn": object.mrn,
-                "acc": object.acc,
-                "num_spokes": object.num_spokes,
-                "case_type": object.case_type,
-                "exam_time": object.exam_time.strftime("%Y-%m-%d %H:%M"),
-                "receive_time": object.receive_time.strftime("%Y-%m-%d %H:%M"),
-                "status": Case.CaseStatus(object.status).name.title(),
-                "twix_id": object.twix_id,
-                "case_location": object.case_location,
-                "settings": object.settings,
-                "last_read_by_id": object.last_read_by.username if object.last_read_by_id else "",
-                "viewed_by_id": object.viewed_by.username if object.viewed_by_id else "",
-            }
-        )
+        data.append(extract_case(object))
 
     context = {
         "data": data,
@@ -116,7 +117,7 @@ def viewer(request, case):
     
     context = {
         "studies": [(k.study_uid,k.dicom_set.id, k.dicom_set.type) for k in instances],
-        "case": instances[0].dicom_set.case,
+        "current_case": extract_case(instances[0].dicom_set.case),
         "cases": Case.objects.filter(status = Case.CaseStatus.VIEWING)
     }
     return render(request, "viewer.html", context)
