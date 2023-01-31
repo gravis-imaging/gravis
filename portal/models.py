@@ -1,9 +1,11 @@
+from pathlib import Path
 from time import time
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
 from pydicom import Dataset, valuerep
 from datetime import datetime
+from django.conf import settings
 
 
 class Case(models.Model):
@@ -133,6 +135,25 @@ class DICOMSet(models.Model):
         db_table = "gravis_dicom_set"
 
 
+class Finding(models.Model):
+    dicom_set = models.ForeignKey(DICOMSet, on_delete=models.CASCADE, related_name="findings")
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(default=timezone.now, blank=True)
+
+    name = models.CharField(max_length=100)
+    file_location = models.CharField(null=True,max_length=1000)
+    data = models.JSONField(null=True)
+
+    def to_dict(self):
+        return dict(
+            url=str( Path(settings.MEDIA_URL) / Path(self.dicom_set.case.case_location).relative_to(settings.DATA_FOLDER) / self.file_location),
+            name=self.name,
+            created_at=self.created_at.timestamp()
+        )
+    class Meta:
+        db_table = "gravis_finding"
+
+
 class DICOMInstance(models.Model):
     """
     A model to represent a single DICOM slice.
@@ -206,3 +227,11 @@ class DICOMInstance(models.Model):
 #     reader
 #     case
 #     action
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)  
+    privacy_mode = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.user.username

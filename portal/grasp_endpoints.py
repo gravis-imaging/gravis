@@ -1,7 +1,7 @@
 import json
-import math
+import uuid
 import numpy as np
-from loguru import logger
+from urllib.request import urlopen
 import pydicom
 import os
 from pathlib import Path
@@ -13,6 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 
 from portal.models import *
+
 
 cross = (lambda x,y:np.cross(x,y))
 def show_array(a):
@@ -47,6 +48,7 @@ def case_metadata(request, case, dicom_set, study=None):
     ]
     return JsonResponse(result, safe=False)
 
+
 @login_required
 def timeseries_data(request, case, source_set):
     data = json.loads(request.body)
@@ -55,7 +57,6 @@ def timeseries_data(request, case, source_set):
     # averages[:,0] = np.asarray(range(120))
     averages = []
     
-
     chart_options = data.get('chart_options',{})        
     mode = chart_options.get('mode','mean')
     summary_method = dict(mean=np.ma.mean,
@@ -83,7 +84,6 @@ def timeseries_data(request, case, source_set):
         example_instance = instances.first()
         handles_transformed = [ (np.linalg.inv(im_orientation_mat) @ handle_location).tolist() for handle_location in annotation["handles_indexes"] ]
 
-
         # This does not actually work:
         # out_of_bounds = False
         # rotated_size = np.linalg.inv(im_orientation_mat) @ np.asarray(size)
@@ -109,7 +109,6 @@ def timeseries_data(request, case, source_set):
                 if v < 0:
                     h[n] = h[n]-1
                 h[n] = int(h[n]) 
-
 
         # print("transformed fixed", handles_transformed[0])
         slice_number = int(handles_transformed[0][idx])
@@ -195,6 +194,7 @@ def processed_results_json(request, case, category, source_set):
     job = ProcessingJob.objects.filter(status="Success", case=case, dicom_set=source_set, category=category).latest("created_at")
     return JsonResponse(dict(result = job.json_result))
 
+
 @login_required
 def preview_urls(request, case, source_set, view, location):
     case = Case.objects.get(id=int(case))
@@ -218,6 +218,7 @@ def preview_urls(request, case, source_set, view, location):
     wado_uri = "wadouri:"+str(Path(settings.MEDIA_URL) / location)
     return JsonResponse(dict(urls=[ wado_uri +f"?frame={n}" for n in range(instance.num_frames)]))
 
+
 @login_required
 def processed_results_urls(request, case, case_type, source_set):
     fields = ["series_number", "slice_location", "acquisition_number"]
@@ -225,7 +226,6 @@ def processed_results_urls(request, case, case_type, source_set):
     slices_lookup = {k: request.GET.get(k) for k in fields if k in request.GET}
     dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=case_type, processing_job__dicom_set=source_set)
     instances = dicom_set.latest('processing_job__created_at').instances.filter(**slices_lookup).order_by("slice_location","instance_location","series_number") # or "instance_number"
-
 
     urls = []
     for instance in instances:
@@ -237,6 +237,28 @@ def processed_results_urls(request, case, case_type, source_set):
             urls.append(wado_uri)
     return JsonResponse(dict(urls=urls))
 
+
+@login_required
+def store_finding(request, case, source_set):
+    dicom_set = DICOMSet.objects.get(id=int(source_set))
+    if request.method == 'GET':
+        results = [f.to_dict() for f in dicom_set.findings.all() if f.file_location]
+        return JsonResponse(dict(findings=results))
+    elif request.method == 'POST':
+        data = json.loads(request.body.decode("utf-8"))
+        with urlopen(data["image_data"]) as response:
+            image_data = response.read()
+        directory = Path(dicom_set.case.case_location) / "findings" / str(uuid.uuid4())
+        directory.mkdir()
+        filename = directory / f"finding.png"
+        filename.touch()
+        print(filename)
+        with open(filename,"wb") as f:
+            f.write(image_data)
+        finding = Finding(created_by = request.user, dicom_set = dicom_set, file_location = filename.relative_to(Path(dicom_set.case.case_location)))
+        finding.save()
+        return JsonResponse(finding.to_dict())
+        
 # @login_required
 # def preview_data(request, case, view, index):
 #     instance = DICOMInstance.objects.get(slice_location=index, dicom_set__case=case, dicom_set__type=f"CINE/{view.upper()}",dicom_set__processing_job__status="Success",dicom_set__processing_job__dicom_set__origin="Incoming")

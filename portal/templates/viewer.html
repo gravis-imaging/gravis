@@ -185,7 +185,16 @@ on htmx:afterRequest
     </template>
   </div>
    
-   
+  <!-- Findings -->
+  <div id="findings" style="overflow-y: auto; display: flex; flex-direction: column; flex-wrap: nowrap; grid-area: g">
+    <template x-for="finding in viewer? viewer.findings : []">
+      <div class="mb-2 img-thumbnail">
+        <span x-text="finding.name"></span>
+        <img class="mb-2 img-fluid" :src="finding.url" width="100%"/>
+      </div>
+    </template>
+
+  </div>    
 
 
 </div>

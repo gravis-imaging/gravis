@@ -1,14 +1,9 @@
 from django.urls import path
-
 from .jobs import cine_generation
-
 from . import views, grasp_endpoints
-
 from django.conf import settings
 from django.conf.urls.static import static
-
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
-
 from .rest import CaseView
 
 urlpatterns = [
@@ -30,7 +25,7 @@ urlpatterns = [
     path("api/case/<str:case>/dicom_set/<str:source_set>/processed_json/<str:category>", grasp_endpoints.processed_results_json),
     path("api/case/<str:case>/dicom_set/<str:dicom_set>/metadata", grasp_endpoints.case_metadata),
     path("api/case/<str:case>/dicom_set/<str:dicom_set>/study/<str:study>/metadata", grasp_endpoints.case_metadata),
-
+    path("api/case/<str:case>/dicom_set/<str:source_set>/finding", grasp_endpoints.store_finding),
     *cine_generation.urls,
     *staticfiles_urlpatterns()
 ]

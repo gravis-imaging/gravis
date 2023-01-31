@@ -4,6 +4,8 @@ from portal.jobs.cine_generation import GeneratePreviewsJob, do_job
 from portal.models import Case, DICOMInstance, DICOMSet, ProcessingJob
 
 import django_rq
+
+
 class Command(BaseCommand):
 
     def add_arguments(self, parser):

@@ -14,8 +14,8 @@ from pathlib import Path
 import environ
 
 env = environ.Env(
-    GRAVIS_VERSION=(str, "DEV"),
     DEBUG=(bool, False),
+    GRAVIS_VERSION=(str, "DEV"),
     APPLIANCE_NAME=(str, "master"),
     DATA_FOLDER=(str, "/opt/gravis/data"),
     INCOMING_FOLDER=(str, "/opt/gravis/data/incoming"),
@@ -24,7 +24,8 @@ env = environ.Env(
     INCOMING_SCAN_INTERVAL=(int, 1),
     DB_BACKEND=(str, "postgres"),   
     DB_USER=(str, "gravis"),
-    TEST_FOLDER_PATH = (str, "/tmp")    
+    TEST_FOLDER_PATH=(str, "/tmp"),
+    SECRET_KEY=(str, "django-insecure-r$afdbw+6xgz#af8-e2z=#@kjs2r#$th^m=60v1&almulq5fuh")    
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -33,14 +34,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 environ.Env.read_env(BASE_DIR / "gravis.env")
 environ.Env.read_env(BASE_DIR / "local.env")
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-r$afdbw+6xgz#af8-e2z=#@kjs2r#$th^m=60v1&almulq5fuh"
-
-# SECURITY WARNING: don't run with debug turned on in production!
+SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
+GRAVIS_VERSION=env("GRAVIS_VERSION")
 APPLIANCE_NAME = env("APPLIANCE_NAME")
 DATA_FOLDER = env("DATA_FOLDER")
 INCOMING_FOLDER = env("INCOMING_FOLDER")
@@ -48,7 +44,6 @@ CASES_FOLDER = env("CASES_FOLDER")
 ERROR_FOLDER = env("ERROR_FOLDER")
 INCOMING_SCAN_INTERVAL = env("INCOMING_SCAN_INTERVAL")
 TEST_FOLDER_PATH = env("TEST_FOLDER_PATH")
-GRAVIS_VERSION=env("GRAVIS_VERSION")
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = DATA_FOLDER
@@ -67,7 +62,6 @@ CSRF_TRUSTED_ORIGINS = [
     "https://127.0.0.1:4443",
     "https://rmrlpdcdap001.nyumc.org"
 ]
-# Application definition
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -114,9 +108,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "app.wsgi.application"
 
-
-# Database
-# https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 DB_BACKEND = env("DB_BACKEND")
 BACKENDS = {
     "postgres":  {
@@ -129,10 +120,6 @@ BACKENDS = {
 DATABASES = {
     "default": BACKENDS[DB_BACKEND]
 }
-
-
-# Password validation
-# https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -149,28 +136,17 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/4.0/topics/i18n/
-
 LANGUAGE_CODE = "en-us"
-
-TIME_ZONE = "UTC"
-
+TIME_ZONE = "America/New_York"
 USE_I18N = True
-
 USE_TZ = True
 
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
 LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/"
 
 RQ_SHOW_ADMIN_LINK = True
+RQ_API_TOKEN = "api"
 RQ_QUEUES = {
     "default": {
         "HOST": "localhost",
@@ -189,6 +165,7 @@ RQ_QUEUES = {
     #     'DB': 0,
     # }
 }
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

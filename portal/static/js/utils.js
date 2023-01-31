@@ -56,22 +56,22 @@ async function doJob(type, case_, params) {
 }
 
 
-async function doFetch(url, body) {
+async function doFetch(url, body, method="POST") {
     let raw_result = await fetch(url, {
-        method: 'POST', 
+        method: method, 
         credentials: 'same-origin',        
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': csrftoken,
         },
-        body: JSON.stringify(body),
+        ...( method=="GET"? {} : {body: JSON.stringify(body)})
     })
     let text = await raw_result.text();
     
     try {
         return JSON.parse(text)
     } catch (e) {
-        console.warn(text);
+        console.warn("Failed to parse as JSON", text);
         throw e
     }
 }
@@ -94,7 +94,7 @@ async function startJob(type, case_, params) {
     try {
         return await raw_result.json()
     } catch (e) {
-        console.warn(raw_result)
+        console.warn("Failed to parse as JSON",raw_result)
         throw e
     }
     
@@ -147,4 +147,36 @@ function getJobInstances(result, case_id) {
     return urls;
 }
 
-export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances };
+
+const loadImage = async url => {
+    const img = document.createElement('img')
+    img.src = url
+    return new Promise((resolve, reject) => {
+      img.onload = () => resolve(img)
+      img.onerror = reject
+    })
+  }
+
+  async function viewportToImage(viewport) {
+    const element = viewport.element.getElementsByTagName("svg")[0];
+    const cloneElement = element.cloneNode(true);
+
+    cloneElement.setAttribute("width", element.clientWidth);
+    cloneElement.setAttribute("height", element.clientHeight);
+    cloneElement.setAttribute("viewBox", `0 0 ${element.clientWidth} ${element.clientHeight}`)
+    
+    const pixelData = viewport.getCanvas().toDataURL("image/png");
+    cloneElement.getElementsByTagName("defs")[0].insertAdjacentHTML("afterend",`<image x=0 y=0 width="100%" height=100% href="${pixelData}"></image>`)
+
+    const svgAsXML = (new XMLSerializer()).serializeToString(cloneElement)
+    const svgData = `data:image/svg+xml,${encodeURIComponent(svgAsXML)}`
+    const img = await loadImage(svgData);
+    const canvas = document.createElement('canvas');
+    canvas.width = element.clientWidth;
+    canvas.height = element.clientHeight;
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    const dataURL = await canvas.toDataURL("image/png", 1.0);
+    return dataURL;
+}
+
+export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage };

@@ -100,6 +100,8 @@ class GraspViewer {
     volume; 
     selected_time = 0;
     chart_options = {};
+
+    findings;
     constructor( ...inp ) {
         return (async () => {
             await this.initialize(...inp);
@@ -517,7 +519,7 @@ class GraspViewer {
         await this.setVolumeBySeries(graspVolumeInfo[selected_index]["series_uid"])
         document.getElementById("volume-picker").setAttribute("value",selected_index)
 
-
+        this.findings = await this.loadFindings();
         this.volume.load(()=>{ 
             console.log("Volume loaded");
             this.state_manager.load();
@@ -570,10 +572,14 @@ class GraspViewer {
         }
         return native_viewports;
     }
+    async loadFindings() {
+        const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`,{},"GET");
+        return result.findings;
+    }
     async storeFinding(n){
         const image = await viewportToImage(this.viewports[n]);
         const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`, {image_data: image});
-
+        this.findings.push(result);
     }
 }
 

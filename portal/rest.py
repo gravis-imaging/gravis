@@ -1,8 +1,7 @@
 from django.http import HttpResponseNotAllowed, JsonResponse
-
 from django.contrib.auth.decorators import login_required
-
 from .models import Case
+
 
 class RestfulView(object):
     def __call__(self, request, *args, **kw):
@@ -20,6 +19,7 @@ class RestfulView(object):
 
         return handler(request, *args, **kw)
 
+
 class CaseView(RestfulView):       
     @staticmethod
     @login_required
@@ -34,4 +34,3 @@ class CaseView(RestfulView):
         case.status = Case.CaseStatus.DELETE
         case.save()
         return response
-        
