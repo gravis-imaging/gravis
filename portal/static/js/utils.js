@@ -179,4 +179,38 @@ const loadImage = async url => {
     return dataURL;
 }
 
-export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage };
+class Vector {
+    static sub(arr_a,arr_b) {
+        let r = Array(arr_a.length);
+        for (let i=0;i<arr_a.length;i++) 
+            r[i] = arr_a[i] - arr_b[i];
+        return r;
+    }
+    static add(arr_a,arr_b) {
+        let r = Array(arr_a.length);
+        for (let i=0;i<arr_a.length;i++) 
+            r[i] = arr_a[i] + arr_b[i];
+        return r;
+    }
+    static mul(arr_a,k) {
+        let r = Array(arr_a.length);
+        for (let i=0;i<arr_a.length;i++) 
+            r[i] = arr_a[i] * k;
+        return r;
+    }
+    static len(arr_a){
+        return Math.sqrt(arr_a.reduce((p, n) => p+n*n,0));
+    }
+    static dot(arr_a, arr_b) {
+        let r = 0;
+        for (let i=0;i<arr_a.length;i++) 
+            r += arr_a[i] * arr_b[i];
+        return r;
+    }
+    static avg(arr){    
+        return Vector.mul(arr.reduce(Vector.add, [0,0,0]), 1/arr.length);
+    }
+
+}
+console.log(Vector)
+export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, Vector };

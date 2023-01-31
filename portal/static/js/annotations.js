@@ -1,4 +1,4 @@
-import { doFetch, HSLToRGB } from "./utils.js"
+import { doFetch, HSLToRGB, Vector } from "./utils.js"
 
 class AnnotationManager {
     viewer;
@@ -125,7 +125,8 @@ class AnnotationManager {
             a.data.handles.points.map( point => {
                 point[0] = midpoint - (point[0] - midpoint)
             })
-            cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,[a.metadata.viewportId]) 
+            this.goToAnnotation(a.annotationUID);
+            // cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,[a.metadata.viewportId]) 
         }
     }
 
@@ -173,10 +174,30 @@ class AnnotationManager {
         await this.updateChart()
     }
 
-    goToAnnotation(uid) {
-        let annotation_info = this.annotations[uid];
+    goToAnnotation(uid, mode="scroll") {
+        const annotation_info = this.annotations[uid];
         const viewport = this.viewer.viewports.find( x => x.id == annotation_info.viewportId);
-        viewport.setCamera(annotation_info.cam);
+
+        const annotation = cornerstone.tools.annotation.state.getAnnotation(uid);
+        let cam = viewport.getCamera();
+
+
+        const centerPoint = Vector.avg(annotation.data.handles.points);
+        if (mode == "scroll") {
+            const moveAmount = Vector.dot(cam.viewPlaneNormal, centerPoint) - Vector.dot(cam.viewPlaneNormal, cam.focalPoint)
+            const delta = Vector.mul(cam.viewPlaneNormal, moveAmount);    
+            cam = {...cam, 
+                        focalPoint: Vector.add(cam.focalPoint, delta),
+                        position: Vector.add(cam.position,delta)
+                    }
+        } else if ( mode == "center") {
+            const offset = Vector.sub(cam.position, cam.focalPoint);
+            cam = {...cam, 
+                        focalPoint: centerPoint,
+                        position: Vector.add(centerPoint,offset)
+                    }
+        }
+        viewport.setCamera(cam);
         cornerstone.tools.annotation.selection.setAnnotationSelected(uid, true, false);
         this.viewer.renderingEngine.renderViewports([annotation_info.viewportId]);
         cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,[annotation_info.viewportId]) 
