@@ -6,21 +6,21 @@ from time import sleep
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.conf import settings
-
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
+from django.contrib.staticfiles import views as static_views
+from django.views import static
 
-from portal.models import *
 import django_rq
 import docker
+import pydicom
+import numpy as np
+
+from portal.models import *
 
 logger = logging.getLogger(__name__)
-from django.contrib.staticfiles import views as static_views
 
-import pydicom
-from django.views import static
-import numpy as np
 
 @login_required
 def retrieve_instance(request, study, series, instance, case, frame=1):
@@ -76,6 +76,7 @@ def test_populate_instances(request):
             ),
         )
     return HttpResponse("Done!")
+
 
 @login_required
 def study_metadata(request, case, study):

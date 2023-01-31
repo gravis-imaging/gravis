@@ -18,6 +18,7 @@ from .models import *
 import django_rq
 import docker
 
+
 # class ImageJob(models.Model):
 #     folder_path = models.CharField(max_length=10000, default=uuid.uuid1)
 #     rq_id = models.CharField(max_length=10000)
@@ -104,8 +105,6 @@ import docker
 #     return HttpResponseRedirect(f"/work_status/{new_job.id}/")
 
 
-
-    
 def do_docker_job(job_id):
     print(":::Docker job begin:::")
     docker_client = docker.from_env()
@@ -151,5 +150,3 @@ def docker_job(request):
     new_job.save()
     return HttpResponse("OK")
     # return HttpResponseRedirect(f"/work_status/{new_job.id}/")
-
-

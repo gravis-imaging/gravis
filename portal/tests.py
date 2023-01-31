@@ -2,7 +2,6 @@ import pytest
 from pathlib import Path 
 import json
 
-
 from django.conf import settings
 import django_rq
 from django_rq import get_worker
@@ -15,6 +14,8 @@ from pydicom.dataset import Dataset, FileMetaDataset
 
 from .models import *
 from .jobs import watch_incoming
+
+
 @pytest.fixture(autouse=True)
 def redis():
     django_rq.queues.get_redis_connection = FakeRedisConnSingleton()
@@ -46,8 +47,8 @@ def generate_ds(location):
     ds.save_as(location, write_like_original=False)
     return ds
 
-def test_2(fs: FakeFilesystem):
 
+def test_2(fs: FakeFilesystem):
     incoming = Path(settings.INCOMING_FOLDER) 
     cases = Path(settings.CASES_FOLDER) 
     fs.create_dir(incoming / "test" )

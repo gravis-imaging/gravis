@@ -134,6 +134,7 @@ class DICOMSet(models.Model):
     class Meta:
         db_table = "gravis_dicom_set"
 
+
 class Finding(models.Model):
     dicom_set = models.ForeignKey(DICOMSet, on_delete=models.CASCADE, related_name="findings")
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -234,4 +235,3 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.user.username
-        
