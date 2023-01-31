@@ -74,6 +74,34 @@ on htmx:afterRequest
       </select>
     </div>
   </div>  
+
+  <!-- Image manipulation buttons -->
+  <div style="grid-area: n;">
+    <button title="Duplicate Selected Annotation" style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
+        :disabled="switching || job_loading != null"
+        @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
+    </button>
+    <button title="Flip Selected Annotation" style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
+        :disabled="switching || job_loading != null"
+        @click="viewer.annotation_manager.flipSelectedAnnotations();">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-symmetry-vertical" viewBox="0 0 16 16">
+        <path d="M7 2.5a.5.5 0 0 0-.939-.24l-6 11A.5.5 0 0 0 .5 14h6a.5.5 0 0 0 .5-.5v-11zm2.376-.484a.5.5 0 0 1 .563.245l6 11A.5.5 0 0 1 15.5 14h-6a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .376-.484zM10 4.46V13h4.658L10 4.46z"/>
+      </svg>
+    </button>
+    <button title="Delete Selected Annotation" style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
+      :disabled="switching || job_loading != null"
+      @click="viewer.annotation_manager.deleteSelectedAnnotations();"><i class="fa-solid fa-trash"></i>
+    </button>
+    <button 
+        title="Delete All Annotations" 
+        style="pointer-events: auto; background-color:red;" 
+        class="btn-primary btn-large ms-2 my-2"
+        :disabled="switching || job_loading != null"
+        @click="viewer.annotation_manager.deleteAllAnnotations();">
+        <i class="fa-solid fa-trash"></i>
+    </button>
+  </div>
+            
   
 </div>
 
@@ -92,37 +120,22 @@ on htmx:afterRequest
       <div class="viewer-grid">
         <template x-for="i in 3">
           <div class="viewport-overlay" :id="'viewport-overlay-'+i" :style="`grid-row: 1; grid-column: ${i}`">
-            <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2" 
+            <button title="Add Elliptical ROI Annotation" style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2" 
                 :disabled="switching || job_loading != null"
                 @click="viewer.annotation_manager.addAnnotationToViewport('EllipticalROI',i-1);"><i class="fa-regular fa-circle"></i>
             </button>
-            <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2" 
+            <button title="Add Probe Annotation" style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2" 
                 :disabled="switching || job_loading != null"
                 @click="viewer.annotation_manager.addAnnotationToViewport('Probe',i-1);"><i class="fa-solid fa-plus"></i>
             </button>
-            <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
+            <button title="Zoom" style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
                 :disabled="switching || job_loading != null"
                 @click="viewer.viewports[i-1].setZoom(1);viewer.viewports[i-1].setPan([0,0]);  viewer.viewports[i-1].render();"><i class="fa-solid fa-arrows-to-circle"></i>
             </button>
-            <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
-                :disabled="switching || job_loading != null"
-                @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
-            </button>
-            <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
-                :disabled="switching || job_loading != null"
-                @click="viewer.annotation_manager.deleteSelectedAnnotations();"><i class="fa-solid fa-trash"></i>
-            </button>
-            <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
+            <button title="Store Finding" style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
                 :disabled="switching || job_loading != null"
                 @click="viewer.storeFinding(i-1);"><i class="fa-solid fa-camera"></i>
-            </button>
-            <button style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
-                :disabled="switching || job_loading != null"
-                @click="viewer.annotation_manager.flipSelectedAnnotations();">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-symmetry-vertical" viewBox="0 0 16 16">
-                <path d="M7 2.5a.5.5 0 0 0-.939-.24l-6 11A.5.5 0 0 0 .5 14h6a.5.5 0 0 0 .5-.5v-11zm2.376-.484a.5.5 0 0 1 .563.245l6 11A.5.5 0 0 1 15.5 14h-6a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .376-.484zM10 4.46V13h4.658L10 4.46z"/>
-              </svg>
-            </button>
+            </button>            
             <template x-if="viewer && viewer.getNativeViewports().indexOf(viewer.viewports[i-1].id) > -1">
               <div>
                 Native
