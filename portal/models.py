@@ -151,6 +151,8 @@ class Finding(models.Model):
         )
     class Meta:
         db_table = "gravis_finding"
+
+
 class DICOMInstance(models.Model):
     """
     A model to represent a single DICOM slice.
@@ -224,3 +226,12 @@ class DICOMInstance(models.Model):
 #     reader
 #     case
 #     action
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)  
+    privacy_mode = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.user.username
+        
