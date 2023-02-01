@@ -2,6 +2,8 @@
 
 {% block header %}
 <link rel="stylesheet" type="text/css" href="/static/css/datatables.min.css" crossorigin />
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
 {% endblock %}
 
 {% block content %}
@@ -27,6 +29,7 @@
                             <th>Received</th>
                             <th>Status</th>
                             <th>Reader</th>
+                            <th>Tags</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -36,12 +39,14 @@
         </div>
     </div>
 </div>
+
 {% include "case_information_modal.html" %}
 {% endblock %}
 
 {% block addedscripts %}
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js" crossorigin></script>
 <script type="text/javascript" src="/static/js/datatables.min.js" crossorigin></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" crossorigin></script>
 <script>
     
     $(document).ready(function () {
@@ -49,7 +54,7 @@
         var case_data_table = $('#casetable').DataTable({
            
             dom: "<'row browsertoolbar align-items-end'<'col-sm-12 col-md-6 browserbuttons'B><'col-sm-12 col-md-6'f>>" + "<'row'<'col-sm-12'tr>>" + "<'row'<'col-sm-12 col-md-5'><'col-sm-12 col-md-7'p>>",
-            ajax: "/browser/get_all_cases",
+            ajax: "/browser/get_cases_all",
             deferRender: true,
             columns: [
                 { data: 'case_id', visible: false },
@@ -98,7 +103,19 @@
                     },            
                 },
                 { data: 'last_read_by_id' },
-            ],            
+                {
+                    data: 'tags',
+                    render: function (data, type, row) {
+                        // Custom field rendering for tags
+                        html_element = '';
+                        for (const tag of data) {
+                            html_element = html_element + '<span class="badge rounded-pill bg-light text-dark">'+tag+'</span><br>';
+                        }
+                        return html_element;
+                    }                    
+                },            
+                        
+            ], 
             select: {
                 style: 'single'
             },
@@ -210,7 +227,11 @@
                 },
             ],
             initComplete: () => { 
+                $('#casetable').on('draw.dt', function() {
+                    $('.selecttags').select2({tags: "true", width: "20em"});
+                });                
                 $("#tablewrapper").show();
+                
             }
         });
 

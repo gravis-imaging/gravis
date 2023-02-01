@@ -8,7 +8,7 @@ from .rest import CaseView
 
 urlpatterns = [
     path("", views.index, name="index"),
-    path("browser/get_all_cases", views.browser_get_all_cases),
+    path("browser/get_cases_all", views.browser_get_cases_all),
     path("browser/get_case/<str:case>", views.browser_get_case),
     path("login/", views.login_request, name="login"),
     path("logout/", views.logout_request, name="logout"),

@@ -23,7 +23,7 @@
                         <a class="nav-link {% if request.resolver_match.url_name == "index" %}active{% endif %}" aria-current="page" href="/"><i class="fa-solid fa-table"></i>&nbsp;&nbsp;Browser</a>
                     </li>
                     <!-- Viewer -->
-                    {% if cases %}    
+                    {% if viewer_cases %}    
                     <li class="nav-item dropdown">
                         <a
                           class="nav-link dropdown-toggle {% if request.resolver_match.url_name == "viewer" %}active{% endif %}"
@@ -39,12 +39,12 @@
                           <li>
                             <a class="dropdown-item disabled" href="#" style="">Open Cases</a>
                           </li>
-                          {% for item in cases %}                         
+                          {% for case in viewer_cases %}                         
                           <li>
                             {% if request.resolver_match.url_name == "viewer" %}
                                 {% url_case_id request.get_full_path as id %}      
                             {% endif %}                                                
-                            <a class="navbar_case_list dropdown-item {% if request.resolver_match.url_name == "viewer" and id == item.id %}active{% endif %}" href="/viewer/{{ item.id }}">{{ item.patient_name }} {% if item.num_spokes != "" %}({{ item.num_spokes}} spokes) {% endif %}id: {{item.id}}</a>                                                        
+                            <a class="navbar_case_list dropdown-item {% if request.resolver_match.url_name == "viewer" and id == case.id %}active{% endif %}" href="/viewer/{{ case.id }}">{{ case.patient_name }} {% if case.num_spokes != "" %}({{ case.num_spokes}} spokes) {% endif %}id: {{case.id}}</a>                                                        
                           </li>  
                           {% endfor %}                        
                         </ul>
@@ -62,7 +62,7 @@
                 <ul class="nav navbar-nav mx-auto">
                     <li class="nav-item menuitems-top" >                                             
                         {% url_case_id request.get_full_path as id %}
-                        {% case_info cases id as case %}
+                        {% case_info viewer_cases id as case %}
                         <a href="#" onclick="showCaseInformation({{ case.id }});">
                             <h5 class="navbar_patient_info nav-link mb-0">{{ case.patient_name }} {% if case.num_spokes != "" %}({{ case.num_spokes}} spokes){% endif %}</h5>                         
                         </a>

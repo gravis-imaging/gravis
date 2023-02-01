@@ -3,6 +3,7 @@ from time import time
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
+from django.db.models import JSONField
 from pydicom import Dataset, valuerep
 from datetime import datetime
 from django.conf import settings
@@ -64,6 +65,7 @@ class Case(models.Model):
         null=True,
         related_name="viewed_by",
     )
+    tags = JSONField(blank=True, null=True)
 
     class Meta:
         db_table = "gravis_case"

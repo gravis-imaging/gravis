@@ -56,35 +56,10 @@ def logout_request(request):
 
 # TODO: Status viewer from django rq - Case Information button is clicked
 
-def extract_case(object):
-
-    return { 
-        'case_id': str(object.id),
-        "patient_name": object.patient_name,
-        "mrn": object.mrn,
-        "acc": object.acc,
-        "num_spokes": object.num_spokes,
-        "case_type": object.case_type,
-        "exam_time": object.exam_time.strftime("%Y-%m-%d %H:%M"),
-        "receive_time": object.receive_time.strftime("%Y-%m-%d %H:%M"),
-        "status": Case.CaseStatus(object.status).name.title(),
-        "twix_id": object.twix_id,
-        "case_location": object.case_location,
-        "settings": object.settings,
-        "last_read_by_id": object.last_read_by.username if object.last_read_by_id else "",
-        "viewed_by_id": object.viewed_by.username if object.viewed_by_id else "",
-    }
-
 @login_required
 def index(request):
-    data = []
-    objects = Case.objects.all()
-    for object in objects:
-        data.append(extract_case(object))
-
     context = {
-        "data": data,
-        "cases": Case.objects.filter(status = Case.CaseStatus.VIEWING)
+        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user)
     }
     return render(request, "index.html", context)
 
@@ -92,7 +67,7 @@ def index(request):
 @login_required
 def user(request):
     context = {
-        "cases": Case.objects.filter(status = Case.CaseStatus.VIEWING)
+        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user)
     }
     return render(request, "user.html", context)
 
@@ -100,7 +75,7 @@ def user(request):
 @login_required
 def config(request):
     context = {
-        "cases": Case.objects.filter(status = Case.CaseStatus.VIEWING)
+        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user)
     }
     return render(request, "config.html", context)
 
@@ -118,7 +93,7 @@ def viewer(request, case):
     context = {
         "studies": [(k.study_uid,k.dicom_set.id, k.dicom_set.type) for k in instances],
         "current_case": extract_case(instances[0].dicom_set.case),
-        "cases": Case.objects.filter(status = Case.CaseStatus.VIEWING)
+        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user)
     }
     return render(request, "viewer.html", context)
 
@@ -133,32 +108,36 @@ def add_case(request):
     return render(request, "portal.html", context)
 
 
+def extract_case(case_object):
+    tmp_tags = ["item1", "item2"]
+    return { 
+        'case_id': str(case_object.id),
+        "patient_name": case_object.patient_name,
+        "mrn": case_object.mrn,
+        "acc": case_object.acc,
+        "num_spokes": case_object.num_spokes,
+        "case_type": case_object.case_type,
+        "exam_time": case_object.exam_time.strftime("%Y-%m-%d %H:%M"),
+        "receive_time": case_object.receive_time.strftime("%Y-%m-%d %H:%M"),
+        "status": Case.CaseStatus(case_object.status).name.title(),
+        "twix_id": case_object.twix_id,
+        "case_location": case_object.case_location,
+        "settings": case_object.settings,
+        "last_read_by_id": case_object.last_read_by.username if case_object.last_read_by_id else "",
+        "viewed_by_id": case_object.viewed_by.username if case_object.viewed_by_id else "",
+        "tags": tmp_tags #case_object.tags if case_object.tags else "",
+    }
+
+
 @login_required
-def browser_get_all_cases(request):
+def browser_get_cases_all(request):
     '''
     Returns a JSON object containing information on all cases stored in the database.
     '''
     case_data = []
     all_cases = Case.objects.all()
     for case in all_cases:
-        case_data.append(
-            {
-                "case_id": str(case.id),
-                "patient_name": case.patient_name,
-                "mrn": case.mrn,
-                "acc": case.acc,
-                "num_spokes": case.num_spokes,
-                "case_type": case.case_type,
-                "exam_time": case.exam_time.strftime("%Y-%m-%d %H:%M"),
-                "receive_time": case.receive_time.strftime("%Y-%m-%d %H:%M"),
-                "status": Case.CaseStatus(case.status).name.title(),
-                "twix_id": case.twix_id,
-                "case_location": case.case_location,
-                "settings": case.settings,
-                "last_read_by_id": case.last_read_by.username if case.last_read_by_id else "",
-                "viewed_by_id": case.viewed_by.username if case.viewed_by_id else "",
-            }
-        )
+        case_data.append(extract_case(case))
 
     return JsonResponse({"data": case_data}, safe=False)
 
@@ -171,21 +150,6 @@ def browser_get_case(request, case):
     '''
     case = get_object_or_404(Case, id=case)
 
-    json_data = {
-        "case_id": str(case.id),
-        "patient_name": case.patient_name,
-        "mrn": case.mrn,
-        "acc": case.acc,
-        "num_spokes": case.num_spokes,
-        "case_type": case.case_type,
-        "exam_time": case.exam_time.strftime("%Y-%m-%d %H:%M"),
-        "receive_time": case.receive_time.strftime("%Y-%m-%d %H:%M"),
-        "status": Case.CaseStatus(case.status).name.title(),
-        "twix_id": case.twix_id,
-        "case_location": case.case_location,
-        "settings": case.settings,
-        "last_read_by_id": case.last_read_by.username if case.last_read_by_id else "",
-        "viewed_by_id": case.viewed_by.username if case.viewed_by_id else "",
-    }
+    json_data = extract_case(case)
     return JsonResponse(json_data, safe=False)
 
