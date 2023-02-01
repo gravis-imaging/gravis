@@ -27,14 +27,9 @@ on htmx:afterRequest
 
 {% block content %}
 {{ studies|json_script:"studies_data" }}
-{{ current_case|json_script:"case_data" }}
 <script type="text/javascript">
   const studies_data_parsed = JSON.parse(document.getElementById('studies_data').textContent);    
 </script>
-<script type="text/javascript">
-  const current_case_parsed = JSON.parse(document.getElementById('case_data').textContent);    
-</script>
-
 <div class="grid"
   x-data="{ viewer: null, n_annotations: 0, previewing: false, switching: false, current_study: null, index: 0, loading: false, job_loading: null, case_id: {{case.id}} }" >
    
