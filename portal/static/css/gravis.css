@@ -260,3 +260,12 @@ button:focus:not(:focus-visible) {
   width: 14px;
   height: 14px;
 }
+
+.btn-viewer-toolbar {
+  font-size: 1rem;
+  line-height: 1.0!important;
+}
+
+.ripple-wave {
+    background: none!important;
+}
