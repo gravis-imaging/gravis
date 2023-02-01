@@ -115,7 +115,7 @@
                         const selected_row = case_data_table.row({selected: true}).data();
                         const case_id = selected_row.case_id;
                         const link = '/viewer/'+case_id
-                        window.open(link);
+                        window.open(link, "_self");
                     }
                 },
                 {
@@ -124,16 +124,6 @@
                     titleAttr: 'Unlock case',
                     action: function (e, dt, node, config) {
                         alert("Coming soon!");
-                    }
-                },
-                {
-                    extend: "selectedSingle",
-                    text: '<i class="fa-solid fa-tags"></i>',
-                    titleAttr: 'Case information',
-                    action: function (e, dt, node, config) {
-                        const selected_row = case_data_table.row({selected: true}).data();
-                        const case_id = selected_row.case_id;
-                        showCaseInformation(case_id);                        
                     }
                 },
                 {% if user.is_staff %}
@@ -179,6 +169,16 @@
                     }
                 },
                 {
+                    extend: "selectedSingle",
+                    text: '<i class="fas fa-list-alt"></i>',
+                    titleAttr: 'Case information',
+                    action: function (e, dt, node, config) {
+                        const selected_row = case_data_table.row({selected: true}).data();
+                        const case_id = selected_row.case_id;
+                        showCaseInformation(case_id);                        
+                    }
+                },                
+                {
                     text: '<i class="fa-solid fa-sync"></i>',
                     titleAttr: 'Refresh',
                     action: function (e, dt, node, config) {
@@ -219,7 +219,7 @@
             const selected_row = case_data_table.row(tr).data();
             const case_id = selected_row.case_id;                                            
             const link = '/viewer/'+case_id
-            window.open(link);
+            window.open(link, "_self");
         });
         
         $('#casetable tbody').on('click', 'tr', function () {

@@ -11,19 +11,10 @@
     import { setCookie, getCookie } from "/static/js/utils.js";
     document.getElementById('privacy_mode').checked = getCookie('privacy_mode') == 1 ? true : false;
     function set_check() {
-        const is_checked = document.getElementById('privacy_mode').checked;
-        setCookie('privacy_mode', is_checked ? 1 : 0);
-        if (is_checked) {
-            Array.from(document.getElementsByClassName('patient_info')).forEach(e => e.classList.add("blur"));
-        }
-        else {
-            Array.from(document.getElementsByClassName('patient_info')).forEach(e => e.classList.remove("blur"));
-        }    
+        const is_checked = document.getElementById('privacy_mode').checked; 
     }
     window.set_check = set_check;
 </script>
-
-<!-- <label for="privacy_mode">Privacy Mode:</label><input style="margin-left:10px;" type="checkbox" id="privacy_mode" onchange="set_check();"> -->
 
 <div class="form-check form-switch">
     <input class="form-check-input" type="checkbox" role="switch" id="privacy_mode" onchange="set_check();" unchecked />
