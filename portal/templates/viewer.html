@@ -40,7 +40,6 @@ on htmx:afterRequest
    
   <!-- dicom set selector -->
   <div class="toolbar-area">
-    
   <!-- volume picker -->
   <!-- x-model="value" x-ref="input" x-on:focus="() => { $refs.input.focus() }"  -->
   <input id='volume-picker' tabindex='1' 
@@ -79,26 +78,30 @@ on htmx:afterRequest
     </div>
 
   <!-- Image manipulation buttons -->
+  <button title="Reset cameras" style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
+    :disabled="loading || switching || job_loading != null"
+    @click="viewer.viewports.map(v=> {v.resetCamera(); v.render()}); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-arrows-to-circle"></i>
+    </button>
     <button title="Duplicate Selected Annotation" style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
-        :disabled="switching || job_loading != null"
+        :disabled="loading || switching || job_loading != null"
         @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
     </button>
     <button title="Flip Selected Annotation" style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
-        :disabled="switching || job_loading != null"
+        :disabled="loading || switching || job_loading != null"
         @click="viewer.annotation_manager.flipSelectedAnnotations();">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-symmetry-vertical" viewBox="0 0 16 16">
         <path d="M7 2.5a.5.5 0 0 0-.939-.24l-6 11A.5.5 0 0 0 .5 14h6a.5.5 0 0 0 .5-.5v-11zm2.376-.484a.5.5 0 0 1 .563.245l6 11A.5.5 0 0 1 15.5 14h-6a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .376-.484zM10 4.46V13h4.658L10 4.46z"/>
       </svg>
     </button>
     <button title="Delete Selected Annotation" style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
-      :disabled="switching || job_loading != null"
+      :disabled="loading || switching || job_loading != null"
       @click="viewer.annotation_manager.deleteSelectedAnnotations();"><i class="fa-solid fa-trash"></i>
     </button>
     <button 
         title="Delete All Annotations" 
         style="pointer-events: auto; background-color:red;" 
         class="btn-primary btn-large ms-2 my-2"
-        :disabled="switching || job_loading != null"
+        :disabled="loading || switching || job_loading != null"
         @click="viewer.annotation_manager.deleteAllAnnotations();">
         <i class="fa-solid fa-trash"></i>
     </button>
@@ -108,8 +111,8 @@ on htmx:afterRequest
     <div x-show="loading" style="z-index:10;" class="pointer-events-none grid-fill">
       <div style="display: flex;justify-content: center;align-items: center; height:100%">Loading...</div>
     </div>
-    <div x-init="await $nextTick(); viewer = await new GraspViewer($refs.viewer_main, $refs.viewer_preview ); window.viewer = viewer; 
-    current_study = await viewer.switchStudy([studies_data_parsed[0][0], studies_data_parsed[0][1]], case_id);" class="grid-fill grid-container h-100">
+    <div x-init="await $nextTick(); loading= true; viewer = await new GraspViewer($refs.viewer_main, $refs.viewer_preview ); window.viewer = viewer; 
+    current_study = await viewer.switchStudy([studies_data_parsed[0][0], studies_data_parsed[0][1]], case_id); loading=false;" class="grid-fill grid-container h-100">
       <div x-ref="viewer_preview" class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 1 : 0 }"></div>
       <div x-ref="viewer_main" class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 0 : 1 }"></div>
     </div>
@@ -127,9 +130,9 @@ on htmx:afterRequest
                 :disabled="switching || job_loading != null"
                 @click="viewer.annotation_manager.addAnnotationToViewport('Probe',i-1);"><i class="fa-solid fa-plus"></i>
             </button>
-            <button title="Zoom" style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
+            <button title="Reset view" style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
                 :disabled="switching || job_loading != null"
-                @click="viewer.viewports[i-1].setZoom(1);viewer.viewports[i-1].setPan([0,0]);  viewer.viewports[i-1].render();"><i class="fa-solid fa-arrows-to-circle"></i>
+                @click="viewer.viewports[i-1].setZoom(1); viewer.viewports[i-1].setPan([0,0]); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-magnifying-glass-minus"></i>
             </button>
             <button title="Store Finding" style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
                 :disabled="switching || job_loading != null"
@@ -188,9 +191,12 @@ on htmx:afterRequest
   <div id="findings" style="overflow-y: auto; display: flex; flex-direction: column; flex-wrap: nowrap; grid-area: g">
     <template x-for="finding in viewer? viewer.findings : []" :key="finding.id">
       <div class="mb-2 img-thumbnail">
+        <button title="Go to finding" class="btn-dark btn-large ms-2 my-2" style="float:right;"
+          @click="await viewer.goToFinding(finding);"><i class="fa-solid fa-magnifying-glass"></i>
+        </button>
         <button title="Delete" class="btn-dark btn-large ms-2 my-2" style="float:right;"
-        @click="viewer.deleteFinding(finding.id);"><i class="fa-solid fa-trash"></i>
-      </button>
+          @click="await viewer.deleteFinding(finding.id);"><i class="fa-solid fa-trash"></i>
+        </button>
         <img class="mb-2 img-fluid" :src="finding.url" width="100%"/>
       </div>
     </template>

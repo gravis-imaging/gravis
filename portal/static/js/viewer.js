@@ -1,6 +1,6 @@
 import { AnnotationManager } from "./annotations.js"
 import { StateManager } from "./state.js"
-import { doJob, viewportToImage } from "./utils.js"
+import { doJob, viewportToImage, Vector, scrollViewportToPoint } from "./utils.js"
 
 const SOP_INSTANCE_UID = '00080018';
 const STUDY_DATE = '00080020';
@@ -98,6 +98,7 @@ class GraspViewer {
     case_id;
     study_uid;
     volume; 
+    current_study;
     selected_time = 0;
     chart_options = {};
 
@@ -172,6 +173,8 @@ class GraspViewer {
                 }
                 this.renderingEngine.resize(true, true);
             }
+            auxViewport.element.oncontextmenu = e=>e.preventDefault();
+
             this.renderingEngine.setViewports([...previewViewports, ...viewViewports, auxViewport])
             this.viewportIds = [...viewportIds , auxViewport.viewportId]
             this.previewViewportIds = previewViewportIds
@@ -513,6 +516,8 @@ class GraspViewer {
                     break;
                 }
             }
+        } else {
+            this.selected_time = graspVolumeInfo[0].acquisition_seconds;
         }
         console.log(`Loading index ${selected_index}`)
         console.log(graspVolumeInfo)
@@ -532,6 +537,7 @@ class GraspViewer {
         }
 
         console.log("Study switched");
+        this.current_study = graspVolumeInfo;
         return graspVolumeInfo
     }
 
@@ -581,7 +587,8 @@ class GraspViewer {
         const image = await viewportToImage(viewport);
 
         const info = {
-            cam: viewport.getCamera(),
+            cam: viewport.getCamera(), //this.viewports.map(v=>v.getCamera()),
+            time: this.selected_time
             // center_index: cornerstone.utilities.transformWorldToIndex(viewport.getDefaultImageData(), viewport.getCamera().focalPoint),
         }
         const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`, {image_data: image, info: info});
@@ -591,7 +598,28 @@ class GraspViewer {
         const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding/${id}`,{}, "DELETE");
         this.findings = await this.loadFindings()
     }
-
+    async goToFinding(finding) {
+        for (const v of this.viewports) {
+            const view_cam = v.getCamera();
+            if (Vector.eq(view_cam.viewPlaneNormal, finding.data.cam.viewPlaneNormal)) {
+                scrollViewportToPoint(v, finding.data.cam.focalPoint);
+                cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,this.viewportIds) 
+                this.renderingEngine.renderViewports(this.viewportIds);
+                break;
+            }
+        }
+        console.log("Finding info", finding.data.time, this.current_study);
+        for (const [index, info] of this.current_study.entries()) { 
+            console.log(info.acquisition_seconds,finding.data.time)
+            if ( Math.abs(info.acquisition_seconds - finding.data.time) < 0.001 ) {
+                console.log("Would switch to", info.series_uid);
+                this.selected_time=info.acquisition_seconds;
+                document.getElementById("volume-picker").value = index;
+                await viewer.switchSeries(info.series_uid); 
+                break;
+            }
+        }
+    }
 }
 
 

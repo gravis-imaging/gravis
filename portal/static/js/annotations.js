@@ -1,4 +1,4 @@
-import { doFetch, HSLToRGB, Vector } from "./utils.js"
+import { doFetch, HSLToRGB, Vector, scrollViewportToPoint } from "./utils.js"
 
 class AnnotationManager {
     viewer;
@@ -202,30 +202,13 @@ class AnnotationManager {
         await this.updateChart()
     }
 
-    goToAnnotation(uid, mode="scroll") {
+    
+    goToAnnotation(uid) {
         const annotation_info = this.annotations[uid];
         const viewport = this.viewer.viewports.find( x => x.id == annotation_info.viewportId);
-
         const annotation = cornerstone.tools.annotation.state.getAnnotation(uid);
-        let cam = viewport.getCamera();
-
-
         const centerPoint = Vector.avg(annotation.data.handles.points);
-        if (mode == "scroll") {
-            const moveAmount = Vector.dot(cam.viewPlaneNormal, centerPoint) - Vector.dot(cam.viewPlaneNormal, cam.focalPoint)
-            const delta = Vector.mul(cam.viewPlaneNormal, moveAmount);    
-            cam = {...cam, 
-                        focalPoint: Vector.add(cam.focalPoint, delta),
-                        position: Vector.add(cam.position,delta)
-                    }
-        } else if ( mode == "center") {
-            const offset = Vector.sub(cam.position, cam.focalPoint);
-            cam = {...cam, 
-                        focalPoint: centerPoint,
-                        position: Vector.add(centerPoint,offset)
-                    }
-        }
-        viewport.setCamera(cam);
+        scrollViewportToPoint(viewport, centerPoint);
         cornerstone.tools.annotation.selection.setAnnotationSelected(uid, true, false);
         this.viewer.renderingEngine.renderViewports([annotation_info.viewportId]);
         cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,[annotation_info.viewportId]) 

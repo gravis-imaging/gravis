@@ -210,6 +210,30 @@ class Vector {
     static avg(arr){    
         return Vector.mul(arr.reduce(Vector.add, [0,0,0]), 1/arr.length);
     }
-
+    static eq(arr_a,arr_b) {
+        if (arr_a.length != arr_b.length) return false;
+        for (let i=0;i<arr_a.length;i++){
+            if (arr_a[i] != arr_b[i]) return false;
+        }
+        return true;
+    }
 }
-export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, Vector };
+const scrollViewportToPoint = (viewport, centerPoint) => {
+    let cam = viewport.getCamera();
+    const moveAmount = Vector.dot(cam.viewPlaneNormal, centerPoint) - Vector.dot(cam.viewPlaneNormal, cam.focalPoint)
+    const delta = Vector.mul(cam.viewPlaneNormal, moveAmount);    
+    cam = {...cam, 
+                focalPoint: Vector.add(cam.focalPoint, delta),
+                position: Vector.add(cam.position,delta)
+            }
+    // TODO: this doesn't work and ends up desyncing the viewports. 
+    // } else if ( mode == "center") {
+    // const offset = Vector.sub(cam.position, cam.focalPoint);
+    // cam = {...cam, 
+    //             focalPoint: centerPoint,
+    //             position: Vector.add(centerPoint,offset)
+    //         }
+    // }
+    viewport.setCamera(cam);
+}
+export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, Vector };
