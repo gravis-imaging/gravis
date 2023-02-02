@@ -1,9 +1,8 @@
-<!-- Modal -->
-<div class="modal fade" id="modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+<div class="modal fade" id="case_details_modal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content">
         <div class="modal-header">
-            <h5 class="modal-title" id="exampleModalLabel">Case Info</h5>
+            <h5 class="modal-title" id="exampleModalLabel">Case Details</h5>
             <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
@@ -67,6 +66,59 @@
         <div class="modal-footer">
             <button type="button" class="btn btn-primary" data-mdb-dismiss="modal">Close</button>
         </div>
-        <!-- </div> -->
     </div>
 </div>
+
+
+<script>
+
+// Retrieves that information for the given case from the server and shows a modal popup window with
+// the information
+function showCaseInformation(case_id) {
+    $.ajax({
+        type: 'GET',
+        url: '/browser/get_case/'+case_id,
+        dataType: 'json',
+        error: function () {
+            // Show error if the data cannot be read from server
+            Swal.fire(
+                'Error',
+                'Unable to find case information.',
+                'error'
+            )
+        },
+        success: function (data) {
+            // Call helper function to display modal window with information
+            displayReceivedCaseInformation(data);
+        },
+        complete: function (data) {
+        },
+        timeout: 3000
+    });
+}
+
+// Renders the retrieved JSON information in modal window and displays it 
+function displayReceivedCaseInformation(caseData) {
+
+    // Pass data to UI elements and provide default value in case entry is missing in provided JSON object
+    document.getElementById("case_details_patient_name").innerText = caseData.patient_name || "Missing";
+    document.getElementById("case_details_mrn").innerText = caseData.mrn || "Missing";
+    document.getElementById("case_details_acc").innerText = caseData.acc || "Missing";
+    document.getElementById("case_details_num_spokes").innerText = caseData.num_spokes || "Missing";
+    document.getElementById("case_details_case_type").innerText = caseData.case_type || "Missing";
+    document.getElementById("case_details_exam_time").innerText = caseData.exam_time || "Missing";
+    document.getElementById("case_details_receive_time").innerText = caseData.receive_time || "Missing";
+    document.getElementById("case_details_status").innerText = caseData.status || "Missing";
+    document.getElementById("case_details_twix_id").innerText = caseData.twix_id || "Missing";
+    document.getElementById("case_details_case_location").innerText = caseData.case_location || "Missing";
+    document.getElementById("case_details_viewed_by_id").innerText = caseData.viewed_by_id || "Missing";
+    document.getElementById("case_details_last_read_by_id").innerText = caseData.last_read_by_id || "Missing";
+    document.getElementById("case_details_settings").innerText = JSON.stringify(caseData.settings, null, 4)  || "{}";
+    
+    // Display the modal window
+    const myModalEl = document.getElementById('case_details_modal');
+    const modal = new mdb.Modal(myModalEl);
+    modal.show();
+}
+
+</script>

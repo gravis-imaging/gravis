@@ -63,6 +63,10 @@ class AnnotationManager {
 
     createAnnotationTemplate(tool_name) {
         var idx = Math.max(0,...Object.values(this.annotations).map(a => a.idx+1));
+        let tool_name_label = "Probe";
+        if (tool_name == "EllipticalROI") {
+            tool_name_label = "ROI";
+        }
         return {
             chartColor: `rgb(${HSLToRGB(idx*(360/1.618033988),50,50).join(",")})`,
             highlighted: true,
@@ -75,7 +79,7 @@ class AnnotationManager {
             },
             data: {
                 cachedStats: {},
-                label: `${tool_name} ${idx+1}`,
+                label: `${tool_name_label} ${idx+1}`,
                 handles: {
                     textBox:{"hasMoved":false,"worldPosition":[0,0,0],"worldBoundingBox":{"topLeft":[0,0,0],"topRight":[0,0,0],"bottomLeft":[0,0,0],"bottomRight":[0,0,0]}},
                     activeHandleIndex: null
@@ -123,7 +127,7 @@ class AnnotationManager {
             text: "Do you really want to delete all annotations?",
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#3085d6',
+            confirmButtonColor: '#1266f1',
             cancelButtonColor: '#d33',
             confirmButtonText: 'Yes, delete all!'
             }).then((result) => {

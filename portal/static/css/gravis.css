@@ -222,4 +222,50 @@ button:focus:not(:focus-visible) {
     color: none;
     background: none;
 }
+
+.navbar_patient_info:hover {
+    color: #FFF!important;
+    background-color: #1266f1!important;
+}
+
+.navbar_case_list.active {
+    color: #FFF!important;
+    background-color: #1266f1!important;
+}
  
+.btn-viewer {
+    border-radius: 3px;
+}
+
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  /* background-color: #0a0a0a; */
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsla(0,0%,100%,.55);
+  border-radius: 10px;
+  border: 4px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #FFF;
+  border: 4px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+.btn-viewer-toolbar {
+  font-size: 1rem;
+  line-height: 1.0!important;
+}
+
+.ripple-wave {
+    background: none!important;
+}

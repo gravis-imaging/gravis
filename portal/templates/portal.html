@@ -1,9 +1,7 @@
 {% extends 'base.html' %}
 {% load portaltags %}
 
-
 {% block body %}
-
 <header class="mb-5">
     <nav class="navbar navbar-expand-lg  fixed-top navbar-dark bg-dark mb-4 shadow-2-strong">
         <div class="container-fluid">
@@ -25,7 +23,7 @@
                         <a class="nav-link {% if request.resolver_match.url_name == "index" %}active{% endif %}" aria-current="page" href="/"><i class="fa-solid fa-table"></i>&nbsp;&nbsp;Browser</a>
                     </li>
                     <!-- Viewer -->
-                    {% if cases %}    
+                    {% if viewer_cases %}    
                     <li class="nav-item dropdown">
                         <a
                           class="nav-link dropdown-toggle {% if request.resolver_match.url_name == "viewer" %}active{% endif %}"
@@ -35,43 +33,39 @@
                           data-mdb-toggle="dropdown"
                           aria-expanded="false"
                         >
-                        <i class="fas fa-images"></i>&nbsp;&nbsp;Viewing
+                        <i class="fas fa-images"></i>&nbsp;&nbsp;Viewer
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                          {% for item in cases %}                         
+                          <li>
+                            <a class="dropdown-item disabled" href="#" style="">Open Cases</a>
+                          </li>
+                          {% for case in viewer_cases %}                         
                           <li>
                             {% if request.resolver_match.url_name == "viewer" %}
                                 {% url_case_id request.get_full_path as id %}      
-                            {% endif %}                      
-                            {% if item.num_spokes == "" %}
-                                <a class="patient_info blur dropdown-item {% if request.resolver_match.url_name == "viewer" and id == item.id %}active{% endif %}" href="/viewer/{{ item.id }}">{{ item.patient_name }} id: {{item.id}}</a>
-                            {% else %}
-                                <a class="patient_info blur dropdown-item {% if request.resolver_match.url_name == "viewer" and id == item.id %}active{% endif %}" href="/viewer/{{ item.id }}">{{ item.patient_name }} ({{ item.num_spokes}} spokes) id: {{item.id}}</a>
-                            {% endif %}                            
+                            {% endif %}                                                
+                            <a class="navbar_case_list dropdown-item {% if request.resolver_match.url_name == "viewer" and id == case.id %}active{% endif %}" href="/viewer/{{ case.id }}">{{ case.patient_name }} {% if case.num_spokes != "" %}({{ case.num_spokes}} spokes) {% endif %}id: {{case.id}}</a>                                                        
                           </li>  
                           {% endfor %}                        
                         </ul>
                     </li>                              
-                    {% endif %}                            
+                    {% endif %}     
+                    {% if request.resolver_match.url_name == "viewer" %}
+                    <li class="nav-item menuitems-top">
+                        <a class="nav-link" aria-current="page" href="#" onclick="closeCurrentCase();"><i class="far fa-window-close"></i>&nbsp;&nbsp;Close</a>
+                    </li>           
+                    {% endif %}     
+                    
                 </ul>
                 <!-- Patient name for the current case -->
                 {% if request.resolver_match.url_name == "viewer" %}  
                 <ul class="nav navbar-nav mx-auto">
-                    <li class="nav-item menuitems-top" style="pointer-events: none;">                                             
+                    <li class="nav-item menuitems-top" >                                             
                         {% url_case_id request.get_full_path as id %}
-                        {% case_info cases id as case %}
-                        {% if case.num_spokes == "" %}
-                            <h5 class="patient_info nav-link blur">{{ case.patient_name }} id: {{case.id}} </h5>
-                        {% else %}
-                            <h5 class="patient_info nav-link blur">{{ case.patient_name }} ({{ case.num_spokes}} spokes) id: {{case.id}} </h5>
-                        {% endif %}  
-                    </li>
-                    <li class="nav-item menuitems-top">                                             
-                        {% url_case_id request.get_full_path as id %}
-                        {% case_info cases id as case %}
-                        <button title="Case Info" style="pointer-events: auto" class="btn-primary btn-large ms-2 my-2"
-                            onClick="showPopup(current_case_parsed);"><i class="fa-solid fa-tags"></i>
-                        </button> 
+                        {% case_info viewer_cases id as case %}
+                        <a href="#" onclick="showCaseInformation({{ case.id }});">
+                            <h5 class="navbar_patient_info nav-link mb-0">{{ case.patient_name }} {% if case.num_spokes != "" %}({{ case.num_spokes}} spokes){% endif %}</h5>                         
+                        </a>
                     </li>
                 </ul>
                 {% endif %}  
@@ -105,27 +99,11 @@
 
 <main class="flex-shrink-1">
     <div class="container-fluid pt-3">
-        <div class="maincontent px-4 mt-3">
+        <div class="maincontent px-2 mt-3">
             {% block content %}                
             {% endblock %}
         </div>
     </div>
 </main>
-
-<script type="module">
-    import { getCookie } from "/static/js/utils.js";
-    if (getCookie('privacy_mode') == 1) {
-        Array.from(document.getElementsByClassName('patient_info')).forEach(e => e.classList.add("blur"));
-    }
-    else {
-        Array.from(document.getElementsByClassName('patient_info')).forEach(e => e.classList.remove("blur"));
-    }    
-</script>
-
-<script type="module">
-    import { showPopup } from "/static/js/popup.js";
-    window.showPopup = showPopup;
-</script>
-
 
 {% endblock %}

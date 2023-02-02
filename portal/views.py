@@ -1,9 +1,9 @@
 import logging
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.views.static import serve
@@ -56,35 +56,10 @@ def logout_request(request):
 
 # TODO: Status viewer from django rq - Case Information button is clicked
 
-def extract_case(object):
-
-    return { 
-        'case_id': str(object.id),
-        "patient_name": object.patient_name,
-        "mrn": object.mrn,
-        "acc": object.acc,
-        "num_spokes": object.num_spokes,
-        "case_type": object.case_type,
-        "exam_time": object.exam_time.strftime("%Y-%m-%d %H:%M"),
-        "receive_time": object.receive_time.strftime("%Y-%m-%d %H:%M"),
-        "status": Case.CaseStatus(object.status).name.title(),
-        "twix_id": object.twix_id,
-        "case_location": object.case_location,
-        "settings": object.settings,
-        "last_read_by_id": object.last_read_by.username if object.last_read_by_id else "",
-        "viewed_by_id": object.viewed_by.username if object.viewed_by_id else "",
-    }
-
 @login_required
 def index(request):
-    data = []
-    objects = Case.objects.all()
-    for object in objects:
-        data.append(extract_case(object))
-
     context = {
-        "data": data,
-        "cases": Case.objects.filter(status = Case.CaseStatus.VIEWING)
+        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user)
     }
     return render(request, "index.html", context)
 
@@ -92,7 +67,7 @@ def index(request):
 @login_required
 def user(request):
     context = {
-        "cases": Case.objects.filter(status = Case.CaseStatus.VIEWING)
+        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user)
     }
     return render(request, "user.html", context)
 
@@ -100,14 +75,14 @@ def user(request):
 @login_required
 def config(request):
     context = {
-        "cases": Case.objects.filter(status = Case.CaseStatus.VIEWING)
+        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user)
     }
     return render(request, "config.html", context)
 
 
 @login_required
 def viewer(request, case):
-    case = Case.objects.get(id=case)
+    case = get_object_or_404(Case, id=case)
     
     case.viewed_by = request.user
     case.last_read_by = request.user
@@ -118,7 +93,7 @@ def viewer(request, case):
     context = {
         "studies": [(k.study_uid,k.dicom_set.id, k.dicom_set.type) for k in instances],
         "current_case": extract_case(instances[0].dicom_set.case),
-        "cases": Case.objects.filter(status = Case.CaseStatus.VIEWING)
+        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user)
     }
     return render(request, "viewer.html", context)
 
@@ -131,3 +106,50 @@ def add_case(request):
         "cases": [(k.id) for k in cases],
     }
     return render(request, "portal.html", context)
+
+
+def extract_case(case_object):
+    tmp_tags = ["item1", "item2"]
+    return { 
+        'case_id': str(case_object.id),
+        "patient_name": case_object.patient_name,
+        "mrn": case_object.mrn,
+        "acc": case_object.acc,
+        "num_spokes": case_object.num_spokes,
+        "case_type": case_object.case_type,
+        "exam_time": case_object.exam_time.strftime("%Y-%m-%d %H:%M"),
+        "receive_time": case_object.receive_time.strftime("%Y-%m-%d %H:%M"),
+        "status": Case.CaseStatus(case_object.status).name.title(),
+        "twix_id": case_object.twix_id,
+        "case_location": case_object.case_location,
+        "settings": case_object.settings,
+        "last_read_by_id": case_object.last_read_by.username if case_object.last_read_by_id else "",
+        "viewed_by_id": case_object.viewed_by.username if case_object.viewed_by_id else "",
+        "tags": tmp_tags #case_object.tags if case_object.tags else "",
+    }
+
+
+@login_required
+def browser_get_cases_all(request):
+    '''
+    Returns a JSON object containing information on all cases stored in the database.
+    '''
+    case_data = []
+    all_cases = Case.objects.all()
+    for case in all_cases:
+        case_data.append(extract_case(case))
+
+    return JsonResponse({"data": case_data}, safe=False)
+
+
+@login_required
+def browser_get_case(request, case):
+    '''
+    Returns information about the given case in JSON format. Returns 404 page if
+    case ID does not exist
+    '''
+    case = get_object_or_404(Case, id=case)
+
+    json_data = extract_case(case)
+    return JsonResponse(json_data, safe=False)
+

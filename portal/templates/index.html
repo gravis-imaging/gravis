@@ -1,5 +1,11 @@
 {% extends 'portal.html' %}
 
+{% block header %}
+<link rel="stylesheet" type="text/css" href="/static/css/datatables.min.css" crossorigin />
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+{% endblock %}
+
 {% block content %}
 <div class="row mb-3">
     <div class="col">
@@ -13,51 +19,19 @@
                 <table id="casetable" class="table table-dark table-bordered" style="width:100%">
                     <thead>
                         <tr>
-                            <th style="display:none;">ID</th>
+                            <th>ID</th>
                             <th>Patient</th>
                             <th>MRN</th>
                             <th>ACC</th>
+                            <th>Exam Time</th>
                             <th>Spokes</th>
                             <th>Type</th>
-                            <th>Exam Time</th>
-                            <th>Received</th>
                             <th>Status</th>
                             <th>Reader</th>
+                            <th>Tags</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for item in data %}
-                        <tr>
-                            <td style="display:none;">{{ item.case_id }}</td>
-                            <td class="patient_info">{{ item.patient_name }}</td>
-                            <td class="patient_info">{{ item.mrn }}</td>
-                            <td class="patient_info">{{ item.acc }}</td>
-                            <td>{{ item.num_spokes }}</td>
-                            <td>{{ item.case_type }}</td>
-                            <td class="patient_info">{{ item.exam_time }}</td>
-                            <td class="patient_info">{{ item.receive_time }}</td>
-                            {% if item.status == 'Received' %}
-                                <td><span class="badge bg-secondary">{{ item.status }}</span></td>
-                            {% elif item.status == 'Queued' %}
-                                <td><span class="badge bg-primary">{{ item.status }}</span></td>
-                            {% elif item.status == 'Processing' %}
-                                <td><span class="badge bg-light text-dark">{{ item.status }}</span></td>
-                            {% elif item.status == 'Ready' %}
-                                <td><span class="badge bg-info text-dark">{{ item.status }}</span></td>
-                            {% elif item.status == 'Viewing' %}
-                                <td><span class="badge bg-warning text-dark">{{ item.status }}</span></td>
-                            {% elif item.status == 'Complete' %}
-                                <td><span class="badge bg-success">{{ item.status }}</span></td>
-                            {% elif item.status == 'Archived' %}
-                                <td><span class="badge bg-dark">{{ item.status }}</span></td>
-                            {% elif item.status == 'Error' %}
-                                <td><span class="badge bg-danger">{{ item.status }}</span></td>
-                            {% elif item.status == 'Delete' %}
-                                <td><span class="badge bg-danger">{{ item.status }}</span></td>
-                            {% endif %}
-                            <td>{{ item.viewed_by_id }}</td>
-                        </tr>
-                        {% endfor %}
                     </tbody>
                 </table>
             </div>
@@ -65,19 +39,13 @@
     </div>
 </div>
 
-{% include "popup.html" %}
-
-{% endblock %}
-
-{% block header %}
-<link rel="stylesheet" type="text/css" href="/static/css/datatables.min.css" crossorigin />
+{% include "case_information_modal.html" %}
 {% endblock %}
 
 {% block addedscripts %}
-<!--script src="/static/js/jquery-3.5.1.min.js" crossorigin></script-->
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js" crossorigin></script>
 <script type="text/javascript" src="/static/js/datatables.min.js" crossorigin></script>
-{{ data|json_script:"cases_data" }}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" crossorigin></script>
 <script>
     
     $(document).ready(function () {
@@ -85,6 +53,67 @@
         var case_data_table = $('#casetable').DataTable({
            
             dom: "<'row browsertoolbar align-items-end'<'col-sm-12 col-md-6 browserbuttons'B><'col-sm-12 col-md-6'f>>" + "<'row'<'col-sm-12'tr>>" + "<'row'<'col-sm-12 col-md-5'><'col-sm-12 col-md-7'p>>",
+            ajax: "/browser/get_cases_all",
+            deferRender: true,
+            columns: [
+                { data: 'case_id', visible: false },
+                { data: 'patient_name' },
+                { data: 'mrn' },
+                { data: 'acc' },
+                { data: 'exam_time' },
+                { data: 'num_spokes' },
+                { data: 'case_type' },
+                { data: 'status',
+                  render: function (data, type, row) {
+                        // Custom field rendering for the status field
+                        switch(data) {
+                        case 'Received':
+                            return '<span class="badge bg-secondary rounded-pill">'+data+'</span>';
+                            break;
+                        case 'Queued':
+                            return '<span class="badge bg-primary">'+data+'</span>';
+                            break;
+                        case 'Processing':
+                            return '<span class="badge bg-light text-dark rounded-pill">'+data+'</span>';
+                            break;
+                        case 'Ready':
+                            return '<span class="badge bg-info text-dark rounded-pill">'+data+'</span>';
+                            break;
+                        case 'Viewing':
+                            return '<span class="badge bg-warning text-dark rounded-pill">'+data+'</span>';
+                            break;
+                        case 'Complete':
+                            return '<span class="badge bg-success rounded-pill">'+data+'</span>';
+                            break;
+                        case 'Archived':
+                            return '<span class="badge bg-dark rounded-pill">'+data+'</span>';
+                            break;
+                        case 'Error':
+                            return '<span class="badge bg-danger rounded-pill">'+data+'</span>';
+                            break;
+                        case 'Delete':
+                            return '<span class="badge bg-danger rounded-pill">'+data+'</span>';
+                            break;
+                        default:
+                            return '<span class="badge rounded-pill">'+data+'</span>';
+                            break;
+                        }                    
+                    },            
+                },
+                { data: 'last_read_by_id' },
+                {
+                    data: 'tags',
+                    render: function (data, type, row) {
+                        // Custom field rendering for tags
+                        html_element = '';
+                        for (const tag of data) {
+                            html_element = html_element + '<span class="badge border border-2 text-light me-1" style="border-color: #FFF!important;">'+tag+'</span>';
+                        }
+                        return html_element;
+                    }                    
+                },            
+                        
+            ], 
             select: {
                 style: 'single'
             },
@@ -98,10 +127,10 @@
                     text: '<i class="fas fa-folder-open"></i>',
                     titleAttr: 'Open case',
                     action: function (e, dt, node, config) {
-                        const row = case_data_table.row( {selected: true});
-                        const case_id = row.data()[0];
+                        const selected_row = case_data_table.row({selected: true}).data();
+                        const case_id = selected_row.case_id;
                         const link = '/viewer/'+case_id
-                        window.open(link);
+                        window.open(link, "_self");
                     }
                 },
                 {
@@ -110,18 +139,6 @@
                     titleAttr: 'Unlock case',
                     action: function (e, dt, node, config) {
                         alert("Coming soon!");
-                    }
-                },
-                {
-                    extend: "selectedSingle",
-                    text: '<i class="fa-solid fa-tags"></i>',
-                    titleAttr: 'Case information',
-                    action: function (e, dt, node, config) {
-                        const row = case_data_table.row( {selected: true});
-                        const case_id = row.data()[0];
-                        const d = JSON.parse(document.getElementById('cases_data').textContent);                         
-                        const c = d.filter((el) => el.case_id === case_id)[0];    
-                        showPopup(c);                        
                     }
                 },
                 {% if user.is_staff %}
@@ -136,14 +153,13 @@
                             text: "Do you really want to delete the case?",
                             icon: 'warning',
                             showCancelButton: true,
-                            confirmButtonColor: '#3085d6',
+                            confirmButtonColor: '#1266f1',
                             cancelButtonColor: '#d33',
                             confirmButtonText: 'Yes, delete it!'
                             }).then((result) => {
-                            if (result.isConfirmed) {
-                                
-                                const row = case_data_table.row( {selected: true});
-                                const case_id = row.data()[0];   
+                            if (result.isConfirmed) {                                
+                                const selected_row = case_data_table.row({selected: true}).data();
+                                const case_id = selected_row.case_id;
                                 fetch('/cases/', {
                                     method: 'POST',
                                     headers: {
@@ -155,11 +171,10 @@
                                 })
                                 .then(response => response.json())
                                 .then(response => {
-                                    // window.alert(JSON.stringify(response));
                                     Swal.fire(
-                                    'Deleted!',
-                                    'The case has been deleted.',
-                                    'success'
+                                        'Deleted!',
+                                        'The case has been deleted.',
+                                        'success'
                                     ).then((result) => {
                                         window.location.reload();
                                     })
@@ -168,6 +183,31 @@
                         })
                     }
                 },
+                {
+                    extend: "selectedSingle",
+                    text: '<i class="fas fa-list-alt"></i>',
+                    titleAttr: 'Case information',
+                    action: function (e, dt, node, config) {
+                        const selected_row = case_data_table.row({selected: true}).data();
+                        const case_id = selected_row.case_id;
+                        showCaseInformation(case_id);                        
+                    }
+                },                
+                {
+                    extend: "selectedSingle",
+                    text: '<i class="fas fa-tags"></i>',
+                    titleAttr: 'Tag case',
+                    action: function (e, dt, node, config) {
+                        // TODO
+                    }
+                },                
+                {
+                    text: '<i class="fa-solid fa-sync"></i>',
+                    titleAttr: 'Refresh',
+                    action: function (e, dt, node, config) {
+                        case_data_table.ajax.reload();
+                    }
+                },                
                 {% endif %}
                 {
                     extend: 'spacer',
@@ -192,17 +232,21 @@
                     }
                 },
             ],
-            // data: {{ data| safe }},
-            "initComplete": () => { 
-                $("#tablewrapper").show();}
+            initComplete: () => { 
+                $('#casetable').on('draw.dt', function() {
+                    $('.selecttags').select2({tags: "true", width: "20em"});
+                });                
+                $("#tablewrapper").show();
+                
+            }
         });
 
         $('#casetable tbody').on( 'dblclick', 'tr', function () {
             const tr = $(this).closest('tr');
-            const row = case_data_table.row(tr);
-            const case_id = row.data()[0];
+            const selected_row = case_data_table.row(tr).data();
+            const case_id = selected_row.case_id;                                            
             const link = '/viewer/'+case_id
-            window.open(link);
+            window.open(link, "_self");
         });
         
         $('#casetable tbody').on('click', 'tr', function () {
@@ -216,11 +260,6 @@
         
     } );
     
-</script>
-
-<script type="module">
-    import { showPopup } from "/static/js/popup.js";
-    window.showPopup = showPopup;
 </script>
 
 {% endblock %}
