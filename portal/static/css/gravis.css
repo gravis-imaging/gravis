@@ -239,6 +239,7 @@ button:focus:not(:focus-visible) {
  
 .btn-viewer {
     border-radius: 3px;
+    min-width: 32px;
 }
 
 
@@ -279,4 +280,10 @@ button:focus:not(:focus-visible) {
     transition:none!important;
     -webkit-animation:unset!important;
     animation:unset!important
+}
+
+.curve-settings-select {
+    background-color: #000;
+    color: hsla(0,0%,100%,.55);
+    width: 120px;
 }

@@ -40,7 +40,7 @@
       <option value="{{i.0}}:::{{i.1}}">{{ i.2 }}</option>
       {% endfor %}
       </optgroup>      
-  </select>
+    </select>
   </div>    
 
   <!-- volume picker -->
@@ -56,71 +56,86 @@
       >
       </input>
       <label for='volume-picker' x-text="viewer && viewer.selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>
-  
-  <!-- Annotations -->
-    <!-- <div class="" style="margin-left: 1em">
-      <select id="annotations_select" name="annotations" autocomplete="off" class="selectpicker" value=""  data-style="btn btn-outline-light btn-lg btn-rounded text-light btn-viewer-toolbar" data-width="100px"
-      @change="let annotation_select = $event.target.value; $event.target.value = ''; await viewer.annotation_manager.goToAnnotation(annotation_select);">
-        <option value="" selected disabled>Select ROI</option>
-        <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
-          <option x-text="(viewer.annotation_manager.annotations[uid] || {}).label" :value="uid"></option>
-        </template>
-      </select>
-    </div> -->
-
-  <div class="" style="margin-left: 2em">
-    <div class="dropdown">
-      <button
-        class="btn-primary btn-large btn-viewer"
-        :disabled="loading || switching || job_loading != null"
-        href="#"
-        id="dropdownMenuLink"
-        data-mdb-toggle="dropdown"
-        aria-expanded="false"
-      >
-      <i class="fas fa-map-marker-alt"></i>
-    </button>
-      <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-        <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
-          <li><a class="dropdown-item" @click="await viewer.annotation_manager.goToAnnotation(uid);" href="#" x-text="(viewer.annotation_manager.annotations[uid] || {}).label"></a></li>
-        </template>               
-      </ul>
-    </div>    
-  </div>
-
-  <!-- Image manipulation buttons -->
-  <button title="Reset cameras" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
-    :disabled="loading || switching || job_loading != null"
-    @click="viewer.viewports.map(v=> {v.resetCamera(); v.render()}); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-arrows-to-circle"></i>
-    </button>
-    <button title="Duplicate Selected Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
-        :disabled="loading || switching || job_loading != null"
-        @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
-    </button>
-    <button title="Flip Selected Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
-        :disabled="loading || switching || job_loading != null"
-        @click="viewer.annotation_manager.flipSelectedAnnotations();">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-symmetry-vertical" viewBox="0 0 16 16">
-        <path d="M7 2.5a.5.5 0 0 0-.939-.24l-6 11A.5.5 0 0 0 .5 14h6a.5.5 0 0 0 .5-.5v-11zm2.376-.484a.5.5 0 0 1 .563.245l6 11A.5.5 0 0 1 15.5 14h-6a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .376-.484zM10 4.46V13h4.658L10 4.46z"/>
-      </svg>
-    </button>
-    <button title="Delete Selected Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
+ 
+    <!-- Image manipulation buttons -->
+    <div class="flex" style="margin-left: 2em; display: flex;">
+      <button title="Reset Viewers" class="all-pointer-events btn-primary btn-large btn-viewer my-2" style="margin-right: 1.1rem!important;"
       :disabled="loading || switching || job_loading != null"
-      @click="viewer.annotation_manager.deleteSelectedAnnotations();"><i class="fa-solid fa-trash"></i>
-    </button>
-    <button 
-        title="Delete All Annotations" 
-        style="pointer-events: auto; background-color:red;" 
-        class="btn-primary btn-large btn-viewer ms-2 my-2"
-        :disabled="loading || switching || job_loading != null"
-        @click="viewer.annotation_manager.deleteAllAnnotations();">
-        <i class="fa-solid fa-trash"></i>
-    </button>
+      @click="viewer.viewports.map(v=> {v.resetCamera(); v.render()}); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-arrows-to-circle"></i>
+      </button>
 
-    <div :class="(loading || switching) || 'invisible'" class="spinner-border spinner-border-sm ms-3" role="status" style="color: hsla(0,0%,100%,.55);">
-      <span class="visually-hidden">Loading...</span>
+      <!-- Annotations -->
+      <div class="my-2">
+        <div class="dropdown">
+          <button
+            class="btn-primary btn-large btn-viewer"
+            :disabled="loading || switching || job_loading != null"
+            href="#"
+            id="dropdownMenuLink"
+            data-mdb-toggle="dropdown"
+            aria-expanded="false",
+            title="Select Annotation"
+          >
+          <i class="fas fa-map-marker-alt"></i>
+        </button>
+          <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+            <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
+              <li><a class="dropdown-item" @click="await viewer.annotation_manager.goToAnnotation(uid);" href="#" x-text="(viewer.annotation_manager.annotations[uid] || {}).label"></a></li>
+            </template>               
+          </ul>
+        </div>    
+      </div>
+    
+      <button title="Duplicate Selected Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
+          :disabled="loading || switching || job_loading != null"
+          @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
+      </button>
+      <button title="Flip Selected Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
+          :disabled="loading || switching || job_loading != null"
+          @click="viewer.annotation_manager.flipSelectedAnnotations();">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-symmetry-vertical" viewBox="0 0 16 16">
+          <path d="M7 2.5a.5.5 0 0 0-.939-.24l-6 11A.5.5 0 0 0 .5 14h6a.5.5 0 0 0 .5-.5v-11zm2.376-.484a.5.5 0 0 1 .563.245l6 11A.5.5 0 0 1 15.5 14h-6a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .376-.484zM10 4.46V13h4.658L10 4.46z"/>
+        </svg>
+      </button>
+
+      <div class="my-2 ms-2">
+        <div class="dropdown">
+          <button
+            class="btn-primary btn-large btn-viewer"
+            :disabled="loading || switching || job_loading != null"
+            href="#"
+            id="dropdownMenuLink"
+            data-mdb-toggle="dropdown"
+            aria-expanded="false",
+            title="Delete Annotation"
+          >
+          <i class="fa-solid fa-trash"></i>
+        </button>
+          <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+            <li>
+            <a title="Delete Selected Annotation" href="#" class="dropdown-item" 
+              :disabled="loading || switching || job_loading != null"
+              @click="viewer.annotation_manager.deleteSelectedAnnotations();">
+              Delete Selected
+            </a>
+            </li>
+            <li>
+            <a title="Delete All Annotations" :disabled="loading || switching || job_loading != null" href="#" class="dropdown-item" 
+                @click="viewer.annotation_manager.deleteAllAnnotations();">
+                Delete All
+            </a>    
+            </li>
+          </ul>
+        </div>    
+      </div>      
+
+      </div> 
+
+      <!-- Loading indicator -->
+      <div :class="(loading || switching) || 'invisible'" class="spinner-grow spinner-grow-sm ms-3" role="status" style="color: hsla(0,0%,100%,.2);">
+        <span class="visually-hidden">Loading...</span>
+      </div>
     </div>
-</div>
 
   <div x-cloak id="grasp-view-outer" class="grid-container h-100" style="width: 100%; grid-area: e" >
     <div x-show="loading" style="z-index:10;" class="no-pointer-events grid-fill">
@@ -137,19 +152,20 @@
       <div class="viewer-grid">
         <template x-for="i in 3">
           <div class="viewport-overlay" :id="'viewport-overlay-'+i" :style="`grid-row: 1; grid-column: ${i}`">
-            <button title="Add Elliptical ROI Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
+            <!-- Note layout of buttons opening/closing to avoid undesired spaces between buttons -->
+            <button title="Add ROI Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
                 :disabled="switching || job_loading != null"
                 @click="viewer.annotation_manager.addAnnotationToViewport('EllipticalROI',i-1);"><i class="fa-regular fa-circle"></i>
-            </button>
-            <button title="Add Probe Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
+            </button><button
+             title="Add Probe Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
                 :disabled="switching || job_loading != null"
                 @click="viewer.annotation_manager.addAnnotationToViewport('Probe',i-1);"><i class="fa-solid fa-plus"></i>
-            </button>
-            <button title="Reset view" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
+            </button><button
+             title="Reset Viewer" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
                 :disabled="switching || job_loading != null"
                 @click="viewer.viewports[i-1].setZoom(1); viewer.viewports[i-1].setPan([0,0]); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-magnifying-glass-minus"></i>
-            </button>
-            <button title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
+            </button><button
+             title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
                 :disabled="switching || job_loading != null"
                 @click="viewer.storeFinding(i-1);"><i class="fa-solid fa-camera"></i>
             </button>            
@@ -174,26 +190,26 @@
   <!-- MIP viewer -->
   <div style="grid-area: d" class="mb-2" id="aux-container">
     <div x-show="!!current_study" class="viewport-overlay" style="position: absolute; left: 3em; z-index: 10;">
-      <button class="no-pointer-events btn-primary btn-large btn-viewer ml-2 my-2" 
+      <button class="all-pointer-events btn-primary btn-large btn-viewer ml-2 my-2" 
         @click="viewer.renderingEngine.getViewport('VIEW_CINE').setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/MIP?acquisition_number=35`)).json()).urls)">MIP
       </button>
     </div>
   </div>
 
   <!-- Chart -->
-  <div style="grid-area: f" class="mb-2">
+  <div style="grid-area: f; background: #000 !important;" class="mb-2 py-4 px-3">
     <div id="chart" style="background-color: black; color: white;">
     </div>
   </div>
   <div style="grid-area: f">
     <template x-if="viewer">    
       <div style="text-align:right; position:relative;">
-        <select style="width:100px;" x-model="viewer.chart_options['adjust']" @change="viewer.annotation_manager.updateChart()">
+        <select class="curve-settings-select" x-model="viewer.chart_options['adjust']" @change="viewer.annotation_manager.updateChart()">
           <option value="normal" autocomplete="off" selected>normal</option>
           <option value="zeroed">zeroed</option>
           <option value="normalized">normalized</option>
         </select>
-        <select style="width:100px;" x-model="viewer.chart_options['mode']" @change="viewer.annotation_manager.updateChart()">
+        <select style="width:100px;" class="curve-settings-select" x-model="viewer.chart_options['mode']" @change="viewer.annotation_manager.updateChart()">
           <option value="mean" autocomplete="off" selected>mean</option>
           <option value="median">median</option>
           <option value="ptp">ptp</option>
@@ -206,12 +222,14 @@
   <div id="findings" style="overflow-y: auto; display: flex; flex-direction: column; flex-wrap: nowrap; grid-area: g; margin-left: 8px; overflow-y: scroll; ">
     <template x-for="finding in viewer? viewer.findings : []" :key="finding.id">
       <div class="mb-2 img-thumbnail">
-        <button title="Go to finding" class="btn-dark btn-large btn-viewer ms-2 my-2" style="float:right;"
-          @click="await viewer.goToFinding(finding);"><i class="fa-solid fa-magnifying-glass"></i>
-        </button>
-        <button title="Delete" class="btn-dark btn-large btn-viewer ms-2 my-2" style="float:right;"
-          @click="await viewer.deleteFinding(finding.id);"><i class="fa-solid fa-trash"></i>
-        </button>
+        <div style="float:right;">
+          <button title="Go to finding" class="btn-dark btn-large btn-viewer me-1 my-2" 
+            @click="await viewer.goToFinding(finding);"><i class="fa-solid fa-map-marker-alt"></i>
+          </button><button
+           title="Delete" class="btn-dark btn-large btn-viewer me-2 my-2" 
+            @click="await viewer.deleteFinding(finding.id);"><i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
         <img class="mb-2 img-fluid" :src="finding.url" width="100%"/>
       </div>
     </template>
@@ -227,7 +245,6 @@
   window.doJob = doJob;
   window.doFetch = doFetch;
 </script>
-
 
 <script>
   function closeCurrentCase() {
