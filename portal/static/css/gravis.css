@@ -63,8 +63,12 @@ h2 {
     justify-content: center;
 }
 
-.pointer-events-none {
+.no-pointer-events {
     pointer-events: none;
+}
+
+.all-pointer-events {
+    pointer-events: auto;
 }
 
 .grid-container {
@@ -268,4 +272,11 @@ button:focus:not(:focus-visible) {
 
 .ripple-wave {
     background: none!important;
+}
+
+/* Disable animations. */
+.animation {
+    transition:none!important;
+    -webkit-animation:unset!important;
+    animation:unset!important
 }
