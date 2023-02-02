@@ -23,10 +23,9 @@
                             <th>Patient</th>
                             <th>MRN</th>
                             <th>ACC</th>
+                            <th>Exam Time</th>
                             <th>Spokes</th>
                             <th>Type</th>
-                            <th>Exam Time</th>
-                            <th>Received</th>
                             <th>Status</th>
                             <th>Reader</th>
                             <th>Tags</th>
@@ -61,43 +60,42 @@
                 { data: 'patient_name' },
                 { data: 'mrn' },
                 { data: 'acc' },
+                { data: 'exam_time' },
                 { data: 'num_spokes' },
                 { data: 'case_type' },
-                { data: 'exam_time' },
-                { data: 'receive_time' },
                 { data: 'status',
                   render: function (data, type, row) {
                         // Custom field rendering for the status field
                         switch(data) {
                         case 'Received':
-                            return '<span class="badge bg-secondary">'+data+'</span>';
+                            return '<span class="badge bg-secondary rounded-pill">'+data+'</span>';
                             break;
                         case 'Queued':
                             return '<span class="badge bg-primary">'+data+'</span>';
                             break;
                         case 'Processing':
-                            return '<span class="badge bg-light text-dark">'+data+'</span>';
+                            return '<span class="badge bg-light text-dark rounded-pill">'+data+'</span>';
                             break;
                         case 'Ready':
-                            return '<span class="badge bg-info text-dark">'+data+'</span>';
+                            return '<span class="badge bg-info text-dark rounded-pill">'+data+'</span>';
                             break;
                         case 'Viewing':
-                            return '<span class="badge bg-warning text-dark">'+data+'</span>';
+                            return '<span class="badge bg-warning text-dark rounded-pill">'+data+'</span>';
                             break;
                         case 'Complete':
-                            return '<span class="badge bg-success">'+data+'</span>';
+                            return '<span class="badge bg-success rounded-pill">'+data+'</span>';
                             break;
                         case 'Archived':
-                            return '<span class="badge bg-dark">'+data+'</span>';
+                            return '<span class="badge bg-dark rounded-pill">'+data+'</span>';
                             break;
                         case 'Error':
-                            return '<span class="badge bg-danger">'+data+'</span>';
+                            return '<span class="badge bg-danger rounded-pill">'+data+'</span>';
                             break;
                         case 'Delete':
-                            return '<span class="badge bg-danger">'+data+'</span>';
+                            return '<span class="badge bg-danger rounded-pill">'+data+'</span>';
                             break;
                         default:
-                            return '<span class="badge">'+data+'</span>';
+                            return '<span class="badge rounded-pill">'+data+'</span>';
                             break;
                         }                    
                     },            
@@ -109,7 +107,7 @@
                         // Custom field rendering for tags
                         html_element = '';
                         for (const tag of data) {
-                            html_element = html_element + '<span class="badge rounded-pill bg-light text-dark">'+tag+'</span><br>';
+                            html_element = html_element + '<span class="badge border border-2 text-light me-1" style="border-color: #FFF!important;">'+tag+'</span>';
                         }
                         return html_element;
                     }                    
@@ -193,6 +191,14 @@
                         const selected_row = case_data_table.row({selected: true}).data();
                         const case_id = selected_row.case_id;
                         showCaseInformation(case_id);                        
+                    }
+                },                
+                {
+                    extend: "selectedSingle",
+                    text: '<i class="fas fa-tags"></i>',
+                    titleAttr: 'Tag case',
+                    action: function (e, dt, node, config) {
+                        // TODO
                     }
                 },                
                 {
