@@ -39,13 +39,19 @@
     </div>
 </div>
 
+
 {% include "case_information_modal.html" %}
+
+
 {% endblock %}
 
 {% block addedscripts %}
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js" crossorigin></script>
 <script type="text/javascript" src="/static/js/datatables.min.js" crossorigin></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" crossorigin></script>
+
+{% include "tags_management_modal.html" %}
+
 <script>
     
     $(document).ready(function () {
@@ -198,7 +204,9 @@
                     text: '<i class="fas fa-tags"></i>',
                     titleAttr: 'Tag case',
                     action: function (e, dt, node, config) {
-                        // TODO
+                        const selected_row = case_data_table.row({selected: true}).data();
+                        const case_id = selected_row.case_id;
+                        showTagsDialog(case_id);
                     }
                 },                
                 {
@@ -232,12 +240,8 @@
                     }
                 },
             ],
-            initComplete: () => { 
-                $('#casetable').on('draw.dt', function() {
-                    $('.selecttags').select2({tags: "true", width: "20em"});
-                });                
+            initComplete: () => {             
                 $("#tablewrapper").show();
-                
             }
         });
 

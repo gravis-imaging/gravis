@@ -1,0 +1,74 @@
+<div class="modal fade" id="tags_selection_modal" role="dialog" style="overflow:hidden;">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add tags to the selected case.</h5>
+                <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Select from available tags or type in a new one:
+                <select class="form-control select2" multiple="multiple" id="select_tags" style="color: black">
+                </select>                               
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btn_ok" class="btn btn-primary">OK</button>
+                <button type="button" class="btn btn-primary" data-mdb-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+
+$(document).ready(function() {
+    $('.modal .select2').select2({
+        tags: true,
+        width: '100%',
+        dropdownParent: $('.modal')
+    });
+});
+
+// Retrieves that information for the given case from the server and shows a modal popup window with
+// the information
+function showTagsDialog(case_id) {
+    $.ajax({
+        type: 'GET',
+        url: '/browser/get_case/'+case_id,
+        dataType: 'json',
+        error: function () {
+            // Show error if the data cannot be read from server
+            Swal.fire(
+                'Error',
+                'Unable to find case information.',
+                'error'
+            )
+        },
+        success: function (data) {
+            // Call helper function to display modal window with information
+            displayTagsInformation(data);
+        },
+        complete: function (data) {
+        },
+        timeout: 3000
+    });
+}
+
+// Renders the retrieved JSON information in modal window and displays it 
+function displayTagsInformation(caseData) {
+    const select = document.getElementById("select_tags");
+
+    for (const tag of caseData.tags) {
+        const option = document.createElement("option");
+        option.value = tag;
+        option.innerHTML = tag;
+        select.appendChild(option);
+    }
+    
+    // Display the modal window
+    const myModalElement = document.getElementById('tags_selection_modal');
+    const modal = new mdb.Modal(myModalElement);
+    modal.show();
+}
+
+</script>
