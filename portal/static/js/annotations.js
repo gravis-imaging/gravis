@@ -125,11 +125,11 @@ class AnnotationManager {
         Swal.fire({
             title: 'Are you sure?',
             text: "Do you really want to delete all annotations?",
-            icon: 'warning',
+            icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#1266f1',
             cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, delete all!'
+            confirmButtonText: 'Yes'
             }).then((result) => {
             if (result.isConfirmed) {
                 

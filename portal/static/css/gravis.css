@@ -283,6 +283,7 @@ button:focus:not(:focus-visible) {
  
 .btn-viewer {
     border-radius: 3px;
+    min-width: 32px;
 }
 
 
@@ -319,7 +320,15 @@ button:focus:not(:focus-visible) {
 }
 
 /* Disable animations. */
-.dropdown-menu.animation {
-    -webkit-animation-duration:0s;
-    animation-duration:0s;
+ .animation {
+    -webkit-transition-duration: 0s!important;
+    transition-duration: 0s!important;
+    -webkit-animation-duration:0s!important;
+    animation-duration:0s!important
+} 
+
+.curve-settings-select {
+    background-color: #000;
+    color: hsla(0,0%,100%,.55);
+    width: 120px;
 }
