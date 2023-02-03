@@ -37,14 +37,14 @@
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
                           <li>
-                            <a class="dropdown-item disabled" href="#" style="">Open Cases</a>
+                            <a class="dropdown-item disabled" href="#" style="">Viewed Cases</a>
                           </li>
                           {% for case in viewer_cases %}                         
                           <li>
                             {% if request.resolver_match.url_name == "viewer" %}
                                 {% url_case_id request.get_full_path as id %}      
                             {% endif %}                                                
-                            <a class="navbar_case_list dropdown-item {% if request.resolver_match.url_name == "viewer" and id == case.id %}active{% endif %}" href="/viewer/{{ case.id }}">{{ case.patient_name }} {% if case.num_spokes != "" %}({{ case.num_spokes}} spokes) {% endif %}id: {{case.id}}</a>                                                        
+                            <a class="navbar_case_list dropdown-item {% if request.resolver_match.url_name == "viewer" and id == case.id %}active" href="#{% else %}" href="/viewer/{{ case.id }}{% endif %}">{{ case.patient_name }} {% if case.num_spokes != "" %}({{ case.num_spokes}} spokes) {% endif %}id: {{case.id}}</a>                                                        
                           </li>  
                           {% endfor %}                        
                         </ul>
