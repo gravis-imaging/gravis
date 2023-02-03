@@ -142,7 +142,6 @@ class AnnotationManager {
                     cornerstone.tools.annotation.state.removeAnnotation(a.annotationUID)
                     cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,[a.metadata.viewportId]) 
                     delete this.annotations[a.annotationUID];
-                    
                     this.updateChart();
                 }                    
             }
@@ -225,7 +224,7 @@ class AnnotationManager {
 
         var g = new Dygraph(div, [],
         {
-            // legend: 'always',
+            legend: 'always',
             // valueRange: [0.0, 1000],
             gridLineColor: 'white',
             // hideOverlayOnMouseOut: true,
@@ -240,9 +239,9 @@ class AnnotationManager {
                         return ''
                     }
                   }
-            },           
+            },
             underlayCallback: (function(canvas, area, g) {
-                if (! this.viewer.study_uid ) {
+                if (! this.viewer.study_uid || Object.keys(this.annotations).length == 0 ) {
                     return
                 }
                 var bottom_left = g.toDomCoords(this.viewer.selected_time, -20);  
@@ -250,22 +249,21 @@ class AnnotationManager {
                 canvas.fillStyle = "rgba(255, 255, 102, 1.0)";
                 canvas.fillRect(left-2, area.y, 4, area.h);
             }).bind(this),
-              pointClickCallback: function(event, p) {
-            }
+              pointClickCallback: function(event, p) {}
         });
 
-        div.addEventListener('mouseenter', () => {
-            g.updateOptions({legend: 'follow'});
-        });
+        // div.addEventListener('mouseenter', () => {
+        //     g.updateOptions({legend: 'follow'});
+        // });
 
-        div.addEventListener('mouseleave', () => {
-            g.updateOptions({legend: 'none'});
-        });
+        // div.addEventListener('mouseleave', () => {
+        //     g.updateOptions({legend: 'none'});
+        // });
 
         const resizeObserver = new ResizeObserver(() => {
             g.resize(1,1); 
             // The above makes the chart small so offsetWidth etc reflects a nearly-empty parent div
-            g.resize(viewer.chart.maindiv_.parentElement.offsetWidth,viewer.chart.maindiv_.parentElement.offsetHeight);
+            g.resize(viewer.chart.maindiv_.parentElement.offsetWidth-220,viewer.chart.maindiv_.parentElement.offsetHeight);
         });
         resizeObserver.observe(g.maindiv_.parentElement.parentElement);
     

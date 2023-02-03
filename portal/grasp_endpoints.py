@@ -267,7 +267,9 @@ def sc_from_ref(reference_dataset, pixel_array):
 def store_finding(request, case, source_set, id=None):
     dicom_set = DICOMSet.objects.get(id=int(source_set))
     if request.method == 'GET':
-        results = [f.to_dict() for f in dicom_set.findings.all() if f.file_location]
+        results = []
+        for set_ in dicom_set.case.dicom_sets.all():
+            results += [f.to_dict() for f in set_.findings.all() if f.file_location]
         return JsonResponse(dict(findings=results))
     elif request.method == "DELETE":
         finding = Finding.objects.get(id=id)
