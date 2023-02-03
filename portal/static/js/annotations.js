@@ -121,8 +121,8 @@ class AnnotationManager {
         this.updateChart();
     }
     
-    deleteAllAnnotations() {
-        Swal.fire({
+    async deleteAllAnnotations() {
+        let result = await Swal.fire({
             title: 'Are you sure?',
             text: "Do you really want to delete all annotations?",
             icon: 'question',
@@ -130,22 +130,20 @@ class AnnotationManager {
             confirmButtonColor: '#1266f1',
             cancelButtonColor: '#d33',
             confirmButtonText: 'Yes'
-            }).then((result) => {
-            if (result.isConfirmed) {
-                
-                let annotations = this.getAllAnnotations();
-                if ( !annotations ) {
-                    return;
-                }
-                for (var a of annotations) {
-                    if (!a) { continue }
-                    cornerstone.tools.annotation.state.removeAnnotation(a.annotationUID)
-                    cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,[a.metadata.viewportId]) 
-                    delete this.annotations[a.annotationUID];
-                    this.updateChart();
-                }                    
+            })
+        if (result.isConfirmed) {
+            let annotations = this.getAllAnnotations();
+            if ( !annotations ) {
+                return;
             }
-        })        
+            for (var a of annotations) {
+                if (!a) { continue }
+                cornerstone.tools.annotation.state.removeAnnotation(a.annotationUID)
+                delete this.annotations[a.annotationUID];
+            }
+            this.updateChart();
+            cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,this.viewer.viewportIds)
+        }
     }
 
     flipSelectedAnnotations() {

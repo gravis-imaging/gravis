@@ -329,6 +329,8 @@ button:focus:not(:focus-visible) {
 
 .curve-settings-select {
     background-color: #000;
-    color: hsla(0,0%,100%,.55);
+    color: darkgray;
     width: 120px;
+    border: 1px solid white;
+    border-radius: 3px;
 }
