@@ -276,11 +276,12 @@ button:focus:not(:focus-visible) {
 }
 
 /* Disable animations. */
-.animation {
-    transition:none!important;
-    -webkit-animation:unset!important;
-    animation:unset!important
-}
+ .animation {
+    -webkit-transition-duration: 0s!important;
+    transition-duration: 0s!important;
+    -webkit-animation-duration:0s!important;
+    animation-duration:0s!important
+} 
 
 .curve-settings-select {
     background-color: #000;
