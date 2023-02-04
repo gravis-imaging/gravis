@@ -53,6 +53,8 @@
 {% include "tags_management_modal.html" %}
 
 <script>
+
+    
     
     $(document).ready(function () {
                
@@ -134,18 +136,7 @@
                     titleAttr: 'Open case',
                     action: function (e, dt, node, config) {
                         const selected_row = case_data_table.row({selected: true}).data();
-                        if ( ["Ready", "Viewing", "Complete"].includes(selected_row.status) && (selected_row.last_read_by_id == "{{ user.username }}" || selected_row.last_read_by_id == "") )  {
-                            const case_id = selected_row.case_id;                                            
-                            const link = '/viewer/'+case_id;
-                            window.open(link, "_self");
-                        }
-                        else {
-                            Swal.fire(
-                                'Warning',
-                                'The case  is not ready for viewing or locked by another user.', 
-                                'warning'
-                            )
-                        }    
+                        openCase(selected_row.case_id, selected_row.status, selected_row.last_read_by_id); 
                     }
                 },
                 {
@@ -255,19 +246,9 @@
         });
 
         $('#casetable tbody').on( 'dblclick', 'tr', function () {
-            const selected_row = case_data_table.row({selected: true}).data();
-            if ( ["Ready", "Viewing", "Complete"].includes(selected_row.status) && (selected_row.last_read_by_id == "{{ user.username }}" || selected_row.last_read_by_id == "") )  {
-                const case_id = selected_row.case_id;                                            
-                const link = '/viewer/'+case_id;
-                window.open(link, "_self");
-            }
-            else {
-                Swal.fire(
-                    'Warning',
-                    'The case  is not ready for viewing or locked by another user.', 
-                    'warning'
-                )
-            }            
+            const tr = $(this).closest('tr');
+            const selected_row = case_data_table.row(tr).data();
+            openCase(selected_row.case_id, selected_row.status, selected_row.last_read_by_id);           
         });
         
         $('#casetable tbody').on('click', 'tr', function () {
@@ -280,6 +261,20 @@
         } );
         
     } );
+
+    function openCase(case_id, status, last_read_by_id) {
+        if ( ["Ready", "Viewing", "Complete"].includes(status) && (last_read_by_id == "{{ user.username }}" || last_read_by_id == "") )  {                                      
+            const link = '/viewer/'+case_id;
+            window.open(link, "_self");
+        }
+        else {
+            Swal.fire(
+                'Warning',
+                'The case  is not ready for viewing or locked by another user.', 
+                'warning'
+            )
+        }  
+    }
     
 </script>
 
