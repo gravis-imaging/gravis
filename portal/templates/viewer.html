@@ -25,15 +25,15 @@
   const studies_data_parsed = JSON.parse(document.getElementById('studies_data').textContent);    
 </script>
 <div class="grid"
-  x-data="{ viewer: null, n_annotations: 0, previewing: false, switching: false, current_study: null, index: 0, loading: false, job_loading: null, case_id: {{case.id}} }" >
+  x-data="{ viewer: null, previewing: false, switching: false, loading: false, job_loading: null, case_id: {{case.id}} }" >
    
   <!-- dicom set selector -->
   <div class="toolbar-area">
 
   <!-- dicom set selection -->
-  <div class="" style="margin-right: 1em">
+  <div class="" style="margin-right: 1em; width: 100px;">
     <select id="studies" name="studies" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-outline-light btn-lg btn-rounded text-light btn-viewer-toolbar" data-width="100px"
-    @change="loading=true; await $nextTick(); current_study = await viewer.switchStudy($event.target.value.split(':::'), case_id);  loading=false;">
+    @change="loading=true; await $nextTick(); await viewer.switchStudy($event.target.value.split(':::'), case_id);  loading=false;">
       <!-- <option value="" selected disabled hidden>Select study...</option> -->
       <optgroup label="Displayed Series">
       {% for i in studies %}
@@ -46,11 +46,12 @@
   <!-- volume picker -->
   <!-- x-model="value" x-ref="input" x-on:focus="() => { $refs.input.focus() }"  -->
   <input id='volume-picker' tabindex='1' 
+
       type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
       @mouseUp="previewing = false"
-      @input="if (!previewing) { viewer.startPreview(); previewing = true; }; index = $event.target.value; viewer.selected_time=current_study[index].acquisition_seconds; viewer.setPreview(index,current_study.length);"
-      @change="switching = true; viewer.selected_time=current_study[index].acquisition_seconds; await viewer.switchSeries(current_study[index].series_uid); current_time=viewer.selected_time; switching = false;"
-      :disabled="!current_study || !!loading"
+      @input="if (!previewing) { viewer.startPreview(); previewing = true; }; viewer.selected_time=viewer.current_study[$event.target.value].acquisition_seconds; viewer.setPreview($event.target.value);"
+      @change="switching = true; viewer.selected_time=viewer.current_study[$event.target.value].acquisition_seconds; await viewer.switchSeries(viewer.current_study[$event.target.value].series_uid); current_time=viewer.selected_time; switching = false;"
+      :disabled="!viewer || (!viewer.current_study || !!loading || !!switching)"
       @keydown.left=""
       @keydown.right=""
       >
@@ -141,14 +142,14 @@
     <div x-show="loading" style="z-index:10;" class="no-pointer-events grid-fill">
       <div style="display: flex;justify-content: center;align-items: center; height:100%">Loading...</div>
     </div>
-    <div x-init="await $nextTick(); loading= true; viewer = await new GraspViewer($refs.viewer_main, $refs.viewer_preview ); window.viewer = viewer; 
-    current_study = await viewer.switchStudy([studies_data_parsed[0][0], studies_data_parsed[0][1]], case_id); loading=false;" class="grid-fill grid-container h-100">
+    <div x-init="await $nextTick(); loading = true; 
+      viewer = await new GraspViewer($refs.viewer_main, $refs.viewer_preview ); window.viewer = viewer; await viewer.switchStudy([studies_data_parsed[0][0], studies_data_parsed[0][1]], case_id); loading=false;" class="grid-fill grid-container h-100">
       <div x-ref="viewer_preview" class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 1 : 0 }"></div>
       <div x-ref="viewer_main" class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 0 : 1 }"></div>
     </div>
 
     <!-- AX/COR/SAG viewer -->
-    <div x-show="!!current_study" class="no-pointer-events grid-fill" style="z-index:1;">
+    <div x-show="viewer && !!viewer.current_study" class="no-pointer-events grid-fill" style="z-index:1;">
       <div class="viewer-grid">
         <template x-for="i in 3">
           <div class="viewport-overlay" :id="'viewport-overlay-'+i" :style="`grid-row: 1; grid-column: ${i}`">
@@ -189,7 +190,7 @@
 
   <!-- MIP viewer -->
   <div style="grid-area: d" class="mb-2" id="aux-container">
-    <div x-show="!!current_study" class="viewport-overlay" style="position: absolute; left: 3em; z-index: 10;">
+    <div x-show="viewer && !!viewer.current_study" class="viewport-overlay" style="position: absolute; left: 3em; z-index: 10;">
       <button class="all-pointer-events btn-primary btn-large btn-viewer ml-2 my-2" 
         @click="viewer.renderingEngine.getViewport('VIEW_CINE').setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/MIP?acquisition_number=35`)).json()).urls)">MIP
       </button>
@@ -197,7 +198,7 @@
   </div>
 
   <!-- Chart -->
-  <div style="grid-area: f; background: #000 !important;" class="mb-2 py-4 px-3">
+  <div style="grid-area: f; background-color: black;" class="mb-2">
     <div id="chart" style="background-color: black; color: white;">
     </div>
   </div>
@@ -219,21 +220,26 @@
   </div>
    
   <!-- Findings -->
-  <div id="findings" style="overflow-y: auto; display: flex; flex-direction: column; flex-wrap: nowrap; grid-area: g; margin-left: 8px; overflow-y: scroll; ">
-    <template x-for="finding in viewer? viewer.findings : []" :key="finding.id">
+  <div id="findings" class="findings">
+    <button title="" style="position: absolute; margin-left:-12px; margin-top:-8px; background-color: inherit;" class="btn-dark btn-large btn-viewer" 
+    @click="document.getElementById('findings').classList.toggle('open');">
+    </button>
+    <div class="findings-inner"> 
+      <template x-for="finding in viewer? viewer.findings : []" :key="finding.id">
       <div class="mb-2 img-thumbnail">
-        <div style="float:right;">
-          <button title="Go to finding" class="btn-dark btn-large btn-viewer me-1 my-2" 
-            @click="await viewer.goToFinding(finding);"><i class="fa-solid fa-map-marker-alt"></i>
-          </button><button
-           title="Delete" class="btn-dark btn-large btn-viewer me-2 my-2" 
-            @click="await viewer.deleteFinding(finding.id);"><i class="fa-solid fa-trash"></i>
-          </button>
-        </div>
+        <div style="float:right;">       
+          <button title="Go to finding" class="btn-dark btn-large btn-viewer me-2 my-2"
+          @click="loading = true; await viewer.goToFinding(finding); loading = false;"><i class="fa-solid fa-map-marker-alt"></i>
+        </button>
+        <button title="Delete" class="btn-dark btn-large btn-viewer me-2 my-2"
+          @click="await viewer.deleteFinding(finding.id);"><i class="fa-solid fa-trash"></i>
+        </button>
+      </div>
         <img class="mb-2 img-fluid" :src="finding.url" width="100%"/>
       </div>
     </template>
-  </div>    
+  </div>
+</div>
 </div>
 
 {% include "case_information_modal.html" %}

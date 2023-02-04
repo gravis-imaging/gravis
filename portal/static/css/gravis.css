@@ -28,11 +28,16 @@ h2 {
 
 .dygraph-legend {
     color: white !important;
-    background-color: rgba(0, 0, 0, 0.3) !important;
+    background-color: rgba(0, 0, 0, 0.7) !important;
     pointer-events: none;
-}
-.dygraph-legend > span {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    bottom: 0 !important;
+    left: 100% !important;
+    width:14em !important;
+    margin-top: 2em;
+    z-index: unset !important;
 }
 
 .right-viewport {
@@ -93,13 +98,52 @@ h2 {
     "e e g"
     "d f g";
 }
-   
+
 .toolbar-area {
     grid-area: c;
     display: flex;
     align-items: center; 
 }
-  
+
+.findings {
+    grid-area: g;
+    overflow-y: scroll;
+}
+.findings > .findings-inner {
+    display: flex; 
+    flex-direction: column;
+    flex-wrap: nowrap; 
+    margin-left: 8px;
+}
+.findings > div {
+    max-width: 200px;
+}
+.findings.open {
+    grid-area: unset;
+    position:absolute;
+    top: 5rem;
+    bottom: 1em;
+    right: 1em;
+    width: 700px;
+    z-index: 10;
+    background-color: #505050;
+    border:1px solid #bdbdbd;
+    border-radius: 5px;
+    padding: 1em;
+    overflow-x: scroll;
+    overflow-y: unset;
+}
+.findings.open > .findings-inner {
+    flex-wrap: wrap; 
+    column-gap: 10px;
+    height: 100%;
+}
+.findings > button::before {
+    content: url('data:image/svg+xml; utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" class="bi bi-chevron-double-left" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8.354 1.646a.5.5 0 0 1 0 .708L2.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/><path fill-rule="evenodd" d="M12.354 1.646a.5.5 0 0 1 0 .708L6.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/></svg>');
+}
+.findings.open > button::before {
+    content: url('data:image/svg+xml; utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" class="bi bi-chevron-double-right" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M3.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L9.293 8 3.646 2.354a.5.5 0 0 1 0-.708z"/><path fill-rule="evenodd" d="M7.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L13.293 8 7.646 2.354a.5.5 0 0 1 0-.708z"/></svg>');
+}
   /* .subitem {
     grid-column: 3 / 6;
     grid-row: 1 / 3;
@@ -264,7 +308,7 @@ button:focus:not(:focus-visible) {
 ::-webkit-scrollbar {
   width: 14px;
   height: 14px;
-}
+} 
 
 .btn-viewer-toolbar {
   font-size: 1rem;
@@ -276,14 +320,17 @@ button:focus:not(:focus-visible) {
 }
 
 /* Disable animations. */
-.animation {
-    transition:none!important;
-    -webkit-animation:unset!important;
-    animation:unset!important
-}
+ .animation {
+    -webkit-transition-duration: 0s!important;
+    transition-duration: 0s!important;
+    -webkit-animation-duration:0s!important;
+    animation-duration:0s!important
+} 
 
 .curve-settings-select {
     background-color: #000;
-    color: hsla(0,0%,100%,.55);
+    color: darkgray;
     width: 120px;
+    border: 1px solid white;
+    border-radius: 3px;
 }

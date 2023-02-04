@@ -450,7 +450,7 @@ class GraspViewer {
             v.element.getElementsByTagName('svg')[0].innerHTML = this.viewports[n].element.getElementsByTagName('svg')[0].innerHTML
         });
     }
-    async setPreview(idx, l) {
+    async setPreview(idx) {
         try {
             requestIdleCallback( (()=>this.chart.renderGraph_()).bind(this))
             idx = parseInt(idx)
@@ -458,7 +458,7 @@ class GraspViewer {
 
             this.previewViewports.slice(0,3).map(async (v, n) => {
                 v.setVOI({lower, upper})
-                await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / l))
+                await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / this.current_study.length))
             })
         } catch (e) {
             console.error(e);
@@ -608,17 +608,36 @@ class GraspViewer {
                 break;
             }
         }
-        console.log("Finding info", finding.data.time, this.current_study);
+        
+        let new_selected_time;
+        let new_selected_index;
+        let new_selected_series;
         for (const [index, info] of this.current_study.entries()) { 
-            console.log(info.acquisition_seconds,finding.data.time)
             if ( Math.abs(info.acquisition_seconds - finding.data.time) < 0.001 ) {
-                console.log("Would switch to", info.series_uid);
-                this.selected_time=info.acquisition_seconds;
-                document.getElementById("volume-picker").value = index;
-                await viewer.switchSeries(info.series_uid); 
+                new_selected_time = info.acquisition_seconds;
+                new_selected_index = index;
+                new_selected_series = info.series_uid
                 break;
             }
         }
+
+        for (const [index, info] of studies_data_parsed.entries()) {
+            console.log(info, finding.dicom_set)
+            if (info[1] === finding.dicom_set && info[1] != this.dicom_set){
+                for (const [index, info] of this.current_study.entries()) { 
+                    if ( Math.abs(info.acquisition_seconds - finding.data.time) < 0.001 ) {
+                        this.selected_time = info.acquisition_seconds;
+                    }
+                }
+                this.selected_time = new_selected_time;
+                document.getElementById("volume-picker").value = new_selected_index;
+                await this.switchStudy(info.slice(0,2),this.case_id);
+                return;
+            }
+        }
+        this.selected_time = new_selected_time;
+        document.getElementById("volume-picker").value = new_selected_index;
+        await viewer.switchSeries(new_selected_series); 
     }
 }
 
