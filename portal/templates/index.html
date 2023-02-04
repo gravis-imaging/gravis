@@ -134,9 +134,18 @@
                     titleAttr: 'Open case',
                     action: function (e, dt, node, config) {
                         const selected_row = case_data_table.row({selected: true}).data();
-                        const case_id = selected_row.case_id;
-                        const link = '/viewer/'+case_id
-                        window.open(link, "_self");
+                        if ( ["Ready", "Viewing", "Complete"].includes(selected_row.status) && (selected_row.last_read_by_id == "{{ user.username }}" || selected_row.last_read_by_id == "") )  {
+                            const case_id = selected_row.case_id;                                            
+                            const link = '/viewer/'+case_id;
+                            window.open(link, "_self");
+                        }
+                        else {
+                            Swal.fire(
+                                'Warning',
+                                'The case  is not ready for viewing or locked by another user.', 
+                                'warning'
+                            )
+                        }    
                     }
                 },
                 {
@@ -246,11 +255,19 @@
         });
 
         $('#casetable tbody').on( 'dblclick', 'tr', function () {
-            const tr = $(this).closest('tr');
-            const selected_row = case_data_table.row(tr).data();
-            const case_id = selected_row.case_id;                                            
-            const link = '/viewer/'+case_id
-            window.open(link, "_self");
+            const selected_row = case_data_table.row({selected: true}).data();
+            if ( ["Ready", "Viewing", "Complete"].includes(selected_row.status) && (selected_row.last_read_by_id == "{{ user.username }}" || selected_row.last_read_by_id == "") )  {
+                const case_id = selected_row.case_id;                                            
+                const link = '/viewer/'+case_id;
+                window.open(link, "_self");
+            }
+            else {
+                Swal.fire(
+                    'Warning',
+                    'The case  is not ready for viewing or locked by another user.', 
+                    'warning'
+                )
+            }            
         });
         
         $('#casetable tbody').on('click', 'tr', function () {
