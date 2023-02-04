@@ -37,7 +37,7 @@
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
                           <li>
-                            <a class="dropdown-item disabled" href="#" style="">Viewed Cases</a>
+                            <a class="dropdown-item disabled" href="#" style="">Assigned Cases</a>
                           </li>
                           {% for case in viewer_cases %}                         
                           <li>
@@ -77,6 +77,12 @@
                             <i class="fas {% if user.is_staff %}fa-user-shield{% else %}fa-user{% endif %}"></i>&nbsp;&nbsp;{{request.user.username}}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
+                            {% if request.resolver_match.url_name == "viewer" %}
+                            <li>
+                                <a class="dropdown-item" data-mdb-toggle="offcanvas" href="#offcanvasShortcuts"><i class="fas fa-keyboard"></i>&nbsp;&nbsp;Keyboard Shortcuts</a>
+                            </li>                              
+                            <li><hr class="dropdown-divider" /></li>
+                            {% endif %}  
                             <li>
                                 <a class="dropdown-item" href="/user/"><i class="fas fa-cog"></i>&nbsp;&nbsp;Settings</a>
                             </li>
@@ -105,5 +111,5 @@
         </div>
     </div>
 </main>
-
+    
 {% endblock %}

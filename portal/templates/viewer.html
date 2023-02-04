@@ -31,7 +31,7 @@
   <div class="toolbar-area">
 
   <!-- dicom set selection -->
-  <div class="" style="margin-right: 1em; width: 100px;">
+  <div class="" style="margin-right: 2em; width: 100px;">
     <select id="studies" name="studies" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-outline-light btn-lg btn-rounded text-light btn-viewer-toolbar" data-width="100px"
     @change="loading=true; await $nextTick(); await viewer.switchStudy($event.target.value.split(':::'), case_id);  loading=false;">
       <!-- <option value="" selected disabled hidden>Select study...</option> -->
@@ -46,7 +46,7 @@
   <!-- volume picker -->
   <!-- x-model="value" x-ref="input" x-on:focus="() => { $refs.input.focus() }"  -->
   <input id='volume-picker' tabindex='1' 
-
+      class="timeslider" title="Displayed Timepoint"
       type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
       @mouseUp="previewing = false"
       @input="if (!previewing) { viewer.startPreview(); previewing = true; }; viewer.selected_time=viewer.current_study[$event.target.value].acquisition_seconds; viewer.setPreview($event.target.value);"
@@ -171,7 +171,7 @@
                 @click="viewer.storeFinding(i-1);"><i class="fa-solid fa-camera"></i>
             </button>            
             <template x-if="viewer && viewer.getNativeViewports().indexOf(viewer.viewports[i-1].id) > -1">
-              <div>
+              <div class="viewer-label-native">
                 Native
               </div>
             </template>
@@ -198,7 +198,7 @@
   </div>
 
   <!-- Chart -->
-  <div style="grid-area: f; background-color: black;" class="mb-2">
+  <div style="grid-area: f; background-color: black; " class="mb-2 py-3">
     <div id="chart" style="background-color: black; color: white;">
     </div>
   </div>
@@ -221,7 +221,7 @@
    
   <!-- Findings -->
   <div id="findings" class="findings">
-    <button title="" style="position: absolute; margin-left:-12px; margin-top:-8px; background-color: inherit;" class="btn-dark btn-large btn-viewer" 
+    <button title="" style="position: absolute; background-color: transparent;" class="btn-dark btn-large btn-viewer" 
     @click="document.getElementById('findings').classList.toggle('open');">
     </button>
     <div class="findings-inner"> 
@@ -230,8 +230,7 @@
         <div style="float:right;">       
           <button title="Go to finding" class="btn-dark btn-large btn-viewer me-2 my-2"
           @click="loading = true; await viewer.goToFinding(finding); loading = false;"><i class="fa-solid fa-map-marker-alt"></i>
-        </button>
-        <button title="Delete" class="btn-dark btn-large btn-viewer me-2 my-2"
+        </button><button title="Delete" class="btn-dark btn-large btn-viewer me-2 my-2"
           @click="await viewer.deleteFinding(finding.id);"><i class="fa-solid fa-trash"></i>
         </button>
       </div>
@@ -243,6 +242,24 @@
 </div>
 
 {% include "case_information_modal.html" %}
+
+<div class="offcanvas offcanvas-start " tabindex="-1" id="offcanvasShortcuts" data-mdb-scroll="true"
+data-mdb-backdrop="false" style="background-color: #1266f1;">
+<div class="offcanvas-header">
+  <h5 class="offcanvas-title" id="offcanvasExampleLabel">Keyboard Shortcuts</h5>
+  <button type="button" class="btn-close text-reset" data-mdb-dismiss="offcanvas" aria-label="Close"></button>
+</div>
+  <div class="offcanvas-body">
+    <div>
+      <p><strong>MPR Viewers</strong></p>
+      <p>
+        <strong>Alt</strong> &minus; Panning<br />
+        <strong>Ctrl</strong> &minus; Windowing
+      </p>
+    </div>
+  </div>
+</div>
+
 
 <script defer type="module">
   import { GraspViewer, doJob } from "/static/js/viewer.js"
