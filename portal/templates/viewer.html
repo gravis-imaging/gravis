@@ -48,12 +48,12 @@
   <input id='volume-picker' tabindex='1' 
       class="timeslider" title="Displayed Timepoint"
       type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
-      @mouseUp="previewing = false"
+      @mouseUp="previewing = false;"
       @input="if (!previewing) { viewer.startPreview(); previewing = true; }; viewer.selected_time=viewer.current_study[$event.target.value].acquisition_seconds; viewer.setPreview($event.target.value);"
-      @change="switching = true; viewer.selected_time=viewer.current_study[$event.target.value].acquisition_seconds; await viewer.switchSeries(viewer.current_study[$event.target.value].series_uid); current_time=viewer.selected_time; switching = false;"
+      @change="switching = true; index = $event.target.value; viewer.selected_time=viewer.current_study[$event.target.value].acquisition_seconds; await viewer.switchSeries(viewer.current_study[$event.target.value].series_uid); current_time=viewer.selected_time; viewer.renderingEngine.getViewport('VIEW_CINE').setStack((await (await fetch(`/api/case/${case_id}/dicom_set/{{original_dicom_set_id}}/processed_results/MIP?acquisition_number=${index}`)).json()).urls, window.angle_slice); switching = false;"
       :disabled="!viewer || (!viewer.current_study || !!loading || !!switching)"
-      @keydown.left=""
-      @keydown.right=""
+      @keyup.left=""
+      @keyup.right=""
       >
       </input>
       <label for='volume-picker' x-text="viewer && viewer.selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>
@@ -191,9 +191,9 @@
   <!-- MIP viewer -->
   <div style="grid-area: d" class="mb-2" id="aux-container">
     <div x-show="viewer && !!viewer.current_study" class="viewport-overlay" style="position: absolute; left: 3em; z-index: 10;">
-      <button class="all-pointer-events btn-primary btn-large btn-viewer ml-2 my-2" 
-        @click="viewer.renderingEngine.getViewport('VIEW_CINE').setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/MIP?acquisition_number=35`)).json()).urls)">MIP
-      </button>
+      <!-- <button class="all-pointer-events btn-primary btn-large btn-viewer ml-2 my-2" 
+        @click="viewer.renderingEngine.getViewport('VIEW_CINE').setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/MIP?acquisition_number=35`)).json()).urls, 5)">MIP
+      </button> -->
     </div>
   </div>
 
@@ -267,6 +267,11 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
   window.GraspViewer = GraspViewer;
   window.doJob = doJob;
   window.doFetch = doFetch;
+  
+  function saveAngleSlice() {
+    window.angle_slice = viewer.renderingEngine.getViewport('VIEW_CINE').targetImageIdIndex;
+  }
+  window.saveAngleSlice = saveAngleSlice;
 </script>
 
 <script>
