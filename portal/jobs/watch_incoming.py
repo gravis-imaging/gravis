@@ -14,10 +14,8 @@ import django_rq
 import portal.jobs.dicom_set_utils as dicom_set_utils
 import portal.jobs.docker_utils as docker_utils
 from portal.models import Case, ProcessingJob
-from common.generate_folder_name import generate_folder_name
 from common.constants import GravisNames, GravisFolderNames
 from .cine_generation import GeneratePreviewsJob, do_job
-
 import common.helper as helper
 
 # logging.basicConfig(filename='watch_incoming.log', filemode='a', format='%(name)s - %(levelname)s - %(message)s')
@@ -101,7 +99,7 @@ def process_folder(job_id: int, incoming_case: Path):
     logger.info(f"Processing {incoming_case}")
 
     cases = Path(settings.CASES_FOLDER)
-    dest_folder_name = generate_folder_name()
+    dest_folder_name = helper.generate_folder_name()
     new_folder = cases / dest_folder_name
     error_folder = Path(settings.ERROR_FOLDER) / dest_folder_name
     input_dest_folder = new_folder / GravisFolderNames.INPUT
@@ -400,9 +398,7 @@ def trigger_queued_cases():
             case.save()
             logger.exception(
                 f"Exception creating a new cine generation processing job for {dicom_set.set_location} "
-            )
-            
-
+            )            
 
 
 def delete_cases():
@@ -418,6 +414,7 @@ def delete_cases():
         
     except Exception as e:
         print(e)
+
 
 def watch():
     logger.info("Incoming watcher booted.")

@@ -212,6 +212,13 @@ class GraspViewer {
                 this.chart.renderGraph_()
             });
 
+            
+            // When user scrolls through MIP slices the state with the slice number is saved
+            // to be retrieved when user changes time points.
+            this.renderingEngine.getViewport("VIEW_CINE").element.addEventListener("CORNERSTONE_IMAGE_RENDERED", function(state) {
+                window.saveAngleSlice();
+            });
+            
             // Synchronize the preview viewports
             this.viewports.slice(0,3).map((v, n)=> {
                 v.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(250, async (evt) => {

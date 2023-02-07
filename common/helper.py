@@ -5,6 +5,7 @@ Various internal helper functions for gravis.
 """
 # Standard python includes
 from pathlib import Path
+import uuid
 
 
 class FileLock:
@@ -26,3 +27,8 @@ class FileLock:
         if self.lockCreated:
             self.lockfile.unlink()
             self.lockCreated = False
+
+
+def generate_folder_name() -> str:
+    new_uuid = str(uuid.uuid4())
+    return new_uuid

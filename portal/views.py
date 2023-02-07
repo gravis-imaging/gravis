@@ -93,7 +93,8 @@ def viewer(request, case):
     context = {
         "studies": [(k.study_uid,k.dicom_set.id, k.dicom_set.type) for k in instances],
         "current_case": extract_case(instances[0].dicom_set.case),
-        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user)
+        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user),
+        "original_dicom_set_id": instances[0].dicom_set.id,
     }
     return render(request, "viewer.html", context)
 
