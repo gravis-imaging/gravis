@@ -1,7 +1,11 @@
+import { doFetch } from "./utils.js";
+
 class StateManager {
     viewer;
     background_save_interval;
     current_state;
+    changed;
+    just_loaded;
     
     constructor( viewer ) {
         this.viewer = viewer;
@@ -56,24 +60,30 @@ class StateManager {
         }
         this.current_state = state;
     }
-    save() {
+    async save() {
         if (!this.viewer.case_id) return;
         console.info("Saving state.")
         const state = this._calcState()
         if (state) {
-            localStorage.setItem(this.viewer.case_id, JSON.stringify(state));
+            await doFetch(`/api/case/${this.viewer.case_id}/session`, state)
+            // localStorage.setItem(this.viewer.case_id, JSON.stringify(state));
             this.current_state = state;
+            this.changed = false;
         }
     }
-    load() {
+    async load() {
         if (!this.viewer.case_id) return;
-        var state = JSON.parse(localStorage.getItem(this.viewer.case_id));
+        var state;
+        // var state = JSON.parse(localStorage.getItem(this.viewer.case_id));
+        state = await doFetch(`/api/case/${this.viewer.case_id}/session`,{},"GET")
         if (!state) {
             return;
         }
         console.info("Loading state");
         this._applyState(state);
         this.viewer.renderingEngine.renderViewports(this.viewer.viewportIds);
+        this.changed = false;
+        this.just_loaded = true;
     }
 
     startBackgroundSave(){ 
@@ -97,6 +107,10 @@ class StateManager {
         if (this.background_save_interval) {
             clearInterval(this.background_save_interval);
         }
+    }
+
+    setChanged() {
+        this.changed = true;
     }
 }
 

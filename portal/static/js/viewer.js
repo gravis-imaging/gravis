@@ -14,14 +14,7 @@ const SERIES_DESCRIPTION = '0008103E';
 function getMeta(data, val) {
     return data[val].Value[0]
 }
-// document.addEventListener(
-//     "wheel",
-//     function touchHandler(e) {
-//       if (e.ctrlKey) {
-//         e.preventDefault();
-//       }
-//     }, { passive: false } 
-// );
+
 function getImageId(instanceMetaData, wadoRsRoot) {
     const StudyInstanceUID = getMeta(instanceMetaData,STUDY_INSTANCE_UID)
     const SeriesInstanceUID = getMeta(instanceMetaData,SERIES_INSTANCE_UID)
@@ -128,6 +121,7 @@ class GraspViewer {
                                         "viewUp": [0,0,1]}]]
             const [ viewViewports, viewportIds ] = this.createViewports("VIEW", view_info, main)
             
+            // Expand a viewport to fill the entire left part of the grid.
             for (const [index, v] of viewViewports.entries()){
                 v.element.ondblclick = e => {
                     let el = v.element;
@@ -188,10 +182,24 @@ class GraspViewer {
             this.createTools();
             this.renderingEngine.renderViewports([...this.viewportIds, ...this.previewViewports]);
             this.chart = this.annotation_manager.initChart();
+            
+            cornerstone.eventTarget.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_MODIFIED",(evt) => { 
+                if (this.state_manager.just_loaded) { 
+                    // Loading annotations seems to emit this event, so we'll ignore the first one after a load
+                    this.state_manager.just_loaded = false;
+                    return;
+                }
+                this.state_manager.setChanged();
+            });
+            // Prompt the user if there are unsaved changes.
+            // TODO: this is a bit overzealous, just mousing over an annotation can trigger a "modified" event.
+            addEventListener('beforeunload', (event) => { if (this.state_manager.changed) { event.returnValue = "ask"; return "ask"; } });
 
             cornerstone.eventTarget.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_MODIFIED",debounce(100, (evt) => {
                 this.annotation_manager.updateChart()
             }));
+            
+            // Highlight selected annotation on the chart
             cornerstone.eventTarget.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_SELECTION_CHANGE", (evt) => {
                 const detail = evt.detail;
                 if (detail.selection.length == 1) {
@@ -203,6 +211,8 @@ class GraspViewer {
                 }
                 this.chart.renderGraph_()
             });
+
+            // Synchronize the preview viewports
             this.viewports.slice(0,3).map((v, n)=> {
                 v.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(250, async (evt) => {
                     if (! v.getDefaultActor() ) return;
@@ -525,10 +535,10 @@ class GraspViewer {
         document.getElementById("volume-picker").setAttribute("value",selected_index)
 
         this.findings = await this.loadFindings();
-        this.volume.load(()=>{ 
+        this.volume.load(async ()=>{ 
             console.log("Volume loaded");
-            this.state_manager.load();
-            this.state_manager.startBackgroundSave();
+            await this.state_manager.load();
+            // this.state_manager.startBackgroundSave();
         })
         try {
             await this.updatePreview()

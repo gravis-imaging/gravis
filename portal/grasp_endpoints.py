@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 from urllib.request import urlopen
 
-from django.http import JsonResponse
+from django.http import HttpResponseForbidden, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import render
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -304,7 +304,36 @@ def store_finding(request, case, source_set, id=None):
                 data = data.get("info",None))
         finding.save()
         return JsonResponse(finding.to_dict())
-        
+
+@login_required
+def handle_session(request, case):
+    if request.method == "POST":
+        return update_state(request, case)
+    elif request.method == "GET":
+        return get_state(request, case)
+    else:
+        return HttpResponseNotAllowed(["POST","GET"])
+
+def update_state(request,case):
+    new_state = json.loads(request.body)
+
+    try:
+        session = SessionInfo.objects.get(case=Case.objects.get(id=case), user=request.user)
+    except SessionInfo.DoesNotExist:
+        session = SessionInfo(case=Case.objects.get(id=case), user=request.user)
+
+    session.cameras = new_state.get("cameras",[])
+    session.annotations = new_state.get("annotations",[])
+    session.voi = new_state.get("voi",{})
+    session.updated_at = timezone.now()
+    session.save()
+    return JsonResponse(dict(error="", action="", ok=True))
+
+def get_state(request, case):
+    session = SessionInfo.objects.get(case=case, user=request.user)
+    return JsonResponse(dict(cameras=session.cameras, annotations=session.annotations, voi=session.voi))
+
+
 # @login_required
 # def preview_data(request, case, view, index):
 #     instance = DICOMInstance.objects.get(slice_location=index, dicom_set__case=case, dicom_set__type=f"CINE/{view.upper()}",dicom_set__processing_job__status="Success",dicom_set__processing_job__dicom_set__origin="Incoming")
