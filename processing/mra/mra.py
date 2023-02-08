@@ -7,6 +7,7 @@ from pathlib import Path
 # Imports for loading, saving and manipulating DICOMs
 import SimpleITK as sitk
 import pydicom
+import math
 
 # import json
 import ast
@@ -127,29 +128,32 @@ class MRA:
         # Calculate subtractions, and then MIPs for this time point. 
         try:               
 
-            for acquisition_number in sorted(self.__d_files)[0:self.__min_intensity_index + 1]:
-                ret_value, image = self.__load_grasp_files(acquisition_number)
-                if ret_value != self.__return_codes.NO_ERRORS:
-                    return ret_value
+            # Save empty subtracted slices for all time points less or equal to minimum intensity.
+            # for acquisition_number in sorted(self.__d_files)[0:self.__min_intensity_index + 1]:
+            #     ret_value, image = self.__load_grasp_files(acquisition_number)
+            #     if ret_value != self.__return_codes.NO_ERRORS:
+            #         return ret_value
 
-                ret_value, subtracted_image = self.__subtract_images(image, image)
-                if ret_value != self.__return_codes.NO_ERRORS:
-                    return ret_value
+            #     ret_value, subtracted_image = self.__subtract_images(image, image)
+            #     if ret_value != self.__return_codes.NO_ERRORS:
+            #         return ret_value
 
-                ret_value = self.__save_processed_images(
-                    acquisition_number,
-                    "sub",
-                    self.__output_dir_name_sub,
-                    subtracted_image,
-                )
-                if ret_value != self.__return_codes.NO_ERRORS:
-                    return ret_value
+            #     ret_value = self.__save_processed_images(
+            #         acquisition_number,
+            #         "sub",
+            #         self.__output_dir_name_sub,
+            #         subtracted_image,
+            #     )
+            #     if ret_value != self.__return_codes.NO_ERRORS:
+            #         return ret_value
 
+            # Create a base volume at the minimum intensity point. 
             ret_value, base_image = self.__load_grasp_files(self.__min_intensity_index)
             if ret_value != self.__return_codes.NO_ERRORS:
                 return ret_value
 
-            for acquisition_number in sorted(self.__d_files)[self.__min_intensity_index + 1:]:
+            # For all volumes, subtract base volume and calculate projections
+            for acquisition_number in sorted(self.__d_files): #[self.__min_intensity_index + 1:]:
 
                 ret_value, image = self.__load_grasp_files(acquisition_number)
                 if ret_value != self.__return_codes.NO_ERRORS:
@@ -185,7 +189,8 @@ class MRA:
                 # print('RAM available memory (GB):', psutil.virtual_memory()[1]/1000000000)
                 # print('RAM memory % used:', psutil.virtual_memory()[2])
                 # print('RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
-                # print('RAM memory not used at and is readily available (GB):', psutil.virtual_memory()[4]/1000000000)    
+                # print('RAM memory not used at and is readily available (GB):', psutil.virtual_memory()[4]/1000000000)                        
+                   
 
         except Exception as e:
             logger.exception(e, f"Problem reading DICOM files from {data_directory}.")
@@ -260,6 +265,8 @@ class MRA:
 
         try:
             subtracted_image = image - base_image
+            #  set all negative pixels to zero
+            subtracted_image = sitk.Threshold(subtracted_image, 0, math.inf, 0)
         except Exception as e:
             logger.exception(e, "Error while subtracting images.")
             return self.__return_codes.ERROR_CALCULATING_SUBTRACTED_IMAGES
@@ -353,6 +360,8 @@ class MRA:
                 extracted_image = sitk.Extract(proj_image, extract_size)
                 slice_volume = sitk.JoinSeries(extracted_image)
                 slice_volume.SetOrigin((min_bounds + max_bounds) / 2)
+                #  set all negative pixels to zero
+                slice_volume = sitk.Threshold(slice_volume, 0, math.inf, 0)                
                 proj_images.append(slice_volume)
         except Exception as e:
             logger.exception(e, "Error calculating projections.")
