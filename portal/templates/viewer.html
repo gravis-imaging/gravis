@@ -65,6 +65,11 @@
       @click="viewer.viewports.map(v=> {v.resetCamera(); v.render()}); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-arrows-to-circle"></i>
       </button>
 
+      <button title="Save annotations" class="all-pointer-events btn-primary btn-large btn-viewer my-2" style="margin-right: 1.1rem!important;"
+      :disabled="loading || switching || job_loading != null"
+      @click="viewer.state_manager.save()"><i class="fa-solid fa-floppy-disk"></i>
+      </button>
+
       <!-- Annotations -->
       <div class="my-2">
         <div class="dropdown">

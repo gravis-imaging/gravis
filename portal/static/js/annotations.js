@@ -155,7 +155,6 @@ class AnnotationManager {
                 point[0] = midpoint - (point[0] - midpoint)
             })
             this.goToAnnotation(a.annotationUID);
-            // cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,[a.metadata.viewportId]) 
         }
     }
 

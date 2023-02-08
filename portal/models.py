@@ -157,6 +157,24 @@ class Finding(models.Model):
     class Meta:
         db_table = "gravis_finding"
 
+class SessionInfo(models.Model):
+    case = models.ForeignKey(
+        Case,
+        on_delete=models.CASCADE,
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+    
+    cameras = models.JSONField(null=False)
+    voi = models.JSONField(null=False)
+    annotations = models.JSONField(null=False)
+    class Meta:
+        db_table = "gravis_session"
 
 class DICOMInstance(models.Model):
     """
