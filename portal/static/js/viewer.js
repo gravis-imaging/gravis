@@ -1,6 +1,6 @@
 import { AnnotationManager } from "./annotations.js"
 import { StateManager } from "./state.js"
-import { doJob, viewportToImage, Vector, scrollViewportToPoint } from "./utils.js"
+import { doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch } from "./utils.js"
 
 const SOP_INSTANCE_UID = '00080018';
 const STUDY_DATE = '00080020';
@@ -152,7 +152,7 @@ class GraspViewer {
                 }
             }
 
-            const auxViewport = this.genViewportDescription("CINE", null, document.getElementById("aux-container"), "VIEW")
+            const auxViewport = this.genViewportDescription("AUX", null, document.getElementById("aux-container"), "VIEW")
 
             auxViewport.element.ondblclick = e => {
                 const el = auxViewport.element;
@@ -212,13 +212,6 @@ class GraspViewer {
                 this.chart.renderGraph_()
             });
 
-            
-            // When user scrolls through MIP slices the state with the slice number is saved
-            // to be retrieved when user changes time points.
-            this.renderingEngine.getViewport("VIEW_CINE").element.addEventListener("CORNERSTONE_IMAGE_RENDERED", function(state) {
-                window.saveAngleSlice();
-            });
-            
             // Synchronize the preview viewports
             this.viewports.slice(0,3).map((v, n)=> {
                 v.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(250, async (evt) => {
@@ -469,6 +462,10 @@ class GraspViewer {
     }
     async setPreview(idx) {
         try {
+            this.switchMIP(idx);
+        } catch (e) {};
+
+        try {
             requestIdleCallback( (()=>this.chart.renderGraph_()).bind(this))
             idx = parseInt(idx)
             let [lower, upper] = this.getVolumeVOI(this.viewports[0])
@@ -493,9 +490,9 @@ class GraspViewer {
         await Promise.all(update.map(async n => {
             let [lower, upper] = this.getVolumeVOI(this.viewports[0])
             console.log("Volume VOI", upper,lower)
-            this.previewViewports[n].setVOI({lower, upper})
+            this.previewViewports[n].setVOI({lower, upper});
             await this.setPreviewStackForViewport(n, this.previewViewports[n]) 
-            this.previewViewports[n].setVOI({lower, upper})
+            this.previewViewports[n].setVOI({lower, upper});
         }))
     }
     async switchSeries(series_uid) {
@@ -504,6 +501,22 @@ class GraspViewer {
         await new Promise( resolve => {
             this.volume.load( e => { console.log("Volume finished loading",e); resolve() });
         });
+    }
+    async switchMIP(index) {
+        const current_info = this.current_study[index];
+        const viewport = this.renderingEngine.getViewport('VIEW_AUX');
+        const ori_dicom_set = studies_data_parsed.find((x)=>x[2]=="ORI")[1]
+        const mip_urls = (await doFetch(`/api/case/${this.case_id}/dicom_set/${ori_dicom_set}/processed_results/MIP?acquisition_number=${current_info.acquisition_number}`,null, "GET")).urls;
+
+        if ( mip_urls.length > 0 ) {
+           await viewport.setStack(mip_urls, viewport.targetImageIdIndex);
+        }
+    }
+    async switchToIndex(index) {
+        const current_info = this.current_study[index];
+        await this.switchMIP(index);
+        await viewer.switchSeries(current_info.series_uid); 
+        this.selected_time = current_info.acquisition_seconds; 
     }
     async switchStudy(info, case_id, keepCamera=true) {
         const [study_uid, dicom_set] = info;

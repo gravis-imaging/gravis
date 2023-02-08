@@ -26,7 +26,6 @@
 </script>
 <div class="grid"
   x-data="{ viewer: null, previewing: false, switching: false, loading: false, job_loading: null, case_id: {{case.id}} }" >
-   
   <!-- dicom set selector -->
   <div class="toolbar-area">
 
@@ -50,7 +49,7 @@
       type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
       @mouseUp="previewing = false;"
       @input="if (!previewing) { viewer.startPreview(); previewing = true; }; viewer.selected_time=viewer.current_study[$event.target.value].acquisition_seconds; viewer.setPreview($event.target.value);"
-      @change="switching = true; index = $event.target.value; viewer.selected_time=viewer.current_study[$event.target.value].acquisition_seconds; await viewer.switchSeries(viewer.current_study[$event.target.value].series_uid); current_time=viewer.selected_time; viewer.renderingEngine.getViewport('VIEW_CINE').setStack((await (await fetch(`/api/case/${case_id}/dicom_set/{{original_dicom_set_id}}/processed_results/MIP?acquisition_number=${index}`)).json()).urls, window.angle_slice); switching = false;"
+      @change="switching = true; await viewer.switchToIndex($event.target.value); switching = false;"
       :disabled="!viewer || (!viewer.current_study || !!loading || !!switching)"
       @keyup.left=""
       @keyup.right=""
@@ -272,12 +271,7 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
   window.GraspViewer = GraspViewer;
   window.doJob = doJob;
   window.doFetch = doFetch;
-  
-  function saveAngleSlice() {
-    window.angle_slice = viewer.renderingEngine.getViewport('VIEW_CINE').targetImageIdIndex;
-  }
-  window.saveAngleSlice = saveAngleSlice;
-</script>
+  </script>
 
 <script>
   function closeCurrentCase() {
