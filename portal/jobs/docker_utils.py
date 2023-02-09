@@ -45,7 +45,7 @@ def do_docker_job(job_id):
             GRAVIS_IN_DIR="/tmp/data/",
             GRAVIS_OUT_DIR="/tmp/output/",
             GRAVIS_ANGLE_STEP=10,
-            GRAVIS_MIP_FULL_ROTATION=False,
+            GRAVIS_MIP_FULL_ROTATION=0, # This is True/False, need to pass 0 or 1 otherwise everything is converted to True.
             GRAVIS_NUM_BOTTOM_SLICES=20,
             DOCKER_RETURN_CODES=DockerReturnCodes.toDict(),
         )
