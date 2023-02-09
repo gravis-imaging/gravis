@@ -30,14 +30,25 @@ class MRA:
         # n_slices - number of bottom slices to calculate image intensity
         # angle_step - angle between each projection
         # full_rotation_flag - create projections over 180 or 360 degrees
-        self.__angle_step = int(vars["GRAVIS_ANGLE_STEP"])
-        self.__full_rotation_flag = bool(vars["GRAVIS_MIP_FULL_ROTATION"])
+        
         self.__n_slices = int(vars["GRAVIS_NUM_BOTTOM_SLICES"])
         self.__return_codes = Enum('ReturnCodes', ast.literal_eval(vars["DOCKER_RETURN_CODES"]))
         self.__min_intensity_index = 0
         self.__tags_to_save_dict = {}
         self.__d_files = defaultdict(list)
         self.__d_indexes = defaultdict(list)
+
+        self.__angle_step = int(vars["GRAVIS_ANGLE_STEP"])
+        full_rotation_flag = bool(int(vars["GRAVIS_MIP_FULL_ROTATION"]))
+        
+        max_angle = np.pi
+        max_angle_degree = 180.0
+        if full_rotation_flag:
+            max_angle = 2 * np.pi
+            max_angle_degree = 360.0
+        self.__rotation_angles = np.linspace(
+            0.0, max_angle, int(max_angle_degree / self.__angle_step)
+        )
         
 
     def __process_volume(self):
@@ -286,14 +297,11 @@ class MRA:
             ptype = "max"
             paxis = 1
             rotation_axis = [0, 0, 1]
-            max_angle = np.pi
-            max_angle_degree = 180.0
-            if self.__full_rotation_flag:
-                max_angle = 2 * np.pi
-                max_angle_degree = 360.0
-            rotation_angles = np.linspace(
-                0.0, max_angle, int(max_angle_degree / self.__angle_step)
-            )
+            # max_angle = np.pi
+            # max_angle_degree = 180.0
+            # if self.__full_rotation_flag:
+            #     max_angle = 2 * np.pi
+            #     max_angle_degree = 360.0
             rotation_center = image.TransformContinuousIndexToPhysicalPoint(
                 [(index - 1) / 2.0 for index in image.GetSize()]
             )
@@ -311,7 +319,7 @@ class MRA:
                             image.TransformIndexToPhysicalPoint([i, j, k])
                         )
             all_points = []
-            for angle in rotation_angles:
+            for angle in self.__rotation_angles:
                 rotation_transform.SetRotation(rotation_axis, angle)
                 all_points.extend(
                     [rotation_transform.TransformPoint(pnt) for pnt in image_bounds]
@@ -327,7 +335,7 @@ class MRA:
                 for spc, sz in zip(new_spc, max_bounds - min_bounds)
             ]
             proj_images = []
-            for angle in rotation_angles:
+            for angle in self.__rotation_angles:
                 rad = angle * np.pi / 180.0
                 new_dir = (
                     np.cos(rad),
@@ -362,7 +370,7 @@ class MRA:
                 slice_volume.SetOrigin((min_bounds + max_bounds) / 2)
                 #  set all negative pixels to zero
                 slice_volume = sitk.Threshold(slice_volume, 0, math.inf, 0)                
-                proj_images.append(slice_volume)
+                proj_images.append((angle, slice_volume))
         except Exception as e:
             logger.exception(e, "Error calculating projections.")
             return self.__return_codes.ERROR_CALCULATING_PROJECTIONS
@@ -436,7 +444,7 @@ class MRA:
                 seriesID = pydicom.uid.generate_uid()
                 # Different angles
                 i = 0
-                for image_slice in images:
+                for angle, image_slice in images:
                     image_slice = sitk.Cast(image_slice, sitk.sitkInt16)
 
                     [
@@ -472,7 +480,9 @@ class MRA:
                     image_slice.SetMetaData(
                         "0020|0013", f"{i+1:04d}"
                     )  # Instance Number
-
+                    image_slice.SetMetaData(
+                        "0020|1041", f"{angle:.2f}"
+                    )
                     path_name = os.path.join(
                         output_dir_name,
                         "mip."
