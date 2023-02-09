@@ -30,7 +30,10 @@ urlpatterns = [
     path("api/case/<str:case>/dicom_set/<str:dicom_set>/study/<str:study>/metadata", grasp_endpoints.case_metadata),
     path("api/case/<str:case>/dicom_set/<str:source_set>/finding", grasp_endpoints.store_finding),
     path("api/case/<str:case>/dicom_set/<str:source_set>/finding/<int:id>", grasp_endpoints.store_finding),
+    path("api/case/<str:case>/sessions", grasp_endpoints.all_sessions),
     path("api/case/<str:case>/session", grasp_endpoints.handle_session),
+    path("api/case/<str:case>/session/new", grasp_endpoints.new_session),
+    path("api/case/<str:case>/session/<int:session_id>", grasp_endpoints.handle_session),
     *cine_generation.urls,
     *staticfiles_urlpatterns()
 ]

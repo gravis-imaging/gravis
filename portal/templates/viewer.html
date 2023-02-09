@@ -58,19 +58,42 @@
       <label for='volume-picker' x-text="viewer && viewer.selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>
  
     <!-- Image manipulation buttons -->
-    <div class="flex" style="margin-left: 2em; display: flex;">
-      <button title="Reset Viewers" class="all-pointer-events btn-primary btn-large btn-viewer my-2" style="margin-right: 1.1rem!important;"
+    <div class="flex ms-2" style="margin-left: 2em; display: flex;">
+      <div class="ms-2">
+        <div class="dropdown">
+          <button
+            class="btn-primary btn-large btn-viewer"
+            :disabled="loading || switching || job_loading != null"
+            href="#"
+            id="dropdownMenuLink"
+            data-mdb-toggle="dropdown"
+            aria-expanded="false",
+            title="Select Session"
+          >
+          <i class="fas fa-rectangle-list"></i>
+        </button>
+          <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+            <template x-show="!!viewer" x-for="session of (viewer? viewer.state_manager.session_list : [])" :key="session.id">
+              <li><a class="dropdown-item" :class="viewer.state_manager.session_id == session.id ? { 'active': true, 'disabled': true} : {}" @click="viewer.state_manager.switchSession(session.id)" href="#" x-text="new Date(session.updated_at*1000).toLocaleString()"></a></li>
+            </template>
+            <li><hr class="dropdown-divider" /></li>
+            <li><a class="dropdown-item" @click="viewer.state_manager.newSession()" href="#">New session</a></li>
+          </ul>
+        </div>    
+      </div>
+    
+      <button title="Reset Viewers" class="all-pointer-events btn-primary btn-large btn-viewer ms-2"
       :disabled="loading || switching || job_loading != null"
       @click="viewer.viewports.map(v=> {v.resetCamera(); v.render()}); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-arrows-to-circle"></i>
       </button>
 
-      <button title="Save annotations" class="all-pointer-events btn-primary btn-large btn-viewer my-2" style="margin-right: 1.1rem!important;"
+      <button title="Save annotations" class="all-pointer-events btn-primary btn-large btn-viewer ms-2"
       :disabled="loading || switching || job_loading != null"
       @click="viewer.state_manager.save()"><i class="fa-solid fa-floppy-disk"></i>
       </button>
 
       <!-- Annotations -->
-      <div class="my-2">
+      <div class="ms-2">
         <div class="dropdown">
           <button
             class="btn-primary btn-large btn-viewer"
@@ -91,11 +114,11 @@
         </div>    
       </div>
     
-      <button title="Duplicate Selected Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
+      <button title="Duplicate Selected Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2"
           :disabled="loading || switching || job_loading != null"
           @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
       </button>
-      <button title="Flip Selected Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
+      <button title="Flip Selected Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2"
           :disabled="loading || switching || job_loading != null"
           @click="viewer.annotation_manager.flipSelectedAnnotations();">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-symmetry-vertical" viewBox="0 0 16 16">
@@ -103,7 +126,7 @@
         </svg>
       </button>
 
-      <div class="my-2 ms-2">
+      <div class="ms-2">
         <div class="dropdown">
           <button
             class="btn-primary btn-large btn-viewer"

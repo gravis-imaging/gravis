@@ -668,7 +668,14 @@ class GraspViewer {
                 return;
             }
         }
-
+        // if (finding.data.viewportId = "VIEW_AUX") {
+        //     await this.switchMIP(new_selected_index);
+        //     console.log("Going to AUX")
+        //     const v = viewer.renderingEngine.getViewport("VIEW_AUX");
+        //     await v.setImageIdIndex(finding.data.imageIdIndex);
+        //     v.setCamera(finding.data.cam);
+        //     v.render();
+        // }
         if (new_selected_time != this.selected_time) {
             this.selected_time = new_selected_time;
             document.getElementById("volume-picker").value = new_selected_index;
