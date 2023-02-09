@@ -257,3 +257,14 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.user.username
+    class Meta:
+        db_table = "gravis_user_profile"
+
+# class Tag(models.Model):
+#     tag = models.CharField(max_length=100, blank=False, null=False)
+#     case = models.ManyToManyField(Case)
+#     class Meta:
+#         db_table = "gravis_tags"
+
+#     def __str__(self):
+#         return self.tag

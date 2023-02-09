@@ -46,3 +46,11 @@ python manage.py rqworker default
 ```
 python manage.py runserver
 ```
+
+## delete cases from db
+```
+./manage.py shell
+from portal.models import *
+Case.objects.exclude(id__in=(99, 103)).delete()
+```
+
