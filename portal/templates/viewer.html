@@ -172,7 +172,7 @@
             </button><button
              title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
                 :disabled="switching || job_loading != null"
-                @click="viewer.storeFinding(i-1);"><i class="fa-solid fa-camera"></i>
+                @click="viewer.storeFinding(viewer.viewports[i-1]);"><i class="fa-solid fa-camera"></i>
             </button>            
             <template x-if="viewer && viewer.getNativeViewports().indexOf(viewer.viewports[i-1].id) > -1">
               <div class="viewer-label-native">
@@ -195,6 +195,11 @@
   <!-- MIP viewer -->
   <div style="grid-area: d" class="mb-2" id="aux-container">
     <div x-show="viewer && !!viewer.current_study" class="viewport-overlay" style="position: absolute; left: 3em; z-index: 10;">
+      <button
+      title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer my-2"
+         :disabled="switching || job_loading != null"
+         @click="viewer.storeFinding(viewer.renderingEngine.getViewport('VIEW_AUX'));"><i class="fa-solid fa-camera"></i>
+     </button>   
       <!-- <button class="all-pointer-events btn-primary btn-large btn-viewer ml-2 my-2" 
         @click="viewer.renderingEngine.getViewport('VIEW_CINE').setStack((await (await fetch(`/api/case/${case_id}/dicom_set/${viewer.dicom_set}/processed_results/MIP?acquisition_number=35`)).json()).urls, 5)">MIP
       </button> -->
