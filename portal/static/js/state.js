@@ -6,7 +6,9 @@ class StateManager {
     current_state;
     changed;
     just_loaded;
-    
+    session_id;
+    session_list = [];
+
     constructor( viewer ) {
         this.viewer = viewer;
     }
@@ -59,13 +61,14 @@ class StateManager {
             }
         }
         this.current_state = state;
+        this.viewer.annotation_manager.updateChart();
     }
     async save() {
         if (!this.viewer.case_id) return;
         console.info("Saving state.")
         const state = this._calcState()
         if (state) {
-            await doFetch(`/api/case/${this.viewer.case_id}/session`, state)
+            await doFetch(`/api/case/${this.viewer.case_id}/session/${this.session_id}`, state)
             // localStorage.setItem(this.viewer.case_id, JSON.stringify(state));
             this.current_state = state;
             this.changed = false;
@@ -75,15 +78,42 @@ class StateManager {
         if (!this.viewer.case_id) return;
         var state;
         // var state = JSON.parse(localStorage.getItem(this.viewer.case_id));
-        state = await doFetch(`/api/case/${this.viewer.case_id}/session`,{},"GET")
+        if (this.session_id) {
+            state = await doFetch(`/api/case/${this.viewer.case_id}/session/${this.session_id}`,{},"GET")
+        } else {
+            state = await doFetch(`/api/case/${this.viewer.case_id}/session`,{},"GET")
+        }
         if (!state) {
             return;
         }
+        state = await doFetch(`/api/case/${this.viewer.case_id}/session`,{},"GET")
+        this.session_list = (await doFetch(`/api/case/${this.viewer.case_id}/sessions`,{},"GET")).sessions
+
         console.info("Loading state");
         this._applyState(state);
         this.viewer.renderingEngine.renderViewports(this.viewer.viewportIds);
         this.changed = false;
         this.just_loaded = true;
+        this.session_id = state.session_id;
+    }
+    async switchSession(id) {
+        const state = await doFetch(`/api/case/${this.viewer.case_id}/session/${id}`,{},"GET")
+        // this.session_list = (await doFetch(`/api/case/${this.viewer.case_id}/sessions`,{},"GET")).sessions
+        this.viewer.viewports.map(v=>v.resetCamera());
+        this._applyState(state)
+        this.viewer.renderingEngine.renderViewports(this.viewer.viewportIds);
+        this.changed = false;
+        this.just_loaded = true;
+        this.session_id = state.session_id;
+    }
+    async newSession() {
+        const state = await doFetch(`/api/case/${this.viewer.case_id}/session/new`,{},"POST")
+        this.session_list = (await doFetch(`/api/case/${this.viewer.case_id}/sessions`,{},"GET")).sessions
+        this._applyState(state)
+        this.viewer.renderingEngine.renderViewports(this.viewer.viewportIds);
+        this.changed = false;
+        this.just_loaded = true;
+        this.session_id = state.session_id;
     }
 
     startBackgroundSave(){ 

@@ -9,7 +9,7 @@ from pathlib import Path
 from urllib.request import urlopen
 
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -321,21 +321,32 @@ def store_finding(request, case, source_set, id=None):
         return JsonResponse(finding.to_dict())
 
 @login_required
-def handle_session(request, case):
+def handle_session(request, case, session_id=None):
     if request.method == "POST":
-        return update_state(request, case)
+        return update_session(request, case, session_id)
     elif request.method == "GET":
-        return get_state(request, case)
+        return get_session(request, case, session_id)
     else:
         return HttpResponseNotAllowed(["POST","GET"])
 
-def update_state(request,case):
-    new_state = json.loads(request.body)
+def new_session(request,case):
+    session = SessionInfo(case=Case.objects.get(id=case), cameras=[], voi={}, annotations=[], user=request.user)
+    session.save()
+    return JsonResponse(session.to_dict())
 
-    try:
-        session = SessionInfo.objects.get(case=Case.objects.get(id=case), user=request.user)
-    except SessionInfo.DoesNotExist:
-        session = SessionInfo(case=Case.objects.get(id=case), user=request.user)
+def all_sessions(request,case):
+    sessions = SessionInfo.objects.filter(case=Case.objects.get(id=case), user=request.user)
+    return JsonResponse(dict(sessions=[dict(id=s.id, created_at=s.created_at.timestamp(), updated_at=s.updated_at.timestamp()) for s in sessions]))
+
+def update_session(request,case,session_id=None):
+    new_state = json.loads(request.body)
+    if not session_id:
+        try:
+            session = SessionInfo.objects.get(case=Case.objects.get(id=case), user=request.user)
+        except SessionInfo.DoesNotExist:
+            session = SessionInfo(case=Case.objects.get(id=case), user=request.user)
+    else:
+        session = get_object_or_404(SessionInfo,case=Case.objects.get(id=case), user=request.user, id=session_id)
 
     session.cameras = new_state.get("cameras",[])
     session.annotations = new_state.get("annotations",[])
@@ -344,9 +355,12 @@ def update_state(request,case):
     session.save()
     return JsonResponse(dict(error="", action="", ok=True))
 
-def get_state(request, case):
-    session = SessionInfo.objects.get(case=case, user=request.user)
-    return JsonResponse(dict(cameras=session.cameras, annotations=session.annotations, voi=session.voi))
+def get_session(request, case, session_id=None):
+    if session_id:
+        session = get_object_or_404(SessionInfo,  id=session_id,case=case, user=request.user)
+    else:
+        session = SessionInfo.objects.filter(case=case, user=request.user).latest("updated_at")
+    return JsonResponse(session.to_dict())
 
 
 # @login_required

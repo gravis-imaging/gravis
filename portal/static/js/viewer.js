@@ -534,8 +534,10 @@ class GraspViewer {
             mip_urls = (await doFetch(`/api/case/${this.case_id}/dicom_set/${ori_dicom_set}/processed_results/MIP?acquisition_number=${current_info.acquisition_number}`,null, "GET")).urls;
         } 
         if ( mip_urls.length > 0 ) {
-           await viewport.setStack(mip_urls, viewport.targetImageIdIndex);           
-        }       
+           await viewport.setStack(mip_urls, viewport.targetImageIdIndex);
+           if (!cam.focalPoint.every( k => k==0 )) viewport.setCamera(cam);
+           viewport.render()
+        }
     }
     async switchToIndex(index) {
         const current_info = this.current_study[index];
@@ -546,13 +548,14 @@ class GraspViewer {
 
         const [study_uid, dicom_set] = info;
 
-        if (this.study_uid) {
-            this.state_manager.stopBackgroundSave();
-            this.state_manager.save();
-        }
         this.study_uid = study_uid;
         this.dicom_set = dicom_set;
         this.case_id = case_id
+
+        if (! this.selected_time ) {            
+            await this.state_manager.load();
+            this.findings = await this.loadFindings();
+        }
 
         const graspVolumeInfo = await (await fetch(`/api/case/${case_id}/dicom_set/${dicom_set}/study/${study_uid}/metadata`, {
             method: 'GET',   credentials: 'same-origin'
@@ -579,14 +582,11 @@ class GraspViewer {
         await this.setVolumeBySeries(graspVolumeInfo[selected_index]["series_uid"])
         document.getElementById("volume-picker").setAttribute("value",selected_index)
 
-        this.findings = await this.loadFindings();
         this.volume.load(async ()=>{ 
             console.log("Volume loaded");
-            await this.state_manager.load();
-            // this.state_manager.startBackgroundSave();
         })
         try {
-            await this.updatePreview()
+            await this.updatePreview();
         } catch (e) {
             console.error(e);
         }
@@ -643,13 +643,15 @@ class GraspViewer {
         const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`,{},"GET");
         return result.findings;
     }
-    async storeFinding(n){
-        const viewport = this.viewports[n];
+    async storeFinding(viewport){
+        // const viewport = this.viewports[n];
         const image = await viewportToImage(viewport);
 
         const info = {
             cam: viewport.getCamera(), //this.viewports.map(v=>v.getCamera()),
-            time: this.selected_time
+            viewportId: viewport.id,
+            time: this.selected_time,
+            imageIdIndex: viewport.currentImageIdIndex? viewport.currentImageIdIndex : null
             // center_index: cornerstone.utilities.transformWorldToIndex(viewport.getDefaultImageData(), viewport.getCamera().focalPoint),
         }
         const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`, {image_data: image, info: info});
@@ -660,16 +662,17 @@ class GraspViewer {
         this.findings = await this.loadFindings()
     }
     async goToFinding(finding) {
-        for (const v of this.viewports) {
-            const view_cam = v.getCamera();
-            if (Vector.eq(view_cam.viewPlaneNormal, finding.data.cam.viewPlaneNormal)) {
-                scrollViewportToPoint(v, finding.data.cam.focalPoint);
-                cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,this.viewportIds) 
-                this.renderingEngine.renderViewports(this.viewportIds);
-                break;
+        if (finding.data.viewportId != "VIEW_AUX") {
+            for (const v of this.viewports) {
+                const view_cam = v.getCamera();
+                if (Vector.eq(view_cam.viewPlaneNormal, finding.data.cam.viewPlaneNormal)) {
+                    scrollViewportToPoint(v, finding.data.cam.focalPoint);
+                    cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,this.viewportIds) 
+                    this.renderingEngine.renderViewports(this.viewportIds);
+                    break;
+                }
             }
         }
-        
         let new_selected_time;
         let new_selected_index;
         let new_selected_series;
@@ -683,7 +686,6 @@ class GraspViewer {
         }
 
         for (const [index, info] of studies_data_parsed.entries()) {
-            console.log(info, finding.dicom_set)
             if (info[1] === finding.dicom_set && info[1] != this.dicom_set){
                 for (const [index, info] of this.current_study.entries()) { 
                     if ( Math.abs(info.acquisition_seconds - finding.data.time) < 0.001 ) {
@@ -696,9 +698,19 @@ class GraspViewer {
                 return;
             }
         }
-        this.selected_time = new_selected_time;
-        document.getElementById("volume-picker").value = new_selected_index;
-        await viewer.switchSeries(new_selected_series); 
+        // if (finding.data.viewportId = "VIEW_AUX") {
+        //     await this.switchMIP(new_selected_index);
+        //     console.log("Going to AUX")
+        //     const v = viewer.renderingEngine.getViewport("VIEW_AUX");
+        //     await v.setImageIdIndex(finding.data.imageIdIndex);
+        //     v.setCamera(finding.data.cam);
+        //     v.render();
+        // }
+        if (new_selected_time != this.selected_time) {
+            this.selected_time = new_selected_time;
+            document.getElementById("volume-picker").value = new_selected_index;
+            await this.switchToIndex(new_selected_index); 
+        }
     }
 }
 

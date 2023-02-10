@@ -173,6 +173,9 @@ class SessionInfo(models.Model):
     cameras = models.JSONField(null=False)
     voi = models.JSONField(null=False)
     annotations = models.JSONField(null=False)
+
+    def to_dict(self):
+        return dict(cameras=self.cameras, annotations=self.annotations, voi=self.voi, session_id=self.id)
     class Meta:
         db_table = "gravis_session"
 
