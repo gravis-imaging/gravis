@@ -41,14 +41,15 @@ class MRA:
         self.__angle_step = int(vars["GRAVIS_ANGLE_STEP"])
         full_rotation_flag = bool(int(vars["GRAVIS_MIP_FULL_ROTATION"]))
         
-        max_angle = np.pi
-        max_angle_degree = 180.0
+        angle_step = self.__angle_step 
+        max_angle = 180.0
         if full_rotation_flag:
-            max_angle = 2 * np.pi
-            max_angle_degree = 360.0
-        self.__rotation_angles = np.linspace(
-            0.0, max_angle, int(max_angle_degree / self.__angle_step)
-        )
+            max_angle = 360.0
+        cur_angle = 0.0
+        self.__rotation_angles = []
+        while cur_angle <= max_angle:
+            self.__rotation_angles.append(cur_angle * np.pi / 180.0)
+            cur_angle += angle_step
         
 
     def __process_volume(self):
