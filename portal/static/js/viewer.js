@@ -95,6 +95,8 @@ class GraspViewer {
     selected_time = 0;
     chart_options = {};
 
+    mip_details = {};
+
     findings;
     constructor( ...inp ) {
         return (async () => {
@@ -225,7 +227,7 @@ class GraspViewer {
                         console.error(e);
                     }
                 }));
-            });
+            });         
         }
     
     
@@ -454,31 +456,44 @@ class GraspViewer {
         // console.log("Image IDs",imageIds)
         await this.setVolumeByImageIds(imageIds, series_uid, true);
     }
-    startPreview() {
+    startPreview(idx) {
         console.info("Starting preview")
+        // Resetting MIP image stack with images at the last saved angle for all time points
+        try {
+            this.switchMIP(idx, true);
+        } catch (e) {
+            console.error(e);
+        }
         this.previewViewports.slice(0,3).map((v, n) => {
             v.element.getElementsByTagName('svg')[0].innerHTML = this.viewports[n].element.getElementsByTagName('svg')[0].innerHTML
         });
     }
     async setPreview(idx) {
         try {
-            this.switchMIP(idx);
-        } catch (e) {};
-
-        try {
             requestIdleCallback( (()=>this.chart.renderGraph_()).bind(this))
             idx = parseInt(idx)
             let [lower, upper] = this.getVolumeVOI(this.viewports[0])
 
             this.previewViewports.slice(0,3).map(async (v, n) => {
-                v.setVOI({lower, upper})
-                await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / this.current_study.length))
+                v.setVOI({lower, upper});
+                // Get closest preview image if only fraction of preview images were generated.
+                await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / this.current_study.length));
             })
+            // Update MIP Viewport
+            await this.renderingEngine.getViewport('VIEW_AUX').setImageIdIndex(idx);
+          
         } catch (e) {
             console.error(e);
         }
     }
-
+    stopPreview(idx) {
+        // Resetting MIP image stack with images at a given time point with all available angles.
+        try {
+            this.switchMIP(idx, false);
+        } catch (e) {
+            console.error(e);
+        }
+    }
     getVolumeVOI(viewport) {
         return viewport.getDefaultActor().actor.getProperty().getRGBTransferFunction(0).getRange()
     }
@@ -502,23 +517,33 @@ class GraspViewer {
             this.volume.load( e => { console.log("Volume finished loading",e); resolve() });
         });
     }
-    async switchMIP(index) {
+    async switchMIP(index, preview) {
+        console.log("switchMIP ", index, preview)
         const current_info = this.current_study[index];
         const viewport = this.renderingEngine.getViewport('VIEW_AUX');
         const ori_dicom_set = studies_data_parsed.find((x)=>x[2]=="ORI")[1]
-        const mip_urls = (await doFetch(`/api/case/${this.case_id}/dicom_set/${ori_dicom_set}/processed_results/MIP?acquisition_number=${current_info.acquisition_number}`,null, "GET")).urls;
+        const slice_location = this.mip_details[viewport.targetImageIdIndex]["slice_location"];
 
-        if ( mip_urls.length > 0 ) {
-           await viewport.setStack(mip_urls, viewport.targetImageIdIndex);
+        // In the preview mode need to get all time points for the given angle (slice_location)
+        // In the regular, not preview mode, need to get all angles (slice_locations) for the given time point
+        let mip_urls = {}
+        if (preview) {
+            mip_urls = (await doFetch(`/api/case/${this.case_id}/dicom_set/${ori_dicom_set}/processed_results/MIP?slice_location=${slice_location}`,null, "GET")).urls;
         }
+        else {
+            mip_urls = (await doFetch(`/api/case/${this.case_id}/dicom_set/${ori_dicom_set}/processed_results/MIP?acquisition_number=${current_info.acquisition_number}`,null, "GET")).urls;
+        } 
+        if ( mip_urls.length > 0 ) {
+           await viewport.setStack(mip_urls, viewport.targetImageIdIndex);           
+        }       
     }
     async switchToIndex(index) {
         const current_info = this.current_study[index];
-        await this.switchMIP(index);
         await viewer.switchSeries(current_info.series_uid); 
         this.selected_time = current_info.acquisition_seconds; 
     }
-    async switchStudy(info, case_id, keepCamera=true) {
+    async switchStudy(info, case_id, keepCamera=true) {       
+
         const [study_uid, dicom_set] = info;
 
         if (this.study_uid) {
@@ -566,11 +591,17 @@ class GraspViewer {
             console.error(e);
         }
 
-        console.log("Study switched");
         this.current_study = graspVolumeInfo;
+        
+        // Get MIP metadata info, currently only need slice_locations
+        const current_info = this.current_study[0];
+        const ori_dicom_set = studies_data_parsed.find((x)=>x[2]=="ORI")[1]
+        this.mip_details = (await doFetch(`/api/case/${case_id}/dicom_set/${ori_dicom_set}/mip_metadata?acquisition_number=${current_info.acquisition_number}`,null, "GET")).details;
+        
+        console.log("Study switched");
+
         return graspVolumeInfo
     }
-
     async setPreviewStackForViewport(n, dest_viewport) {
         const viewport = this.viewports[n];
         const cam = viewport.getCamera();

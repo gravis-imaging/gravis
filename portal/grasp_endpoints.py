@@ -226,11 +226,11 @@ def preview_urls(request, case, source_set, view, location):
 
 @login_required
 def processed_results_urls(request, case, case_type, source_set):
-    fields = ["series_number", "slice_location", "acquisition_number"]
+    fields = ["series_number", "slice_location", "acquisition_number", "acquisition_seconds"]
     case = Case.objects.get(id=int(case))
     slices_lookup = {k: request.GET.get(k) for k in fields if k in request.GET}
     dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=case_type, processing_job__dicom_set=source_set)
-    instances = dicom_set.latest('processing_job__created_at').instances.filter(**slices_lookup).order_by("slice_location","instance_location","series_number") # or "instance_number"
+    instances = dicom_set.latest('processing_job__created_at').instances.filter(**slices_lookup).order_by("acquisition_seconds", "slice_location","instance_location","series_number") # or "instance_number"
 
     urls = []
     for instance in instances:
@@ -241,6 +241,21 @@ def processed_results_urls(request, case, case_type, source_set):
         else:
             urls.append(wado_uri)
     return JsonResponse(dict(urls=urls))
+
+
+@login_required
+def mip_metadata(request, case, source_set):
+    fields = ["series_number", "slice_location", "acquisition_number", "acquisition_seconds"]
+    case = Case.objects.get(id=int(case))
+    slices_lookup = {k: request.GET.get(k) for k in fields if k in request.GET}
+    dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type="MIP", processing_job__dicom_set=source_set)
+    instances = dicom_set.latest('processing_job__created_at').instances.filter(**slices_lookup).order_by("acquisition_seconds", "slice_location","instance_location","series_number") # or "instance_number"
+
+    details = []
+    for instance in instances:
+        details.append(dict(slice_location=instance.slice_location))
+    return JsonResponse(dict(details=details))
+
 
 def sc_from_ref(reference_dataset, pixel_array):
     sc = hd.sc.SCImage.from_ref_dataset(
