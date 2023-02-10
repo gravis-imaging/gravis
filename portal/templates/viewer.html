@@ -46,8 +46,8 @@
   <input id='volume-picker' tabindex='1' 
       class="timeslider" title="Displayed Timepoint"
       type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
-      @mouseUp="previewing = false;"
-      @input="if (!previewing) { viewer.startPreview(); previewing = true; }; viewer.selected_time=viewer.current_study[$event.target.value].acquisition_seconds; viewer.setPreview($event.target.value);"
+      @mouseUp="previewing = false; viewer.stopPreview($event.target.value);"
+      @input="if (!previewing) { viewer.startPreview($event.target.value); previewing = true; }; viewer.selected_time=viewer.current_study[$event.target.value].acquisition_seconds; viewer.setPreview($event.target.value);"
       @change="switching = true; await viewer.switchToIndex($event.target.value); switching = false;"
       :disabled="!viewer || !viewer.current_study || loading || switching" disabled="disabled" 
       @keyup.left=""
