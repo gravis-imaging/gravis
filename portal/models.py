@@ -138,11 +138,14 @@ class DICOMSet(models.Model):
 
 class Finding(models.Model):
     dicom_set = models.ForeignKey(DICOMSet, on_delete=models.CASCADE, related_name="findings")
+    case = models.ForeignKey(Case, on_delete=models.CASCADE, related_name="findings", null=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(default=timezone.now, blank=True)
 
     name = models.CharField(max_length=100)
     file_location = models.CharField(null=True,max_length=1000)
+    dicom_location = models.CharField(null=True,max_length=1000)
+
     data = models.JSONField(null=True)
 
     def to_dict(self):

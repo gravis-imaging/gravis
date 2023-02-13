@@ -144,34 +144,34 @@ h2 {
     height: 100%;
 }
 
-.findings > button {
+.findings > #findings_expander {
     background-color: transparent;
     margin-left:6px; 
     margin-top:-1px;    
 }
 
-.findings.open > button {
+.findings.open > #findings_expander {
     margin-left:-20px!important; 
     margin-top:-18px!important;    
 }
 
-.findings > button::before {
+.findings > #findings_expander::before {
     font-family: 'FontAwesome';
     content: '\f060';
     color: hsla(0,0%,100%,.15);
     background-color: transparent;
 }
 
-.findings > button:hover::before {
+.findings > #findings_expander:hover::before {
     color: #FFF;
 }
 
-.findings > button:focus,
-.findings > button:active:focus {
+.findings > #findings_expander:focus,
+.findings > #findings_expander:active:focus {
     box-shadow: none;
 }
 
-.findings.open > button::before {
+.findings.open > #findings_expander::before {
     font-family: 'FontAwesome';
     content: '\f061';
 }

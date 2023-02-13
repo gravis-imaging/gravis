@@ -25,7 +25,11 @@ env = environ.Env(
     DB_BACKEND=(str, "postgres"),   
     DB_USER=(str, "gravis"),
     TEST_FOLDER_PATH=(str, "/tmp"),
-    SECRET_KEY=(str, "django-insecure-r$afdbw+6xgz#af8-e2z=#@kjs2r#$th^m=60v1&almulq5fuh")    
+    SECRET_KEY=(str, "django-insecure-r$afdbw+6xgz#af8-e2z=#@kjs2r#$th^m=60v1&almulq5fuh"),
+    DISPATCH_HOST=(str, None),
+    DISPATCH_PORT=(int, 104),
+    DISPATCH_AET_SOURCE=(str, None),
+    DISPATCH_AET_TARGET=(str, None)
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -44,6 +48,12 @@ CASES_FOLDER = env("CASES_FOLDER")
 ERROR_FOLDER = env("ERROR_FOLDER")
 INCOMING_SCAN_INTERVAL = env("INCOMING_SCAN_INTERVAL")
 TEST_FOLDER_PATH = env("TEST_FOLDER_PATH")
+
+DISPATCH_HOST = env("DISPATCH_HOST")
+DISPATCH_PORT = env("DISPATCH_PORT")
+
+DISPATCH_AET_SOURCE = env("DISPATCH_AET_SOURCE")
+DISPATCH_AET_TARGET = env("DISPATCH_AET_TARGET")
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = DATA_FOLDER

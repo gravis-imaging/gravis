@@ -1,27 +1,14 @@
-import dataclasses
 import json
-from pathlib import Path
-import time
-from typing import Any
 import uuid
-from django.http import HttpResponseNotFound, JsonResponse
-from django.shortcuts import render
-from django.views import View
-from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
+from pathlib import Path
+
 from django.urls import path
 import numpy as np
 import numpy.typing as npt
-from pydicom import Dataset
 import pydicom
-from urllib3 import HTTPResponse
-from datetime import datetime
+
 from portal.models import Case, DICOMInstance, DICOMSet, ProcessingJob
-
-import django_rq
-
-def do_job(View,id):
-    View._do_job(id)
+from .work_job import WorkJobView
 
 def cross(*c) -> npt.ArrayLike:
     return np.cross(*c)
@@ -31,108 +18,6 @@ def show_array(a):
 {a.shape[1]} {a.shape[0]}
 {a.max()}
 """+"\n".join(" ".join([str(k) for k in r]) for r in a))
-
-@method_decorator(login_required, name='dispatch')
-class WorkJobView(View):
-    type="GENERIC"
-
-    def get(self, request, *args, **kwargs):
-        try:
-            job = ProcessingJob.objects.get(id=request.GET["id"])
-        except ProcessingJob.DoesNotExist:
-            return HttpResponseNotFound()
-        result = dict(id=job.id, category=job.category, status=job.status, parameters = job.parameters )
-
-        result["json_result"] = job.json_result
-        if sets := job.result_sets.all():
-            dicom_sets = []
-            for set in sets:
-                dicom_sets.append([])
-                instances = list(set.instances.all())
-                # sort by acquisition number
-                instances.sort(key=lambda x: int(json.loads(x.json_metadata)["00200012"]["Value"][0]))
-                for instance in instances:
-                    dicom_sets[-1].append(dict(study_uid=instance.study_uid, series_uid=instance.series_uid, instance_uid=instance.instance_uid))
-            result["dicom_sets"] = dicom_sets
-        # job.result.dicom_set.instances()
-        return JsonResponse(result)
-
-
-    def post(self, request, *args, **kwargs):
-        json_in = json.loads(request.body)
-        print(json_in["parameters"])
-
-        case = Case.objects.get(id=json_in["case"])
-        existing_q = ProcessingJob.objects.filter(dicom_set=case.dicom_sets.get(origin="Incoming"),
-                case = case,
-                parameters=json_in["parameters"],
-                status = "Success")
-        print(existing_q.query)
-        existing = existing_q.first()
-        if existing:
-            print("Exists")
-            return JsonResponse(dict(id=existing.id))
-        print("Doesn't exist")
-        job = ProcessingJob(
-            status="CREATED", 
-            category=self.type, 
-            dicom_set=case.dicom_sets.get(origin="Incoming"),
-            case = case,
-            parameters=json_in["parameters"])
-
-        job.save()
-        django_rq.enqueue(do_job,args=(self.__class__,job.id),job_timeout=60*60*4)
-        return JsonResponse(dict(id=job.id))
-
-    @classmethod
-    def do_job(cls, job: ProcessingJob):
-        set = DICOMSet(case=job.case, processing_job = job)
-        set.save()
-        return ({}, [set])
-
-    @classmethod
-    def _do_job(cls,id):
-        job = ProcessingJob.objects.get(id=id)
-        json_result, dicom_sets = cls.do_job(job)
-        job.json_result = json_result
-        # job.result.save()
-
-        for d in dicom_sets:
-            d.processing_job = job
-            d.save()
-
-        job.status = "Success"
-        job.save()
-
-
-@dataclasses.dataclass
-class VView:
-    name: str
-    normal: npt.ArrayLike
-    viewUp: npt.ArrayLike
-    viewHoriz: npt.ArrayLike = None
-    transformed_axes: npt.ArrayLike = None
-    flip_for_preview: list = dataclasses.field(default_factory=list)
-    flip_for_timeseries: list = dataclasses.field(default_factory=list)
-    dicom_set: DICOMSet = None
-
-    transformed_normal : npt.ArrayLike = None
-    transformed_viewUp : npt.ArrayLike = None
-    transformed_viewHoriz : npt.ArrayLike = None
-
-    def to_dict(self):
-        return dict(
-            name = self.name,
-            normal = self.normal,
-            viewUp = self.viewUp,
-            viewHoriz = self.viewHoriz.tolist() if self.viewHoriz is not None else None,
-            transformed_axes = self.transformed_axes.tolist() if self.transformed_axes is not None else None,
-            flip_for_preview = self.flip_for_preview,
-            flip_for_timeseries = self.flip_for_timeseries,
-            transformed_normal = self.transformed_normal.tolist() if self.transformed_normal is not None else None,
-            transformed_viewUp = self.transformed_viewUp.tolist() if self.transformed_viewUp is not None else None,
-            transformed_viewHoriz = self.transformed_viewHoriz.tolist() if self.transformed_viewHoriz is not None else None,
-        )
 
 class GeneratePreviewsJob(WorkJobView):
     type = "CINE"
@@ -287,6 +172,3 @@ class GeneratePreviewsJob(WorkJobView):
             dicom_sets
         )
 
-urls = [
-    path("job/preview", GeneratePreviewsJob.as_view())
-]

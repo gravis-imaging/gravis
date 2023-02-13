@@ -670,6 +670,16 @@ class GraspViewer {
         const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding/${finding.id}`,{name:finding.name}, "PATCH");
         // this.findings = await this.loadFindings()
     }
+
+    async transferFindings() {
+        try {
+            const result_promise = doJob("send_findings", this.case_id,{}, true);
+            const result = await result_promise;
+        } catch (e) {
+            return false;
+        }
+        return true;
+    }
     async goToFinding(finding) {
         if (finding.data.viewportId != "VIEW_AUX") {
             for (const v of this.viewports) {

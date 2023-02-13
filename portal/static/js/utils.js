@@ -42,13 +42,16 @@ function HSLToRGB (h, s, l) {
 }
 
   
-async function doJob(type, case_, params) {
-    let start_result = await startJob(type, case_, params);
+async function doJob(type, case_, params, force=false) {
+    let start_result = await startJob(type, case_, params, force);
     console.log(`Do Job`,start_result.id);
     for (let i=0;i<100;i++) {
         let result = await getJob(type,start_result.id)
-        if ( result["status"] == "Success" ) {
+        if ( result["status"] == "SUCCESS" ) {
             return result;
+        }
+        if ( result["status"] == "FAILED" ) {
+            throw Error("Failed")
         }
         await sleep(100);
     }
@@ -77,10 +80,11 @@ async function doFetch(url, body, method="POST") {
 }
 
 
-async function startJob(type, case_, params) {
+async function startJob(type, case_, params, force=false) {
     var body = {
         case: case_,
         parameters: params,
+        force: force
     };
     var raw_result = await fetch(`/job/${type}`, {
         method: 'POST', 

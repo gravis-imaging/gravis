@@ -158,13 +158,18 @@
       </div>      
       <!-- Indicators -->
       <div style="width:1.75em;">
-        <div :class="(loading || switching) || 'invisible'" class="spinner-grow spinner-grow-sm ms-2" role="status" style="position:absolute; z-index: 1; color: hsla(0,0%,100%,.2);  margin-top: 0.3em;">
+        <div :class="(loading || switching || job_loading) || 'invisible'" class="spinner-grow spinner-grow-sm ms-2" role="status" style="position:absolute; z-index: 1; color: hsla(0,0%,100%,.2);  margin-top: 0.3em;">
           <span class="visually-hidden">Loading...</span>
         </div>
-        <div x-ref="saved" class="ms-2" role="status" style="display: none; position:absolute; color: hsla(0,0%,100%,.3);">
+        <div x-ref="saved" class="ms-2" role="status" style="display: none; position:absolute; color: hsla(128,70%,70%,.3);">
           <i class="fa-solid fa-floppy-disk"></i>
           <span class="visually-hidden">Saved</span>
         </div>
+        <div x-ref="failed" class="ms-2" role="status" style="display: none; position:absolute; color: hsla(0,100%,50%,1);">
+            <i class="fa-solid fa-xmark"></i>
+            <span class="visually-hidden">Failed</span>
+        </div>
+
       </div>
     </div> 
   </div>
@@ -248,9 +253,15 @@
    
   <!-- Findings -->
   <div id="findings" class="findings">
-    <button title="" style="position: absolute; background-color: transparent;" class="btn-dark btn-large btn-viewer" 
+    <button title="" id="findings_expander" style="position: absolute; background-color: transparent;" class="btn-dark btn-large btn-viewer" 
     @click="document.getElementById('findings').classList.toggle('open');">
     </button>
+    <button title="Store Finding" class="all-pointer-events btn-large btn-primary btn-viewer" style="display: block; margin-left: auto; margin-right: 0;"
+       :disabled="loading || switching" disabled="disabled"
+       @click="job_loading = true; success = await viewer.transferFindings(); job_loading = false; ref= success? $refs.saved : $refs.failed; $(ref).fadeIn(50); $(ref).fadeOut(1000);">
+        Transfer&nbsp;<i class="fa-solid fa-square-arrow-up-right"></i>
+    </button>
+  
     <div class="findings-inner"> 
       <template x-for="finding in viewer? viewer.findings : []" :key="finding.id">
       <div class="mb-2 img-thumbnail">

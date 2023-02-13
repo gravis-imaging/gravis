@@ -324,7 +324,9 @@ def store_finding(request, case, source_set, finding_id=None):
         finding = Finding(
                 created_by = request.user, 
                 dicom_set = dicom_set,
+                case = dicom_set.case,
                 file_location = filename.relative_to(Path(dicom_set.case.case_location)),
+                dicom_location = (directory / "finding.dcm").relative_to(Path(dicom_set.case.case_location)),
                 # name = data.get("name",None),
                 # data = data.get("data",None)
                 )
