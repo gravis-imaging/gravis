@@ -21,6 +21,7 @@ urlpatterns = [
     path("user/", views.user, name="user"),
     path("cases/", CaseView()),
     path("media/<path:path>", views.serve_media),
+    path("tags/", views.update_tags),
 
     path("api/case/<str:case>/dicom_set/<str:source_set>/timeseries",grasp_endpoints.timeseries_data),
     path("api/case/<str:case>/dicom_set/<str:source_set>/preview/<str:view>/<str:location>", grasp_endpoints.preview_urls),

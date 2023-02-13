@@ -154,3 +154,21 @@ def browser_get_case(request, case):
     json_data = extract_case(case)
     return JsonResponse(json_data, safe=False)
 
+@login_required
+def update_tags(request):
+    if request.method == 'POST':
+        
+        import json
+        body = json.loads(request.body.decode('utf-8'))
+        print("BBBBBBB ", body)
+        case_id = body['case_id']
+        case = Case.objects.get(id=case_id)
+        
+        response = JsonResponse({'status':'OK'})
+        response.status_code = 200
+        return response 
+    # nothing went well
+    return HttpResponse('FAIL')
+
+    
+
