@@ -661,6 +661,15 @@ class GraspViewer {
         const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding/${id}`,{}, "DELETE");
         this.findings = await this.loadFindings()
     }
+    async renameFinding(finding){
+        let prompt_result = prompt("Finding name?")
+        if (! prompt_result ) return;
+        prompt_result = prompt_result.trim();
+        if (! prompt_result ) return;
+        finding.name = prompt_result;
+        const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding/${finding.id}`,{name:finding.name}, "PATCH");
+        // this.findings = await this.loadFindings()
+    }
     async goToFinding(finding) {
         if (finding.data.viewportId != "VIEW_AUX") {
             for (const v of this.viewports) {

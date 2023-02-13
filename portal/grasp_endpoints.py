@@ -279,7 +279,7 @@ def sc_from_ref(reference_dataset, pixel_array):
     return sc
 
 @login_required
-def store_finding(request, case, source_set, id=None):
+def store_finding(request, case, source_set, finding_id=None):
     dicom_set = DICOMSet.objects.get(id=int(source_set))
     if request.method == 'GET':
         results = []
@@ -287,11 +287,20 @@ def store_finding(request, case, source_set, id=None):
             results += [f.to_dict() for f in set_.findings.all() if f.file_location]
         return JsonResponse(dict(findings=results))
     elif request.method == "DELETE":
-        finding = Finding.objects.get(id=id)
+        finding = Finding.objects.get(id=finding_id)
         shutil.rmtree((Path(dicom_set.case.case_location) / finding.file_location).parent)
         finding.delete()
         return JsonResponse({})
-    elif request.method == 'POST':
+    elif request.method == "PATCH":
+        finding = Finding.objects.get(id=finding_id)
+        data = json.loads(request.body)
+        if name := data.get("name",None):
+            finding.name = name
+        if data := data.get("data",None):
+            finding.data = data
+        finding.save()
+        return JsonResponse({})
+    elif request.method == "POST":
         data = json.loads(request.body.decode("utf-8"))
         with urlopen(data["image_data"]) as response:
             image_data = response.read()
@@ -316,7 +325,9 @@ def store_finding(request, case, source_set, id=None):
                 created_by = request.user, 
                 dicom_set = dicom_set,
                 file_location = filename.relative_to(Path(dicom_set.case.case_location)),
-                data = data.get("info",None))
+                # name = data.get("name",None),
+                # data = data.get("data",None)
+                )
         finding.save()
         return JsonResponse(finding.to_dict())
 
@@ -329,11 +340,13 @@ def handle_session(request, case, session_id=None):
     else:
         return HttpResponseNotAllowed(["POST","GET"])
 
+@login_required
 def new_session(request,case):
     session = SessionInfo(case=Case.objects.get(id=case), cameras=[], voi={}, annotations=[], user=request.user)
     session.save()
     return JsonResponse(session.to_dict())
 
+@login_required
 def all_sessions(request,case):
     sessions = SessionInfo.objects.filter(case=Case.objects.get(id=case), user=request.user)
     return JsonResponse(dict(sessions=[dict(id=s.id, created_at=s.created_at.timestamp(), updated_at=s.updated_at.timestamp()) for s in sessions]))
