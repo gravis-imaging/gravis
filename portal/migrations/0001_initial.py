@@ -53,16 +53,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='Tag',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=200)),
-            ],
-            options={
-                'db_table': 'gravis_tag',
-            },
-        ),
-        migrations.CreateModel(
             name='UserProfile',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -147,11 +137,6 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'gravis_dicom_instance',
             },
-        ),
-        migrations.AddField(
-            model_name='case',
-            name='tags',
-            field=models.ManyToManyField(to='portal.tag'),
         ),
         migrations.AddField(
             model_name='case',
