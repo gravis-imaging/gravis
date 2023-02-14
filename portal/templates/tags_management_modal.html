@@ -26,6 +26,14 @@ $(document).ready(function() {
     $('.modal .myselect2').select2({
         tags: true,
         width: '100%',
+        templateResult: function (data, container) {
+            $(container).css("color", "black");
+            return data.text;
+        },
+        templateSelection: function (data, container) {
+            $(container).css("color", "black");
+            return data.text;
+        },
         dropdownParent: $('.modal')
     });
 });
@@ -125,10 +133,7 @@ function updateTags() {
                 'error'
             )
         }
-    });
-
-   
-    
+    });   
 }
 
 // after tags are updated in the dialog, need to update the database
