@@ -8,6 +8,17 @@ from pydicom import Dataset, valuerep
 from datetime import datetime
 from django.conf import settings
 
+
+class Tag(models.Model):
+    name = models.CharField(max_length=200, blank=False, null=False)
+    
+    class Meta:
+        db_table = "gravis_tag"
+
+    def __str__(self):
+        return self.name
+
+
 class Case(models.Model):
     """
     A model to represent a Gravis case.
@@ -64,8 +75,8 @@ class Case(models.Model):
         default=None,
         null=True,
         related_name="viewed_by",
-    )
-    tags = JSONField(blank=True, null=True)
+    )    
+    tags = models.ManyToManyField(Tag)
 
     class Meta:
         db_table = "gravis_case"
@@ -266,11 +277,6 @@ class UserProfile(models.Model):
     class Meta:
         db_table = "gravis_user_profile"
 
-# class Tag(models.Model):
-#     tag = models.CharField(max_length=100, blank=False, null=False)
-#     case = models.ManyToManyField(Case)
-#     class Meta:
-#         db_table = "gravis_tags"
 
-#     def __str__(self):
-#         return self.tag
+
+     

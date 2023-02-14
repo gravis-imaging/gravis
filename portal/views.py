@@ -9,7 +9,7 @@ from django.contrib import messages
 from django.views.static import serve
 # from django.contrib.staticfiles import views as static_views
 
-from .models import Case, DICOMInstance
+from .models import Case, DICOMInstance, Tag
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +110,7 @@ def add_case(request):
 
 
 def extract_case(case_object):
-    tmp_tags = ["item1", "item2"]
+
     return { 
         'case_id': str(case_object.id),
         "patient_name": case_object.patient_name,
@@ -126,7 +126,7 @@ def extract_case(case_object):
         "settings": case_object.settings,
         "last_read_by_id": case_object.last_read_by.username if case_object.last_read_by_id else "",
         "viewed_by_id": case_object.viewed_by.username if case_object.viewed_by_id else "",
-        "tags": tmp_tags #case_object.tags if case_object.tags else "",
+        "tags": list(tag.name for tag in case_object.tags.all()) 
     }
 
 
@@ -144,6 +144,19 @@ def browser_get_cases_all(request):
 
 
 @login_required
+def browser_get_tags_all(request):
+    '''
+    Returns a JSON object containing information on all tags stored in the database.
+    '''
+    tags = []
+    all_tags = Tag.objects.all()
+    for tag in all_tags:
+        tags.append(tag.name)
+
+    return JsonResponse({"tags": tags}, safe=False)
+
+
+@login_required
 def browser_get_case(request, case):
     '''
     Returns information about the given case in JSON format. Returns 404 page if
@@ -153,22 +166,39 @@ def browser_get_case(request, case):
 
     json_data = extract_case(case)
     return JsonResponse(json_data, safe=False)
+    
 
 @login_required
 def update_tags(request):
-    if request.method == 'POST':
-        
+    if request.method == 'POST':        
         import json
         body = json.loads(request.body.decode('utf-8'))
-        print("BBBBBBB ", body)
         case_id = body['case_id']
         case = Case.objects.get(id=case_id)
-        
+        tags = body['tags']
+
+        # clear old tags from the case, but keep the tags in db
+        old_tags = case.tags.all()
+        for old_tag in old_tags:
+            case.tags.remove(old_tag)
+
+        for tag in tags:
+            existing_tag = Tag.objects.filter(name=tag).first()
+            print(existing_tag)
+            if(existing_tag is None):
+                new_tag = Tag(name=tag)
+                new_tag.save()
+                case.tags.add(new_tag)
+                # new_tag.cases.add(case)                
+            else:
+                case.tags.add(existing_tag)
+                # existing_tag.cases.add(case)               
+            
         response = JsonResponse({'status':'OK'})
-        response.status_code = 200
+        # response.status_code = 200
         return response 
     # nothing went well
-    return HttpResponse('FAIL')
+    return JsonResponse({'status':'FAIL'})
 
     
 
