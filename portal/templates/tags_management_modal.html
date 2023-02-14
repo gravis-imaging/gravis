@@ -8,7 +8,7 @@
             <div class="modal-body">
                 <input type="hidden" id="case_id" name="case_id">
                 Select from available tags or type in a new one:
-                <select class="form-control select2" multiple="multiple" id="select_tags" style="color: black">
+                <select class="form-control myselect2" multiple="multiple" id="select_tags" style="color: black">
                 </select>                               
             </div>
             <div class="modal-footer">
@@ -23,7 +23,7 @@
 <script>
 
 $(document).ready(function() {
-    $('.modal .select2').select2({
+    $('.modal .myselect2').select2({
         tags: true,
         width: '100%',
         dropdownParent: $('.modal')
@@ -33,10 +33,11 @@ $(document).ready(function() {
 // Retrieves that information for the given case from the server and shows a modal popup window with
 // the information
 function showTagsDialog(case_id) {
-    $.ajax({
+    var ajax1 = $.ajax({ 
         type: 'GET',
+        dataType: "json",
         url: '/browser/get_case/'+case_id,
-        dataType: 'json',
+        async: true,
         error: function () {
             // Show error if the data cannot be read from server
             Swal.fire(
@@ -45,28 +46,60 @@ function showTagsDialog(case_id) {
                 'error'
             )
         },
-        success: function (data) {
-            // Call helper function to display modal window with information
-            displayTagsInformation(data);
+        success: function(result) {},
+        timeout: 3000                    
+    });
+    var ajax2 = $.ajax({ 
+        type: 'GET',
+        dataType: "json",
+        url: '/browser/get_tags_all',
+        async: true,
+        error: function () {
+            // Show error if the data cannot be read from server
+            Swal.fire(
+                'Error',
+                'Unable to find tags information.',
+                'error'
+            )
         },
-        complete: function (data) {
-        },
-        timeout: 3000
+        success: function(result) {},
+        timeout: 3000 
+    });
+    $.when( ajax1 , ajax2  ).done(function( case_data, tags_data ) {
+        displayTagsInformation(case_data[0].case_id, case_data[0].tags, tags_data[0].tags);
     });
 }
 
 // Renders the retrieved JSON information in modal window and displays it 
-function displayTagsInformation(caseData) {
-    const case_id = document.getElementById("case_id");
-    const select = document.getElementById("select_tags");
-    case_id.innerText = caseData.case_id;
-    for (const tag of caseData.tags) {
-        const option = document.createElement("option");
-        option.value = tag;
-        option.innerHTML = tag;
-        select.appendChild(option);
+function displayTagsInformation(case_id, case_tags, all_tags) {
+    const case_id_el = document.getElementById("case_id");
+    case_id_el.innerText = case_id;
+    let tag_select = $('.myselect2');  
+
+    $('.myselect2').val(null).trigger('change');
+
+    for (const tag of case_tags) {
+        // create the option and append to Select2
+        let option = new Option(tag, tag, true, true);
+        tag_select.append(option).trigger('change');
+
+        // manually trigger the `select2:select` event
+        // tag_select.trigger({
+        // type: 'select2:select',
+        // params: {
+        //     data: case_tags
+        // }
+        // });
     }
-    
+
+    // tags that do not currently belong to the case, but need to be made available to select
+    let other_tags = all_tags.filter(x => !case_tags.includes(x));
+    for (const tag of other_tags) {
+        // create the option and append to Select2
+        let option = new Option(tag, tag, false, false);
+        tag_select.append(option);
+    }    
+
     // Display the modal window
     const myModalElement = document.getElementById('tags_selection_modal');
     const modal = new mdb.Modal(myModalElement);
@@ -74,15 +107,31 @@ function displayTagsInformation(caseData) {
 }
 
 function updateTags() {
-    const selected = $('.select2').find(':selected');
+    const selected = $('.myselect2').find(':selected');
     const case_id = document.getElementById("case_id").innerText;
     const tags = [];
     for (let i = 0; i < selected.length; i++) {
         tags.push(selected[i].text);
     }    
-    sendData({tags: tags, case_id: case_id});
+    sendData({tags: tags, case_id: case_id}).then(result => {
+        if(result.status == "OK") {
+            window.location.reload();
+            $('#tags_selection_modal').modal('hide');
+        }
+        else {
+            Swal.fire(
+                'Error',
+                'Unable to update tags information.',
+                'error'
+            )
+        }
+    });
+
+   
+    
 }
 
+// after tags are updated in the dialog, need to update the database
 async function sendData(data){
   let response = await fetch('/tags/', {
     method: 'POST',
@@ -93,7 +142,8 @@ async function sendData(data){
     },
     body: JSON.stringify(data)
   });
-
+  const result = await response.json();
+  return result;
 //   if(response != "OK") {
 //       let error=await response.text();
 //       console.log(`failed updating tags: ${error}`);
