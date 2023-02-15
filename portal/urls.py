@@ -10,6 +10,7 @@ urlpatterns = [
     path("", views.index, name="index"),
     path("browser/get_cases_all", views.browser_get_cases_all),
     path("browser/get_tags_all", views.browser_get_tags_all),
+    path("browser/get_case_tags_and_all_tags/<str:case_id>", views.browser_get_case_tags_and_all_tags),
     path("browser/get_case/<str:case>", views.browser_get_case),
     path("login/", views.login_request, name="login"),
     path("logout/", views.logout_request, name="logout"),
@@ -22,7 +23,8 @@ urlpatterns = [
     path("user/", views.user, name="user"),
     path("cases/", CaseView()),
     path("media/<path:path>", views.serve_media),
-    path("tags/", views.update_tags),
+    path("update_case_tags/", views.update_case_tags),
+    path("update_tags/", views.update_tags),
 
     path("api/case/<str:case>/dicom_set/<str:source_set>/timeseries",grasp_endpoints.timeseries_data),
     path("api/case/<str:case>/dicom_set/<str:source_set>/preview/<str:view>/<str:location>", grasp_endpoints.preview_urls),
