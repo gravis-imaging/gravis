@@ -374,7 +374,10 @@ def get_session(request, case, session_id=None):
     if session_id:
         session = get_object_or_404(SessionInfo,  id=session_id,case=case, user=request.user)
     else:
-        session = SessionInfo.objects.filter(case=case, user=request.user).latest("updated_at")
+        try:
+            session = SessionInfo.objects.filter(case=case, user=request.user).latest("updated_at")
+        except SessionInfo.DoesNotExist:
+            return new_session(request,case)
     return JsonResponse(session.to_dict())
 
 
