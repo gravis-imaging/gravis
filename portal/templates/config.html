@@ -93,21 +93,33 @@
           <button type="submit" class="btn btn-primary btn-block mb-4">Place order</button>
         </form>
       </div>
+
+      <!-- Tag management -->
       <div class="tab-pane fade" id="v-pills-tags-management" role="tabpanel" aria-labelledby="v-pills-tags-management-tab">
-        TAG MANAGEMENT
-        <ul class="list-group list-group-dark" >
-          {% for tag in tags %}
-          <li class="list-group-item list-tag-item d-flex justify-content-between align-items-start">
-            <div class="ms-2 me-auto" id="selected-tags" >
-              <input class="tag-check form-check-input me-1" type="checkbox" value="{{tag.0}}" aria-label="..." />
-              {{ tag.0 }}
-            </div>
-            <span class="badge badge-primary rounded-pill">{{ tag.1 }}</span>
-          </li>
-          {% endfor %}
-        </ul>
-        <button type="button" id="btn_delete_selected" onclick="updateCaseTags()" class="btn btn-primary">Delete Selected Tags</button>
+        SELECT TAGS TO DELETE
+        <div class="tag-list mt-4">
+          <ul class="list-group list-group-dark" >
+            {% for tag in tags %}
+            <li class="list-group-item list-tag-item d-flex justify-content-between align-items-center">
+              <div class="ms-2 me-auto" id="selected-tags" >
+                <input class="tag-check form-check-input me-1" type="checkbox" value="{{tag.0}}" aria-label="..." />
+                {{ tag.0 }}
+              </div>
+              <div style="width:200px">
+                <button type="button" class="btn btn-info" value="{{tag.2}}" onclick="showCasesInfo(this)">Cases</button>
+              </div>
+              <div style="width:100px">
+                <span class="badge badge-primary rounded-pill">{{ tag.1 }}</span>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div>
+          <button type="button" id="btn_delete_selected" onclick="updateCaseTags()" class="btn btn-primary mt-4">Delete Selected Tags</button>
+        </div>
       </div>
+
       <div class="tab-pane fade" id="v-pills-profile" role="tabpanel" aria-labelledby="v-pills-profile-tab">
         TODO
       </div>
@@ -119,6 +131,8 @@
   </div>
 </div>
 <!-- Tabs content -->
+
+{% include "tag_cases_information_modal.html" %}
 {% endblock %}
 
 {% block addedscripts %}
@@ -134,6 +148,12 @@ $(document).ready(function(){
         $('#v-pills-tab a[href="' + activeTab + '"]').tab('show');
     }
 });
+
+function showCasesInfo(element) {
+  let cases_list = eval(element.value);
+  showTagCasesInformation(cases_list);    
+}
+
 
 function updateCaseTags() {
   let selected_tags = [];

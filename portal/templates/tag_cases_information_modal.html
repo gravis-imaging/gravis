@@ -1,0 +1,68 @@
+<div class="modal" id="tag_cases_details_modal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Case Details for Selected Tag</h5>
+                <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-sm" id="tag_cases_table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Patient</th>
+                            <th>MRN</th>
+                            <th>ACC</th>
+                        </tr>
+                    </thead>
+                    
+                </table>         
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-mdb-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    
+function showTagCasesInformation(cases_list) {
+
+    let tag_cases_table_el = document.getElementById('tag_cases_table');
+    try {        
+        let rowCount = tag_cases_table_el.rows.length;
+
+        for(let i = rowCount - 1; i >= 0; i--) {
+            let row = tag_cases_table_el.rows[i];
+            tag_cases_table_el.deleteRow(i);
+        }
+    }
+    catch(e) {
+        alert(e);
+    }
+
+    console.log("INSIDE MODAL")
+    for(let i=0; i < cases_list.length; i++) {
+        var newRow = tag_cases_table_el.insertRow();
+
+        var newCell = newRow.insertCell();
+        newCell.innerHTML="<tr><td>" + cases_list[i]["id"] + "</td></tr>";
+
+        newCell = newRow.insertCell();
+        newCell.innerHTML="<tr><td>" + cases_list[i]["patient_name"] + "</td></tr>";
+
+        newCell = newRow.insertCell();
+        newCell.innerHTML="<tr><td>" + cases_list[i]["mrn"] + "</td></tr>";
+
+        newCell = newRow.insertCell();
+        newCell.innerHTML="<tr><td>" + cases_list[i]["acc"] + "</td></tr>";
+    }
+
+    const myModalEl = document.getElementById('tag_cases_details_modal');
+    const modal = new mdb.Modal(myModalEl);
+    modal.show();
+
+}
+
+</script>

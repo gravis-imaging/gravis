@@ -76,7 +76,8 @@ def user(request):
 def config(request):
     context = {
         "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user),
-        "tags": [(tag.name, tag.case_set.all().count()) for tag in Tag.objects.all()]
+        "tags": [(tag.name, tag.case_set.all().count(), [{'id': case.id, 'patient_name': case.patient_name, 'mrn': case.mrn, 'acc': case.acc} 
+            for case in tag.case_set.all()]) for tag in Tag.objects.all()]
     }
     return render(request, "config.html", context)
 
