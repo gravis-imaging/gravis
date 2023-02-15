@@ -1,5 +1,5 @@
 import logging
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
@@ -75,7 +75,8 @@ def user(request):
 @login_required
 def config(request):
     context = {
-        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user)
+        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user),
+        "tags": [(tag.name, tag.case_set.all().count()) for tag in Tag.objects.all()]
     }
     return render(request, "config.html", context)
 
@@ -126,7 +127,7 @@ def extract_case(case_object):
         "settings": case_object.settings,
         "last_read_by_id": case_object.last_read_by.username if case_object.last_read_by_id else "",
         "viewed_by_id": case_object.viewed_by.username if case_object.viewed_by_id else "",
-        "tags": list(tag.name for tag in case_object.tags.all()) 
+        "tags": [tag.name for tag in case_object.tags.all()]
     }
 
 
@@ -148,12 +149,27 @@ def browser_get_tags_all(request):
     '''
     Returns a JSON object containing information on all tags stored in the database.
     '''
-    tags = []
-    all_tags = Tag.objects.all()
-    for tag in all_tags:
-        tags.append(tag.name)
+    # tags = [tag.name for tag in Tag.objects.all()]
+    # all_tags = Tag.objects.all()
+    # for tag in all_tags:
+    #     tags.append(tag.name)
+    return JsonResponse({"tags": [(tag.name, tag.case_set.all().count()) for tag in Tag.objects.all()]}, safe=False)
 
-    return JsonResponse({"tags": tags}, safe=False)
+
+@login_required
+def browser_get_case_tags_and_all_tags(request, case_id):
+    '''
+    Returns a JSON object containing information on all tags stored in the database 
+    and tags specific to the current case.
+    '''
+    # tags = []
+    # all_tags = Tag.objects.all()
+    # for tag in all_tags:
+    #     tags.append(tag.name)
+
+    case = get_object_or_404(Case, id=case_id)
+
+    return JsonResponse({"tags": [tag.name for tag in Tag.objects.all()], "case_tags": [tag.name for tag in case.tags.all()]}, safe=False)
 
 
 @login_required
@@ -166,15 +182,15 @@ def browser_get_case(request, case):
 
     json_data = extract_case(case)
     return JsonResponse(json_data, safe=False)
-    
+
 
 @login_required
-def update_tags(request):
+def update_case_tags(request):
     if request.method == 'POST':        
         import json
         body = json.loads(request.body.decode('utf-8'))
         case_id = body['case_id']
-        case = Case.objects.get(id=case_id)
+        case = get_object_or_404(Case, id=case_id)
         tags = body['tags']
 
         # clear old tags from the case, but keep the tags in db
@@ -184,7 +200,6 @@ def update_tags(request):
 
         for tag in tags:
             existing_tag = Tag.objects.filter(name=tag).first()
-            print(existing_tag)
             if(existing_tag is None):
                 new_tag = Tag(name=tag)
                 new_tag.save()
@@ -194,11 +209,26 @@ def update_tags(request):
                 case.tags.add(existing_tag)
                 # existing_tag.cases.add(case)               
             
-        response = JsonResponse({'status':'OK'})
-        # response.status_code = 200
-        return response 
+        return HttpResponse('OK') 
     # nothing went well
-    return JsonResponse({'status':'FAIL'})
+    return HttpResponseBadRequest("Only POST method is implemented.")
+
+
+ 
+@login_required
+def update_tags(request):
+    if request.method == 'POST':        
+        import json
+        body = json.loads(request.body.decode('utf-8'))
+        tags = body['tags']
+        for tag_name in tags:
+            tag = get_object_or_404(Tag, name=tag_name)
+            tag.delete()          
+            
+        return HttpResponse('OK') 
+    # nothing went well
+    return HttpResponseBadRequest("Only POST method is implemented.")
 
     
+   
 

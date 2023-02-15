@@ -17,8 +17,9 @@
       <a class="nav-link " id="v-pills-home-tab" data-mdb-toggle="pill" href="#v-pills-home" role="tab"
         aria-controls="v-pills-home" aria-selected="true"><i class="fas fa-cog"></i>&nbsp;&nbsp;General</a>
       <a class="nav-link" id="v-pills-profile-tab" data-mdb-toggle="pill" href="#v-pills-profile" role="tab"
-        aria-controls="v-pills-profile" aria-selected="false"><i
-          class="fas fa-user-friends"></i>&nbsp;&nbsp;Accounts</a>
+        aria-controls="v-pills-profile" aria-selected="false"><i class="fas fa-user-friends"></i>&nbsp;&nbsp;Accounts</a>
+      <a class="nav-link" id="v-pills-tags-management-tab" data-mdb-toggle="pill" href="#v-pills-tags-management" role="tab"
+        aria-controls="v-pills-tags-management" aria-selected="false"><i class="fas fa-tags"></i>&nbsp;&nbsp;Tag Management</a>
       <a class="nav-link" id="v-pills-messages-tab" data-mdb-toggle="pill" href="#v-pills-messages" role="tab"
         aria-controls="v-pills-messages" aria-selected="false"><i class="fas fa-box-open"></i>&nbsp;&nbsp;GRASP MRA</a>
       <a class="nav-link" id="v-pills-messages-tab" data-mdb-toggle="pill" href="#v-pills-messages" role="tab"
@@ -92,6 +93,21 @@
           <button type="submit" class="btn btn-primary btn-block mb-4">Place order</button>
         </form>
       </div>
+      <div class="tab-pane fade" id="v-pills-tags-management" role="tabpanel" aria-labelledby="v-pills-tags-management-tab">
+        TAG MANAGEMENT
+        <ul class="list-group list-group-dark" >
+          {% for tag in tags %}
+          <li class="list-group-item list-tag-item d-flex justify-content-between align-items-start">
+            <div class="ms-2 me-auto" id="selected-tags" >
+              <input class="tag-check form-check-input me-1" type="checkbox" value="{{tag.0}}" aria-label="..." />
+              {{ tag.0 }}
+            </div>
+            <span class="badge badge-primary rounded-pill">{{ tag.1 }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        <button type="button" id="btn_delete_selected" onclick="updateCaseTags()" class="btn btn-primary">Delete Selected Tags</button>
+      </div>
       <div class="tab-pane fade" id="v-pills-profile" role="tabpanel" aria-labelledby="v-pills-profile-tab">
         TODO
       </div>
@@ -103,5 +119,67 @@
   </div>
 </div>
 <!-- Tabs content -->
+{% endblock %}
+
+{% block addedscripts %}
+
+<script>
+
+$(document).ready(function(){
+    $('a[role="tab"]').on('show.bs.tab', function(e) {
+        localStorage.setItem('activeTab', $(e.target).attr('href'));
+    });
+    let activeTab = localStorage.getItem('activeTab');
+    if(activeTab){
+        $('#v-pills-tab a[href="' + activeTab + '"]').tab('show');
+    }
+});
+
+function updateCaseTags() {
+  let selected_tags = [];
+  $('#selected-tags input:checked').each(function() {
+      selected_tags.push($(this).attr('value'));
+  });
+  
+  const selected = $('.tags_select2').find(':selected');
+  const tags = [];
+  for (let i = 0; i < selected.length; i++) {
+      tags.push(selected[i].text);
+  }    
+  sendTagsData({tags: selected_tags}).then(result => {
+      if(result == "OK") {
+          window.location.reload();
+          // $( "#v-pills-tags-management-tab" ).load(window.location.href + " #v-pills-tags-management-tab" );
+      }
+      else {
+          Swal.fire(
+              'Error',
+                result,
+              'error'
+          )
+      }
+  });   
+}
+
+// after tags are updated in the dialog, need to update the database
+async function sendTagsData(data){
+  let response = await fetch('/update_tags/', {
+    method: 'POST',
+    headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}',
+    },
+    body: JSON.stringify(data)
+  });
+  const result = await response.text();
+  return result;
+}
+
+</script>
+
+
+</script>
+
 {% endblock %}
 

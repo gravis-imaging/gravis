@@ -447,3 +447,10 @@ button:focus:not(:focus-visible) {
 .selectpicker {
     display: none;
 }
+
+.list-group .list-tag-item {
+    color: #f1f9fb!important; 
+    /* border-top: 1px solid #0091b5;
+    border-left-color: #fff;
+    border-right-color: #fff; */
+  }

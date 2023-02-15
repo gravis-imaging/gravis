@@ -8,11 +8,11 @@
             <div class="modal-body">
                 <input type="hidden" id="case_id" name="case_id">
                 Select from available tags or type in a new one:
-                <select class="form-control myselect2" multiple="multiple" id="select_tags" style="color: black">
+                <select class="form-control tags_select2" multiple="multiple" id="select_tags" style="color: black">
                 </select>                               
             </div>
             <div class="modal-footer">
-                <button type="button" id="btn_ok" onclick="updateTags()" class="btn btn-primary">OK</button>
+                <button type="button" id="btn_ok" onclick="updateCaseTags()" class="btn btn-primary">OK</button>
                 <button type="button" class="btn btn-primary" data-mdb-dismiss="modal">Cancel</button>
             </div>
         </div>
@@ -23,7 +23,7 @@
 <script>
 
 $(document).ready(function() {
-    $('.modal .myselect2').select2({
+    $('.modal .tags_select2').select2({
         tags: true,
         width: '100%',
         templateResult: function (data, container) {
@@ -41,10 +41,10 @@ $(document).ready(function() {
 // Retrieves that information for the given case from the server and shows a modal popup window with
 // the information
 function showTagsDialog(case_id) {
-    var ajax1 = $.ajax({ 
+    let retrieve_tags = $.ajax({ 
         type: 'GET',
         dataType: "json",
-        url: '/browser/get_case/'+case_id,
+        url: '/browser/get_case_tags_and_all_tags/'+case_id,
         async: true,
         error: function () {
             // Show error if the data cannot be read from server
@@ -57,24 +57,8 @@ function showTagsDialog(case_id) {
         success: function(result) {},
         timeout: 3000                    
     });
-    var ajax2 = $.ajax({ 
-        type: 'GET',
-        dataType: "json",
-        url: '/browser/get_tags_all',
-        async: true,
-        error: function () {
-            // Show error if the data cannot be read from server
-            Swal.fire(
-                'Error',
-                'Unable to find tags information.',
-                'error'
-            )
-        },
-        success: function(result) {},
-        timeout: 3000 
-    });
-    $.when( ajax1 , ajax2  ).done(function( case_data, tags_data ) {
-        displayTagsInformation(case_data[0].case_id, case_data[0].tags, tags_data[0].tags);
+    $.when( retrieve_tags ).done(function( data ) {
+        displayTagsInformation(case_id, data.case_tags, data.tags);
     });
 }
 
@@ -82,22 +66,14 @@ function showTagsDialog(case_id) {
 function displayTagsInformation(case_id, case_tags, all_tags) {
     const case_id_el = document.getElementById("case_id");
     case_id_el.innerText = case_id;
-    let tag_select = $('.myselect2');  
+    let tag_select = $('.tags_select2');  
 
-    $('.myselect2').val(null).trigger('change');
+    $('.tags_select2').val(null).trigger('change');
 
     for (const tag of case_tags) {
-        // create the option and append to Select2
+        // create an option and append to tags_select2
         let option = new Option(tag, tag, true, true);
         tag_select.append(option).trigger('change');
-
-        // manually trigger the `select2:select` event
-        // tag_select.trigger({
-        // type: 'select2:select',
-        // params: {
-        //     data: case_tags
-        // }
-        // });
     }
 
     // tags that do not currently belong to the case, but need to be made available to select
@@ -114,22 +90,22 @@ function displayTagsInformation(case_id, case_tags, all_tags) {
     modal.show();
 }
 
-function updateTags() {
-    const selected = $('.myselect2').find(':selected');
+function updateCaseTags() {
+    const selected = $('.tags_select2').find(':selected');
     const case_id = document.getElementById("case_id").innerText;
     const tags = [];
     for (let i = 0; i < selected.length; i++) {
         tags.push(selected[i].text);
     }    
     sendData({tags: tags, case_id: case_id}).then(result => {
-        if(result.status == "OK") {
+        if(result == "OK") {
             window.location.reload();
             $('#tags_selection_modal').modal('hide');
         }
         else {
             Swal.fire(
                 'Error',
-                'Unable to update tags information.',
+                 result,
                 'error'
             )
         }
@@ -138,7 +114,7 @@ function updateTags() {
 
 // after tags are updated in the dialog, need to update the database
 async function sendData(data){
-  let response = await fetch('/tags/', {
+  let response = await fetch('/update_case_tags/', {
     method: 'POST',
     headers: {
         'Accept': 'application/json',
@@ -147,12 +123,8 @@ async function sendData(data){
     },
     body: JSON.stringify(data)
   });
-  const result = await response.json();
+  const result = await response.text();
   return result;
-//   if(response != "OK") {
-//       let error=await response.text();
-//       console.log(`failed updating tags: ${error}`);
-//   }          
 }
 
 </script>
