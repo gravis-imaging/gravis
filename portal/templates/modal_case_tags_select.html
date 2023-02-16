@@ -99,7 +99,8 @@ function updateCaseTags() {
     }    
     sendData({tags: tags, case_id: case_id}).then(result => {
         if(result == "OK") {
-            window.location.reload();
+            // window.location.reload();
+            $('#casetable').DataTable().ajax.reload();
             $('#tags_selection_modal').modal('hide');
         }
         else {

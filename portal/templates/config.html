@@ -96,7 +96,7 @@
 
       <!-- Tag management -->
       <div class="tab-pane fade" id="v-pills-tags-management" role="tabpanel" aria-labelledby="v-pills-tags-management-tab">
-        SELECT TAGS TO DELETE
+        <h4>Select Tags to Delete</h4>
         <div class="tag-list mt-4">
           <ul class="list-group list-group-dark" >
             {% for tag in tags %}
@@ -104,12 +104,12 @@
               <div class="ms-2 me-auto" id="selected-tags" >
                 <input class="tag-check form-check-input me-1" type="checkbox" value="{{tag.0}}" aria-label="..." />
                 {{ tag.0 }}
+              </div>              
+              <div style="width:70px">
+                <span class="badge badge-primary rounded-pill" >{{ tag.1 }}</span>
               </div>
-              <div style="width:200px">
+              <div style="width:70px">
                 <button type="button" class="btn btn-info" value="{{tag.2}}" onclick="showCasesInfo(this)">Cases</button>
-              </div>
-              <div style="width:100px">
-                <span class="badge badge-primary rounded-pill">{{ tag.1 }}</span>
               </div>
             </li>
             {% endfor %}
@@ -132,7 +132,7 @@
 </div>
 <!-- Tabs content -->
 
-{% include "tag_cases_information_modal.html" %}
+{% include "modal_config_tag_cases_information.html" %}
 {% endblock %}
 
 {% block addedscripts %}
@@ -161,24 +161,34 @@ function updateCaseTags() {
       selected_tags.push($(this).attr('value'));
   });
   
-  const selected = $('.tags_select2').find(':selected');
-  const tags = [];
-  for (let i = 0; i < selected.length; i++) {
-      tags.push(selected[i].text);
-  }    
-  sendTagsData({tags: selected_tags}).then(result => {
-      if(result == "OK") {
-          window.location.reload();
-          // $( "#v-pills-tags-management-tab" ).load(window.location.href + " #v-pills-tags-management-tab" );
+  if(selected_tags.length > 0) {
+    Swal.fire({
+      title: 'Are you sure?',
+      text: "Do you really want to delete selected tags?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#1266f1',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+      }).then((result) => {
+      if (result.isConfirmed) {                                
+        sendTagsData({tags: selected_tags}).then(result => {
+        if(result == "OK") {
+            window.location.reload();
+            // $( "#v-pills-tags-management-tab" ).load(window.location.href + " #v-pills-tags-management-tab" );
+        }
+        else {
+            Swal.fire(
+                'Error',
+                  result,
+                'error'
+            )
+        }
+        });   
       }
-      else {
-          Swal.fire(
-              'Error',
-                result,
-              'error'
-          )
-      }
-  });   
+    })
+  }
+  
 }
 
 // after tags are updated in the dialog, need to update the database
