@@ -162,13 +162,12 @@ async function updateCaseTags(all_tags) {
   let selected_tags = [];
   $('#selected-tags input:checked').each(function() {
       selected_tags.push($(this).attr('name'));
-      $(this).prop("checked", false);
   });
 
   if(selected_tags.length == 0) {
     return;
   }
-  console.log(all_tags)
+  
   let result = await Swal.fire({
     title: 'Are you sure?',
     text: "Do you really want to delete selected tags?",
@@ -178,6 +177,11 @@ async function updateCaseTags(all_tags) {
     cancelButtonColor: '#d33',
     confirmButtonText: 'Yes, delete it!'
   })
+
+  $('#selected-tags input:checked').each(function() {
+      $(this).prop("checked", false);
+  });
+
   if (!result.isConfirmed) {                                
     return all_tags;
   }
@@ -188,7 +192,6 @@ async function updateCaseTags(all_tags) {
       all_tags = all_tags.filter(a_t => !selected_tags.some(s_t => s_t === a_t[0]))
       // window.location.reload();
       return all_tags;
-      // $( "#v-pills-tags-management-tab" ).load(window.location.href + " #v-pills-tags-management-tab" );
   } else {
     await Swal.fire(
         'Error',

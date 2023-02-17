@@ -68,7 +68,7 @@ function displayTagsInformation(case_id, case_tags, all_tags) {
     case_id_el.innerText = case_id;
     let tag_select = $('.tags_select2');  
 
-    $('.tags_select2').val(null).trigger('change');
+    $('.tags_select2').empty().trigger('change');
 
     for (const tag of case_tags) {
         // create an option and append to tags_select2
