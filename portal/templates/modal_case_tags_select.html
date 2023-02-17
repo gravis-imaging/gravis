@@ -12,7 +12,7 @@
                 </select>                               
             </div>
             <div class="modal-footer">
-                <button type="button" id="btn_ok" onclick="updateCaseTags()" class="btn btn-primary">OK</button>
+                <button type="button" id="btn_ok" onclick="updateCaseTags();" class="btn btn-primary">OK</button>
                 <button type="button" class="btn btn-primary" data-mdb-dismiss="modal">Cancel</button>
             </div>
         </div>
@@ -90,32 +90,31 @@ function displayTagsInformation(case_id, case_tags, all_tags) {
     modal.show();
 }
 
-function updateCaseTags() {
+async function updateCaseTags() {
     const selected = $('.tags_select2').find(':selected');
     const case_id = document.getElementById("case_id").innerText;
     const tags = [];
     for (let i = 0; i < selected.length; i++) {
         tags.push(selected[i].text);
-    }    
-    sendData({tags: tags, case_id: case_id}).then(result => {
-        if(result == "OK") {
-            // window.location.reload();
-            $('#casetable').DataTable().ajax.reload();
-            $('#tags_selection_modal').modal('hide');
-        }
-        else {
-            Swal.fire(
-                'Error',
-                 result,
-                'error'
-            )
-        }
-    });   
+    }
+    const response = await sendData({tags: tags, case_id: case_id})
+    if(response.ok) {
+        // window.location.reload();
+        $('#casetable').DataTable().ajax.reload();
+        $('#tags_selection_modal').modal('hide');
+    }
+    else {
+        await Swal.fire(
+            'Error',
+                await response.text(),
+            'error'
+        )
+    };   
 }
 
 // after tags are updated in the dialog, need to update the database
 async function sendData(data){
-  let response = await fetch('/update_case_tags/', {
+  return await fetch('/update_case_tags/', {
     method: 'POST',
     headers: {
         'Accept': 'application/json',
@@ -124,8 +123,6 @@ async function sendData(data){
     },
     body: JSON.stringify(data)
   });
-  const result = await response.text();
-  return result;
 }
 
 </script>

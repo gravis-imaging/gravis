@@ -1,6 +1,8 @@
 import logging
-from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
+import json
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotAllowed, JsonResponse
 from django.conf import settings
+from django.views.decorators.http import require_http_methods, require_POST, require_GET
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import redirect, render, get_object_or_404
@@ -8,6 +10,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.views.static import serve
 # from django.contrib.staticfiles import views as static_views
+
 
 from .models import Case, DICOMInstance, Tag
 
@@ -189,50 +192,40 @@ def browser_get_case(request, case):
 
 
 @login_required
+@require_POST
 def update_case_tags(request):
-    if request.method == 'POST':        
-        import json
-        body = json.loads(request.body.decode('utf-8'))
-        case_id = body['case_id']
-        case = get_object_or_404(Case, id=case_id)
-        tags = body['tags']
+    body = json.loads(request.body.decode('utf-8'))
+    case_id = body['case_id']
+    case = get_object_or_404(Case, id=case_id)
+    tags = body['tags']
 
-        # clear old tags from the case, but keep the tags in db
-        old_tags = case.tags.all()
-        for old_tag in old_tags:
-            case.tags.remove(old_tag)
+    # clear old tags from the case, but keep the tags in db
+    old_tags = case.tags.all()
+    for old_tag in old_tags:
+        case.tags.remove(old_tag)
 
-        for tag in tags:
-            existing_tag = Tag.objects.filter(name=tag).first()
-            if(existing_tag is None):
-                new_tag = Tag(name=tag)
-                new_tag.save()
-                case.tags.add(new_tag)
-                # new_tag.cases.add(case)                
-            else:
-                case.tags.add(existing_tag)
-                # existing_tag.cases.add(case)               
-            
-        return HttpResponse('OK') 
-    # nothing went well
-    return HttpResponseBadRequest("Only POST method is implemented.")
+    for tag in tags:
+        existing_tag = Tag.objects.filter(name=tag).first()
+        if(existing_tag is None):
+            new_tag = Tag(name=tag)
+            new_tag.save()
+            case.tags.add(new_tag)
+            # new_tag.cases.add(case)                
+        else:
+            case.tags.add(existing_tag)
+            # existing_tag.cases.add(case)               
+        
+    return HttpResponse() 
 
 
  
 @login_required
+@require_POST
 def update_tags(request):
-    if request.method == 'POST':        
-        import json
-        body = json.loads(request.body.decode('utf-8'))
-        tags = body['tags']
-        for tag_name in tags:
-            tag = get_object_or_404(Tag, name=tag_name)
-            tag.delete()          
-            
-        return HttpResponse('OK') 
-    # nothing went well
-    return HttpResponseBadRequest("Only POST method is implemented.")
-
-    
-   
-
+    body = json.loads(request.body.decode('utf-8'))
+    tags = body['tags']
+    for tag_name in tags:
+        tag = get_object_or_404(Tag, name=tag_name)
+        tag.delete()          
+        
+    return HttpResponse() 

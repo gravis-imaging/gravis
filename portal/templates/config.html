@@ -95,28 +95,32 @@
       </div>
 
       <!-- Tag management -->
-      <div class="tab-pane fade" id="v-pills-tags-management" role="tabpanel" aria-labelledby="v-pills-tags-management-tab">
+      {{ tags|json_script:"tags_data" }}
+      <script type="text/javascript">
+        const tags_data_parsed = JSON.parse(document.getElementById('tags_data').textContent);    
+      </script>
+      <div x-data="{count: 0, tags: tags_data_parsed }" class="tab-pane fade" id="v-pills-tags-management" role="tabpanel" aria-labelledby="v-pills-tags-management-tab">
         <h4>Select Tags to Delete</h4>
         <div class="tag-list mt-4">
           <ul class="list-group list-group-dark" >
-            {% for tag in tags %}
-            <li class="list-group-item list-tag-item d-flex justify-content-between align-items-center">
-              <div class="ms-2 me-auto" id="selected-tags" >
-                <input class="tag-check form-check-input me-1" type="checkbox" value="{{tag.0}}" aria-label="..." />
-                {{ tag.0 }}
-              </div>              
-              <div style="width:70px">
-                <span class="badge badge-primary rounded-pill" >{{ tag.1 }}</span>
-              </div>
-              <div style="width:70px">
-                <button type="button" class="btn btn-info" value="{{tag.2}}" onclick="showCasesInfo(this)">Cases</button>
-              </div>
-            </li>
-            {% endfor %}
+            <template x-for="tag in tags">
+              <li class="list-group-item list-tag-item d-flex justify-content-between align-items-center">
+                <div class="ms-2 me-auto" id="selected-tags" >
+                  <input @change="count += ($event.target.checked) ? +$event.target.value : -$event.target.value;" class="tag-check form-check-input me-1" type="checkbox" value="1" x-bind:name="tag[0]"/>
+                  <span x-text="tag[0]"></span>
+                </div>              
+                <div style="width:70px">
+                  <span x-text="tag[1]" class="badge badge-primary rounded-pill" ></span>
+                </div>
+                <div style="width:70px">
+                  <button type="button" x-bind:disabled="!(tag[1] > 0)" class="btn btn-info" x-bind:value="tag[2]" @click="showCasesInfo(tag[2])">Cases</button>
+                </div>
+              </li>
+            </template>
           </ul>
         </div>
         <div>
-          <button type="button" id="btn_delete_selected" onclick="updateCaseTags()" class="btn btn-primary mt-4">Delete Selected Tags</button>
+          <button type="button"  x-bind:disabled="!(count > 0)" @click="tags = await updateCaseTags(tags); count=0;" class="btn btn-primary mt-4">Delete Selected Tags</button>
         </div>
       </div>
 
@@ -150,50 +154,53 @@ $(document).ready(function(){
 });
 
 function showCasesInfo(element) {
-  let cases_list = eval(element.value);
+  let cases_list = eval(element);
   showTagCasesInformation(cases_list);    
 }
 
-
-function updateCaseTags() {
+async function updateCaseTags(all_tags) {
   let selected_tags = [];
   $('#selected-tags input:checked').each(function() {
-      selected_tags.push($(this).attr('value'));
+      selected_tags.push($(this).attr('name'));
+      $(this).prop("checked", false);
   });
-  
-  if(selected_tags.length > 0) {
-    Swal.fire({
-      title: 'Are you sure?',
-      text: "Do you really want to delete selected tags?",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#1266f1',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Yes, delete it!'
-      }).then((result) => {
-      if (result.isConfirmed) {                                
-        sendTagsData({tags: selected_tags}).then(result => {
-        if(result == "OK") {
-            window.location.reload();
-            // $( "#v-pills-tags-management-tab" ).load(window.location.href + " #v-pills-tags-management-tab" );
-        }
-        else {
-            Swal.fire(
-                'Error',
-                  result,
-                'error'
-            )
-        }
-        });   
-      }
-    })
+
+  if(selected_tags.length == 0) {
+    return;
   }
-  
-}
+  console.log(all_tags)
+  let result = await Swal.fire({
+    title: 'Are you sure?',
+    text: "Do you really want to delete selected tags?",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#1266f1',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Yes, delete it!'
+  })
+  if (!result.isConfirmed) {                                
+    return all_tags;
+  }
+
+  const response = await sendTagsData({tags: selected_tags})
+
+  if(response.ok) {
+      all_tags = all_tags.filter(a_t => !selected_tags.some(s_t => s_t === a_t[0]))
+      // window.location.reload();
+      return all_tags;
+      // $( "#v-pills-tags-management-tab" ).load(window.location.href + " #v-pills-tags-management-tab" );
+  } else {
+    await Swal.fire(
+        'Error',
+        await response.text(),
+        'error'
+    )
+  }
+}   
 
 // after tags are updated in the dialog, need to update the database
 async function sendTagsData(data){
-  let response = await fetch('/update_tags/', {
+  return await fetch('/update_tags/', {
     method: 'POST',
     headers: {
         'Accept': 'application/json',
@@ -202,14 +209,10 @@ async function sendTagsData(data){
     },
     body: JSON.stringify(data)
   });
-  const result = await response.text();
-  return result;
 }
 
 </script>
 
-
-</script>
 
 {% endblock %}
 
