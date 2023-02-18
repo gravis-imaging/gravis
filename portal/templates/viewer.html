@@ -56,43 +56,14 @@
       <label for='volume-picker' x-text="viewer && viewer.selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>
  
     <!-- Image manipulation buttons -->
-    <div class="flex ms-2" style="margin-left: 2em; display: flex;">
-      <div class="ms-2">
-        <div class="dropdown">
-          <button
-            class="btn-primary btn-large btn-viewer"
-            disabled="disabled"
-            :disabled="!viewer || loading || switching"
-            href="#"
-            id="dropdownMenuLink"
-            data-mdb-toggle="dropdown"
-            aria-expanded="false",
-            title="Select Session"
-          >
-          <i class="fas fa-rectangle-list"></i>
-        </button>
-          <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-            <template x-show="!!viewer" x-for="session of (viewer? viewer.state_manager.session_list : [])" :key="session.id">
-              <li><a class="dropdown-item" :class="viewer.state_manager.session_id == session.id ? { 'active': true, 'disabled': true} : {}" @click="viewer.state_manager.switchSession(session.id)" href="#" x-text="new Date(session.updated_at*1000).toLocaleString()"></a></li>
-            </template>
-            <li><hr class="dropdown-divider" /></li>
-            <li><a class="dropdown-item" @click="viewer.state_manager.newSession()" href="#">New session</a></li>
-          </ul>
-        </div>    
-      </div>
     
-      <button title="Reset Viewers" class="all-pointer-events btn-primary btn-large btn-viewer ms-2"
+      <button title="Reset Viewers" class="all-pointer-events btn-primary btn-large btn-viewer ms-5" 
       :disabled="loading || switching" disabled="disabled" 
       @click="viewer.viewports.map(v=> {v.resetCamera(); v.render()}); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-arrows-to-circle"></i>
       </button>
 
-      <button title="Save annotations" class="all-pointer-events btn-primary btn-large btn-viewer ms-2"
-      :disabled="loading || switching " disabled="disabled" 
-      @click="await viewer.state_manager.save(); $($refs.saved).fadeIn(50); $($refs.saved).fadeOut(800);"><i class="fa-solid fa-floppy-disk"></i>
-      </button>
-
       <!-- Annotations -->
-      <div class="ms-2">
+      <div class=""  style="margin-left: 1.4rem;">
         <div class="dropdown">
           <button
             class="btn-primary btn-large btn-viewer"
@@ -113,7 +84,7 @@
         </div>    
       </div>
     
-      <button title="Duplicate Selected Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2"
+      <button title="Duplicate Selected Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2" 
           :disabled="!viewer || loading || switching" disabled="disabled" 
           @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
       </button>
@@ -124,7 +95,10 @@
           <path d="M7 2.5a.5.5 0 0 0-.939-.24l-6 11A.5.5 0 0 0 .5 14h6a.5.5 0 0 0 .5-.5v-11zm2.376-.484a.5.5 0 0 1 .563.245l6 11A.5.5 0 0 1 15.5 14h-6a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .376-.484zM10 4.46V13h4.658L10 4.46z"/>
         </svg>
       </button>
-
+      <button title="Save session" class="all-pointer-events btn-primary btn-large btn-viewer ms-2"   
+      :disabled="loading || switching " disabled="disabled" 
+      @click="await viewer.state_manager.save(); $($refs.saved).fadeIn(50); $($refs.saved).fadeOut(800);"><i class="fa-solid fa-floppy-disk"></i>
+      </button>
       <div class="ms-2">
         <div class="dropdown">
           <button
@@ -155,8 +129,35 @@
           </ul>
         </div>    
       </div>      
+
+      <div class="flex" style="display: flex; margin-left: 1.4rem;">
+        <div class="">
+          <div class="dropdown">
+            <button
+              class="btn-primary btn-large btn-viewer"
+              disabled="disabled"
+              :disabled="!viewer || loading || switching"
+              href="#"
+              id="dropdownMenuLink"
+              data-mdb-toggle="dropdown"
+              aria-expanded="false",
+              title="Select Session"
+            >
+            <i class="fas fa-history"></i>
+          </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+              <template x-show="!!viewer" x-for="session of (viewer? viewer.state_manager.session_list : [])" :key="session.id">
+                <li><a class="dropdown-item" :class="viewer.state_manager.session_id == session.id ? { 'active': true, 'disabled': true} : {}" @click="viewer.state_manager.switchSession(session.id)" href="#" x-text="new Date(session.updated_at*1000).toLocaleString()"></a></li>
+              </template>
+              <li><hr class="dropdown-divider" /></li>
+              <li><a class="dropdown-item" @click="viewer.state_manager.newSession()" href="#">New session</a></li>
+            </ul>
+          </div>    
+        </div>
+
+
       <!-- Indicators -->
-      <div style="width:1.75em;">
+      <div class="ms-3" style="width:1.8em; height: 30px; margin-top: auto; margin-bottom: auto;">
         <div :class="(loading || switching || job_loading) || 'invisible'" class="spinner-grow spinner-grow-sm ms-2" role="status" style="position:absolute; z-index: 1; color: hsla(0,0%,100%,.2);  margin-top: 0.3em;">
           <span class="visually-hidden">Loading...</span>
         </div>
@@ -255,28 +256,29 @@
     <button title="" id="findings_expander" style="position: absolute; background-color: transparent;" class="btn-dark btn-large btn-viewer" 
     @click="document.getElementById('findings').classList.toggle('open');">
     </button>
-    <button title="Store Finding" class="all-pointer-events btn-large btn-primary btn-viewer" style="display: block; margin-left: auto; margin-right: 0;"
-       :disabled="loading || switching" disabled="disabled"
-       @click="job_loading = true; success = await viewer.transferFindings(); job_loading = false; ref= success? $refs.saved : $refs.failed; $(ref).fadeIn(50); $(ref).fadeOut(1000);">
-        Transfer&nbsp;<i class="fa-solid fa-square-arrow-up-right"></i>
-    </button>
-  
     <div class="findings-inner"> 
       <template x-for="finding in viewer? viewer.findings : []" :key="finding.id">
-      <div class="mb-2 img-thumbnail">
+      <div class="mb-2 img-thumbnail" style="background-color: #000; box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%);  ">
         <div style="float:right;">       
           <button title="Go to finding" class="btn-dark btn-large btn-viewer me-2 my-2"
           @click="loading = true; await viewer.goToFinding(finding); loading = false;"><i class="fa-solid fa-map-marker-alt"></i>
-        </button><button title="Rename" class="btn-dark btn-large btn-viewer me-2 my-2"
-        @click="await viewer.renameFinding(finding);"><i class="fa-solid fa-pencil"></i>
-      </button><button title="Delete" class="btn-dark btn-large btn-viewer me-2 my-2"
-          @click="await viewer.deleteFinding(finding.id);"><i class="fa-solid fa-trash"></i>
-        </button>
-      </div>
+          </button><button title="Rename" class="btn-dark btn-large btn-viewer me-2 my-2"
+          @click="await viewer.renameFinding(finding);"><i class="fa-solid fa-pencil"></i>
+          </button><button title="Delete" class="btn-dark btn-large btn-viewer me-2 my-2"
+          @click="await viewer.deleteFinding(finding.id);"><i class="fa-solid fa-trash"></i></button>
+        </div>
         <img class="mb-2 img-fluid" :src="finding.url" width="100%"/>
-        <div x-text="finding.name" class="text-expand"></span>
-      </div>
-    </template>
+        <div x-text="finding.name" class="text-expand"></div>
+      </template>
+    <template x-if="viewer.findings && (Object.keys(viewer.findings).length > 0)">
+      <div class="mb-2">
+      <button title="Store Finding" class="all-pointer-events btn-large btn-primary btn-viewer py-2 px-3 mt-3 mb-3" style="display: block; margin-left: auto; margin-right: auto; box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%);"
+      :disabled="loading || switching" disabled="disabled"
+      @click="job_loading = true; success = await viewer.transferFindings(); job_loading = false; ref= success? $refs.saved : $refs.failed; $(ref).fadeIn(50); $(ref).fadeOut(1000);">
+      <i class="fas fa-paper-plane"></i>&nbsp;&nbsp;Send to PACS
+      </button>  
+    </div>
+    </template>    
   </div>
 </div>
 </div>
