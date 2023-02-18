@@ -115,7 +115,7 @@ h2 {
     display: flex; 
     flex-direction: column;
     flex-wrap: nowrap; 
-    margin-left: 8px;
+    margin-left: 8px;    
 }
 
 .findings > div {
@@ -128,15 +128,16 @@ h2 {
     top: 5rem;
     bottom: 1em;
     right: 1em;
-    width: 700px;
+    width: 50%; 
     z-index: 10;
-    background-color: #505050;
+    background-color: #505050; 
     border:1px solid #bdbdbd;
     border-radius: 5px;
     padding: 1em;
     overflow-x: scroll;
     overflow-y: unset;
 }
+
 
 .findings.open > .findings-inner {
     flex-wrap: wrap; 
@@ -313,6 +314,7 @@ button:focus:not(:focus-visible) {
 .btn-viewer {
     border-radius: 3px;
     min-width: 32px;
+    min-height: 32px;
 }
 
 ::-webkit-scrollbar-track,
@@ -344,10 +346,15 @@ button:focus:not(:focus-visible) {
     scrollbar-color: hsla(0,0%,100%,.15);
 }
 
-.btn-viewer-toolbar {
+.btn-viewer-toolbar, .btn-viewer-toolbar:active, .btn-viewer-toolbar:visited, .btn-viewer-toolbar:focus {
   font-size: 1rem;
   line-height: 1.0!important;
+  background-color: #555!important;
 }
+
+.btn-viewer-toolbar:hover {
+    background-color: #1266f1;
+  }
 
 .ripple-wave {
     background: none!important;
@@ -440,10 +447,12 @@ button:focus:not(:focus-visible) {
     white-space: nowrap;
     text-overflow: ellipsis;
 }
+
 .text-expand:hover {
     word-break: break-all;
     white-space:normal;
 }
+
 .selectpicker {
     display: none;
 }
@@ -453,4 +462,4 @@ button:focus:not(:focus-visible) {
     /* border-top: 1px solid #0091b5;
     border-left-color: #fff;
     border-right-color: #fff; */
-  }
+}

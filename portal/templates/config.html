@@ -11,19 +11,18 @@
   <div class="col-12 col-md-2 pb-4">
     <!-- Tab navs -->
     <div class="nav flex-column nav-pills text-center" id="v-pills-tab" role="tablist" aria-orientation="vertical">
-      <a class="nav-link active" id="v-pills-status-tab" data-mdb-toggle="pill" href="#v-pills-status" role="tab"
-        aria-controls="v-pills-status" aria-selected="false"><i class="fas fa-power-off"></i>&nbsp;&nbsp;System
-        Status</a>
-      <a class="nav-link " id="v-pills-home-tab" data-mdb-toggle="pill" href="#v-pills-home" role="tab"
+      <a class="nav-link active" id="v-pills-home-tab" data-mdb-toggle="pill" href="#v-pills-home" role="tab"
         aria-controls="v-pills-home" aria-selected="true"><i class="fas fa-cog"></i>&nbsp;&nbsp;General</a>
-      <a class="nav-link" id="v-pills-profile-tab" data-mdb-toggle="pill" href="#v-pills-profile" role="tab"
-        aria-controls="v-pills-profile" aria-selected="false"><i class="fas fa-user-friends"></i>&nbsp;&nbsp;Accounts</a>
+      <a class="nav-link" id="v-pills-status-tab" data-mdb-toggle="pill" href="#v-pills-status" role="tab"
+        aria-controls="v-pills-status" aria-selected="false"><i class="fas fa-power-off"></i>&nbsp;&nbsp;System Status</a>
+      <a class="nav-link" id="v-pills-accounts-tab" data-mdb-toggle="pill" href="#v-pills-accounts" role="tab"
+        aria-controls="v-pills-accounts" aria-selected="false"><i class="fas fa-user-friends"></i>&nbsp;&nbsp;Accounts</a>
       <a class="nav-link" id="v-pills-tags-management-tab" data-mdb-toggle="pill" href="#v-pills-tags-management" role="tab"
-        aria-controls="v-pills-tags-management" aria-selected="false"><i class="fas fa-tags"></i>&nbsp;&nbsp;Tag Management</a>
-      <a class="nav-link" id="v-pills-messages-tab" data-mdb-toggle="pill" href="#v-pills-messages" role="tab"
-        aria-controls="v-pills-messages" aria-selected="false"><i class="fas fa-box-open"></i>&nbsp;&nbsp;GRASP MRA</a>
-      <a class="nav-link" id="v-pills-messages-tab" data-mdb-toggle="pill" href="#v-pills-messages" role="tab"
-        aria-controls="v-pills-messages" aria-selected="false"><i class="fas fa-box-open"></i>&nbsp;&nbsp;GRASP Onco</a>
+        aria-controls="v-pills-tags-management" aria-selected="false"><i class="fas fa-tags"></i>&nbsp;&nbsp;Tags</a>
+      <a class="nav-link" id="v-pills-app-mra-tab" data-mdb-toggle="pill" href="#v-pills-app-mra" role="tab"
+        aria-controls="v-pills-app-mra" aria-selected="false"><i class="fas fa-box-open"></i>&nbsp;&nbsp;GRASP MRA</a>
+      <a class="nav-link" id="v-pills-app-onco-tab" data-mdb-toggle="pill" href="#v-pills-app-onco" role="tab"
+        aria-controls="v-pills-app-onco" aria-selected="false"><i class="fas fa-box-open"></i>&nbsp;&nbsp;GRASP Onco</a>
     </div>
     <!-- Tab navs -->
   </div>
@@ -31,67 +30,17 @@
   <div class="col-12 col-md-10">
     <!-- Tab content -->
     <div class="tab-content ms-md-3" id="v-pills-tabContent">
-      <div class="tab-pane fade show active" id="v-pills-status" role="tabpanel" aria-labelledby="v-pills-status-tab">
-        TODO
-      </div>
-      <div class="tab-pane fade" id="v-pills-home" role="tabpanel" aria-labelledby="v-pills-home-tab">
+
+      <div class="tab-pane show active" id="v-pills-home" role="tabpanel" aria-labelledby="v-pills-home-tab">
         <h4>General Settings</h4>
-        <form>
-          <!-- 2 column grid layout with text inputs for the first and last names -->
-          <div class="row mb-4">
-            <div class="col">
-              <div class="form-outline">
-                <input type="text" id="form6Example1" class="form-control" />
-                <label class="form-label" for="form6Example1">First name</label>
-              </div>
-            </div>
-            <div class="col">
-              <div class="form-outline">
-                <input type="text" id="form6Example2" class="form-control" />
-                <label class="form-label" for="form6Example2">Last name</label>
-              </div>
-            </div>
-          </div>
+      </div>
 
-          <!-- Text input -->
-          <div class="form-outline mb-4">
-            <input type="text" id="form6Example3" class="form-control" />
-            <label class="form-label" for="form6Example3">Company name</label>
-          </div>
+      <div class="tab-pane" id="v-pills-status" role="tabpanel" aria-labelledby="v-pills-status-tab">
+        <h4>System Status</h4>
+      </div>
 
-          <!-- Text input -->
-          <div class="form-outline mb-4">
-            <input type="text" id="form6Example4" class="form-control" />
-            <label class="form-label" for="form6Example4">Address</label>
-          </div>
-
-          <!-- Email input -->
-          <div class="form-outline mb-4">
-            <input type="email" id="form6Example5" class="form-control" />
-            <label class="form-label" for="form6Example5">Email</label>
-          </div>
-
-          <!-- Number input -->
-          <div class="form-outline mb-4">
-            <input type="number" id="form6Example6" class="form-control" />
-            <label class="form-label" for="form6Example6">Phone</label>
-          </div>
-
-          <!-- Message input -->
-          <div class="form-outline mb-4">
-            <textarea class="form-control" id="form6Example7" rows="4"></textarea>
-            <label class="form-label" for="form6Example7">Additional information</label>
-          </div>
-
-          <!-- Checkbox -->
-          <div class="form-check d-flex justify-content-center mb-4">
-            <input class="form-check-input me-2" type="checkbox" value="" id="form6Example8" checked />
-            <label class="form-check-label" for="form6Example8"> Create an account? </label>
-          </div>
-
-          <!-- Submit button -->
-          <button type="submit" class="btn btn-primary btn-block mb-4">Place order</button>
-        </form>
+      <div class="tab-pane" id="v-pills-accounts" role="tabpanel" aria-labelledby="v-pills-accounts-tab">
+        <h4>Accounts</h4>
       </div>
 
       <!-- Tag management -->
@@ -99,10 +48,10 @@
       <script type="text/javascript">
         const tags_data_parsed = JSON.parse(document.getElementById('tags_data').textContent);    
       </script>
-      <div x-data="{count: 0, tags: tags_data_parsed }" class="tab-pane fade" id="v-pills-tags-management" role="tabpanel" aria-labelledby="v-pills-tags-management-tab">
-        <h4>Select Tags to Delete</h4>
+      <div x-data="{count: 0, tags: tags_data_parsed }" class="tab-pane" id="v-pills-tags-management" role="tabpanel" aria-labelledby="v-pills-tags-management-tab">
+        <h4>Tags Management</h4>
         <div class="tag-list mt-4">
-          <ul class="list-group list-group-dark" >
+          <ul class="list-group list-group-dark">
             <template x-for="tag in tags">
               <li class="list-group-item list-tag-item d-flex justify-content-between align-items-center">
                 <div class="ms-2 me-auto" id="selected-tags" >
@@ -110,26 +59,30 @@
                   <span x-text="tag[0]"></span>
                 </div>              
                 <div style="width:70px">
-                  <span x-text="tag[1]" class="badge badge-primary rounded-pill" ></span>
+                  <span x-text="tag[1]" class="badge badge-danger rounded-pill" ></span>
                 </div>
-                <div style="width:70px">
-                  <button type="button" x-bind:disabled="!(tag[1] > 0)" class="btn btn-info" x-bind:value="tag[2]" @click="showCasesInfo(tag[2])">Cases</button>
+                <div>
+                  <button type="button" x-bind:disabled="!(tag[1] > 0)" class="btn btn-sm btn-primary" x-bind:value="tag[2]" @click="showCasesInfo(tag[2])"><i class="fas fa-list"></i>&nbsp;&nbsp;Show</button>
                 </div>
               </li>
             </template>
           </ul>
         </div>
         <div>
-          <button type="button"  x-bind:disabled="!(count > 0)" @click="tags = await updateCaseTags(tags); count=0;" class="btn btn-primary mt-4">Delete Selected Tags</button>
+          <button type="button"  x-bind:disabled="!(count > 0)" @click="tags = await updateCaseTags(tags); count=0;" class="btn btn-primary mt-4"><i class="fa-solid fa-trash"></i>&nbsp;&nbsp;Delete</button>
         </div>
       </div>
 
-      <div class="tab-pane fade" id="v-pills-profile" role="tabpanel" aria-labelledby="v-pills-profile-tab">
+      <div class="tab-pane" id="v-pills-app-mra" role="tabpanel" aria-labelledby="v-pills-app-mra-tab">
+        <h4>Application &minus; GRASP MRA</h4>
         TODO
       </div>
-      <div class="tab-pane fade" id="v-pills-messages" role="tabpanel" aria-labelledby="v-pills-messages-tab">
+
+      <div class="tab-pane" id="v-pills-app-onco" role="tabpanel" aria-labelledby="v-pills-app-onco-tab">
+        <h4>Application &minus; GRASP Onco</h4>
         TODO
       </div>
+
     </div>
     <!-- Tab content -->
   </div>
@@ -170,12 +123,11 @@ async function updateCaseTags(all_tags) {
   
   let result = await Swal.fire({
     title: 'Are you sure?',
-    text: "Do you really want to delete selected tags?",
+    text: "Do you want to delete selected tags?",
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#1266f1',
     cancelButtonColor: '#d33',
-    confirmButtonText: 'Yes, delete it!'
   })
 
   $('#selected-tags input:checked').each(function() {
