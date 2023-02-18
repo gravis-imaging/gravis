@@ -12,7 +12,7 @@ from django.views.static import serve
 # from django.contrib.staticfiles import views as static_views
 
 
-from .models import Case, DICOMInstance, Tag
+from .models import Case, DICOMInstance, Tag, UserProfile
 
 logger = logging.getLogger(__name__)
 
@@ -69,10 +69,36 @@ def index(request):
 
 @login_required
 def user(request):
+    obj, created = UserProfile.objects.get_or_create(
+        user=request.user, 
+        defaults={ 
+            'user_id':request.user, 
+            'privacy_mode':False 
+        }
+    )
     context = {
-        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user)
+        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user),
+        "privacy_mode": obj.privacy_mode
     }
     return render(request, "user.html", context)
+
+
+@login_required
+@require_POST
+def settings(request):    
+    '''
+    Updates user settings and returns response.ok if successful
+    '''
+    data = json.loads(request.body)
+    privacy_mode = data['privacy_mode']
+    UserProfile.objects.update_or_create(  # update_or_create returns (obj, created) tuple, currently not needed
+        user=request.user,
+        defaults={
+            'user_id':request.user,
+            'privacy_mode':privacy_mode,
+        }
+    )
+    return HttpResponse()
 
 
 @login_required
@@ -156,10 +182,6 @@ def browser_get_tags_all(request):
     '''
     Returns a JSON object containing information on all tags stored in the database.
     '''
-    # tags = [tag.name for tag in Tag.objects.all()]
-    # all_tags = Tag.objects.all()
-    # for tag in all_tags:
-    #     tags.append(tag.name)
     return JsonResponse({"tags": [(tag.name, tag.case_set.all().count()) for tag in Tag.objects.all()]}, safe=False)
 
 
@@ -169,11 +191,6 @@ def browser_get_case_tags_and_all_tags(request, case_id):
     Returns a JSON object containing information on all tags stored in the database 
     and tags specific to the current case.
     '''
-    # tags = []
-    # all_tags = Tag.objects.all()
-    # for tag in all_tags:
-    #     tags.append(tag.name)
-
     case = get_object_or_404(Case, id=case_id)
 
     return JsonResponse({"tags": [tag.name for tag in Tag.objects.all()], "case_tags": [tag.name for tag in case.tags.all()]}, safe=False)
@@ -194,6 +211,9 @@ def browser_get_case(request, case):
 @login_required
 @require_POST
 def update_case_tags(request):
+    '''
+    Updates tags for a given case and returns response.ok if successful
+    '''
     body = json.loads(request.body.decode('utf-8'))
     case_id = body['case_id']
     case = get_object_or_404(Case, id=case_id)
@@ -217,11 +237,13 @@ def update_case_tags(request):
         
     return HttpResponse() 
 
-
  
 @login_required
 @require_POST
 def update_tags(request):
+    '''
+    Delete selected tags and returns response.ok if successful
+    '''
     body = json.loads(request.body.decode('utf-8'))
     tags = body['tags']
     for tag_name in tags:

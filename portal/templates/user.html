@@ -8,16 +8,34 @@
 </div>
 
 <script type="module">
-    import { setCookie, getCookie } from "/static/js/utils.js";
-    document.getElementById('privacy_mode').checked = getCookie('privacy_mode') == 1 ? true : false;
-    function set_check() {
+    async function set_check() {
         const is_checked = document.getElementById('privacy_mode').checked; 
-    }
+        response = await fetch('/user/settings', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            body: JSON.stringify({'privacy_mode' : is_checked})
+        })
+                
+        if(!response.ok) {
+            await Swal.fire(
+                'Error',
+                await response.text(),
+                'error'
+            )
+        } 
+    }   
     window.set_check = set_check;
 </script>
 
 <div class="form-check form-switch">
-    <input class="form-check-input" type="checkbox" role="switch" id="privacy_mode" onchange="set_check();" unchecked />
+    <input class="form-check-input" type="checkbox" role="switch" id="privacy_mode" onchange="set_check();" 
+    {% if privacy_mode %} 
+        checked 
+    {% endif %} />
     <label class="form-check-label" for="privacy_mode">Privacy Mode</label>
 </div>
    
