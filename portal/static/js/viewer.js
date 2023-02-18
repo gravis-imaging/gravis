@@ -456,14 +456,33 @@ class GraspViewer {
         // console.log("Image IDs",imageIds)
         await this.setVolumeByImageIds(imageIds, series_uid, true);
     }
-    startPreview(idx) {
-        console.info("Starting preview")
+    
+    async startPreviewMIP(idx) {
         // Resetting MIP image stack with images at the last saved angle for all time points
         try {
-            this.switchMIP(idx, true);
+            await this.switchMIP(idx, true);
         } catch (e) {
             console.error(e);
         }
+    }
+    async setPreviewMIP(idx) {
+        try {
+            // Update MIP Viewport
+            await this.renderingEngine.getViewport('VIEW_AUX').setImageIdIndex(idx);
+          
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    async stopPreviewMIP(idx) {
+        // Resetting MIP image stack with images at a given time point with all available angles.
+        try {
+            await this.switchMIP(idx, false);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    async startPreview(idx) {
         this.previewViewports.slice(0,3).map((v, n) => {
             v.element.getElementsByTagName('svg')[0].innerHTML = this.viewports[n].element.getElementsByTagName('svg')[0].innerHTML
         });
@@ -479,21 +498,12 @@ class GraspViewer {
                 // Get closest preview image if only fraction of preview images were generated.
                 await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / this.current_study.length));
             })
-            // Update MIP Viewport
-            await this.renderingEngine.getViewport('VIEW_AUX').setImageIdIndex(idx);
           
         } catch (e) {
             console.error(e);
         }
     }
-    stopPreview(idx) {
-        // Resetting MIP image stack with images at a given time point with all available angles.
-        try {
-            this.switchMIP(idx, false);
-        } catch (e) {
-            console.error(e);
-        }
-    }
+
     getVolumeVOI(viewport) {
         return viewport.getDefaultActor().actor.getProperty().getRGBTransferFunction(0).getRange()
     }
@@ -516,11 +526,11 @@ class GraspViewer {
         await new Promise( resolve => {
             this.volume.load( e => { console.log("Volume finished loading",e); resolve() });
         });
-    }
+    }    
     async switchMIP(index, preview) {
-        console.log("switchMIP ", index, preview)
         const current_info = this.current_study[index];
         const viewport = this.renderingEngine.getViewport('VIEW_AUX');
+        const cam = viewport.getCamera();
         const ori_dicom_set = studies_data_parsed.find((x)=>x[2]=="ORI")[1]
         const slice_location = this.mip_details[viewport.targetImageIdIndex]["slice_location"];
 
@@ -533,8 +543,10 @@ class GraspViewer {
         else {
             mip_urls = (await doFetch(`/api/case/${this.case_id}/dicom_set/${ori_dicom_set}/processed_results/MIP?acquisition_number=${current_info.acquisition_number}`,null, "GET")).urls;
         } 
+
         if ( mip_urls.length > 0 ) {
            await viewport.setStack(mip_urls, viewport.targetImageIdIndex);
+           cornerstone.tools.utilities.stackPrefetch.enable(viewport.element);
            if (!cam.focalPoint.every( k => k==0 )) viewport.setCamera(cam);
            viewport.render()
         }
@@ -717,14 +729,7 @@ class GraspViewer {
                 return;
             }
         }
-        // if (finding.data.viewportId = "VIEW_AUX") {
-        //     await this.switchMIP(new_selected_index);
-        //     console.log("Going to AUX")
-        //     const v = viewer.renderingEngine.getViewport("VIEW_AUX");
-        //     await v.setImageIdIndex(finding.data.imageIdIndex);
-        //     v.setCamera(finding.data.cam);
-        //     v.render();
-        // }
+       
         if (new_selected_time != this.selected_time) {
             this.selected_time = new_selected_time;
             document.getElementById("volume-picker").value = new_selected_index;
