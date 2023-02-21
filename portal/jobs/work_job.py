@@ -46,10 +46,9 @@ class WorkJobView(View):
             dicom_set = case.dicom_sets.get(origin="Incoming")
 
         if not json_in.get("force",False):
-            existing = ProcessingJob.objects.filter(dicom_set=dicom_set,
+            existing = ProcessingJob.successful.filter(dicom_set=dicom_set,
                     case = case,
-                    parameters = json_in.get("parameters",{}),
-                    status = "Success").first()
+                    parameters = json_in.get("parameters",{})).first()
             if existing:
                 return JsonResponse(dict(id=existing.id))
 

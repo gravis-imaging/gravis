@@ -95,7 +95,7 @@ class GraspViewer {
     selected_time = 0;
     chart_options = {};
 
-    mip_details = {};
+    mip_details = [];
 
     findings;
     constructor( ...inp ) {
@@ -608,8 +608,13 @@ class GraspViewer {
         // Get MIP metadata info, currently only need slice_locations
         const current_info = this.current_study[0];
         const ori_dicom_set = studies_data_parsed.find((x)=>x[2]=="ORI")[1]
-        this.mip_details = (await doFetch(`/api/case/${case_id}/dicom_set/${ori_dicom_set}/mip_metadata?acquisition_number=${current_info.acquisition_number}`,null, "GET")).details;
-        
+        try {
+            this.mip_details = (await doFetch(`/api/case/${case_id}/dicom_set/${ori_dicom_set}/mip_metadata?acquisition_number=${current_info.acquisition_number}`,null, "GET")).details;
+        } catch (e) {
+            this.mip_details = null
+            console.warn("Failed to load MIP details")
+            console.error(e);
+        }
         console.log("Study switched");
 
         return graspVolumeInfo

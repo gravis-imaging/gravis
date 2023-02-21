@@ -70,7 +70,7 @@ def timeseries_data(request, case, source_set):
 
     acquisition_seconds = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set=source_set).values("acquisition_seconds").distinct("acquisition_seconds")
     acquisition_timepoints = sorted(list((k['acquisition_seconds'] for k in acquisition_seconds)))
-    ax_preview_set =  DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/AX",processing_job__dicom_set=source_set).latest('processing_job__created_at')
+    ax_preview_set =  DICOMSet.processed_success.filter(case=case,type=f"CINE/AX",processing_job__dicom_set=source_set).latest('processing_job__created_at')
 
     ax_instances = ax_preview_set.instances
     example_instance = ax_instances.first()
@@ -84,7 +84,7 @@ def timeseries_data(request, case, source_set):
     for i, annotation in enumerate(data['annotations']):
         idx = np.abs(annotation['normal']).argmax()
         orientation = ['SAG','COR','AX'][idx]
-        dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/{orientation}",processing_job__dicom_set=source_set).latest('processing_job__created_at')
+        dicom_set = DICOMSet.processed_success.filter(case=case,type=f"CINE/{orientation}",processing_job__dicom_set=source_set).latest('processing_job__created_at')
         instances = dicom_set.instances
         example_instance = instances.first()
         handles_transformed = [ (np.linalg.inv(im_orientation_mat) @ handle_location).tolist() for handle_location in annotation["handles_indexes"] ]
@@ -196,14 +196,14 @@ def processed_results_json(request, case, category, source_set):
     # fields = ["series_number", "slice_location", "acquisition_number"]
     case = Case.objects.get(id=int(case))
     # slices_lookup = {k: request.GET.get(k) for k in fields if k in request.GET}
-    job = ProcessingJob.objects.filter(status="Success", case=case, dicom_set=source_set, category=category).latest("created_at")
+    job = ProcessingJob.successful.filter(case=case, dicom_set=source_set, category=category).latest("created_at")
     return JsonResponse(dict(result = job.json_result))
 
 
 @login_required
 def preview_urls(request, case, source_set, view, location):
     case = Case.objects.get(id=int(case))
-    dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=f"CINE/{view}").filter(processing_job__dicom_set=source_set)
+    dicom_set = DICOMSet.processed_success.filter(case=case,type=f"CINE/{view}").filter(processing_job__dicom_set=source_set)
 
     location = np.asarray(list(map(int, location.split(","))))
 
@@ -229,7 +229,7 @@ def processed_results_urls(request, case, case_type, source_set):
     fields = ["series_number", "slice_location", "acquisition_number", "acquisition_seconds"]
     case = Case.objects.get(id=int(case))
     slices_lookup = {k: request.GET.get(k) for k in fields if k in request.GET}
-    dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type=case_type, processing_job__dicom_set=source_set)
+    dicom_set = DICOMSet.processed_success.filter(case=case,type=case_type, processing_job__dicom_set=source_set)
     instances = dicom_set.latest('processing_job__created_at').instances.filter(**slices_lookup).order_by("acquisition_seconds", "slice_location","instance_location","series_number") # or "instance_number"
 
     urls = []
@@ -248,8 +248,8 @@ def mip_metadata(request, case, source_set):
     fields = ["series_number", "slice_location", "acquisition_number", "acquisition_seconds"]
     case = Case.objects.get(id=int(case))
     slices_lookup = {k: request.GET.get(k) for k in fields if k in request.GET}
-    dicom_set = DICOMSet.objects.filter(processing_job__status="Success",case=case,type="MIP", processing_job__dicom_set=source_set)
-    instances = dicom_set.latest('processing_job__created_at').instances.filter(**slices_lookup).order_by("acquisition_seconds", "slice_location","instance_location","series_number") # or "instance_number"
+    dicom_sets = DICOMSet.processed_success.filter(case=case,type="MIP", processing_job__dicom_set=source_set)
+    instances = dicom_sets.latest('processing_job__created_at').instances.filter(**slices_lookup).order_by("acquisition_seconds", "slice_location","instance_location","series_number") # or "instance_number"
 
     details = []
     for instance in instances:

@@ -82,6 +82,13 @@ class Case(models.Model):
         db_table = "gravis_case"
 
 
+class SuccessfulProcessingJobManager(models.Manager):
+    """
+        To access successful processing jobs only.
+    """
+    def get_queryset(self):
+        return super().get_queryset().filter(status__iexact='success')
+
 class ProcessingJob(models.Model):
     """
     A model to represent processing results for a specific gravis case.
@@ -104,8 +111,10 @@ class ProcessingJob(models.Model):
     docker_image = models.CharField(max_length=100, blank=True, null=True)
     rq_id = models.CharField(max_length=100, blank=True, null=True)
 
+    objects = models.Manager() 
+    successful = SuccessfulProcessingJobManager() # Only successful processing jobs.
     def __str__(self):
-        return "; ".join([f"{x}: {getattr(self,x)}" for x in "category parameters status error_description".split()])
+        return "; ".join([f"{x}: {getattr(self,x)}" for x in "id category parameters status error_description".split()])
 
     class Meta:
         db_table = "gravis_processing_job"
@@ -117,6 +126,9 @@ class ProcessingJob(models.Model):
         #     )
         # ]
 
+class DICOMSetSuccessfulProcessingJobManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(processing_job__status__iexact='Success')
 
 class DICOMSet(models.Model):
     """
@@ -143,6 +155,8 @@ class DICOMSet(models.Model):
         related_name="result_sets",
     )  # null if incoming, otherwise outcome of a processing step
 
+    objects = models.Manager() 
+    processed_success = DICOMSetSuccessfulProcessingJobManager() # Only results of successful processing jobs
     class Meta:
         db_table = "gravis_dicom_set"
 

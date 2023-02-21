@@ -270,7 +270,7 @@
         <img class="mb-2 img-fluid" :src="finding.url" width="100%"/>
         <div x-text="finding.name" class="text-expand"></div>
       </template>
-    <template x-if="viewer.findings && (Object.keys(viewer.findings).length > 0)">
+    <template x-if="viewer && viewer.findings && (Object.keys(viewer.findings).length > 0)">
       <div class="mb-2">
       <button title="Store Finding" class="all-pointer-events btn-large btn-primary btn-viewer py-2 px-3 mt-3 mb-3" style="display: block; margin-left: auto; margin-right: auto; box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%);"
       :disabled="loading || switching" disabled="disabled"
