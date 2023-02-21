@@ -286,7 +286,7 @@ class MRA:
 
 
     def __create_projections(self, image):
-
+        
         try:
             projection = {
                 "sum": sitk.SumProjection,
@@ -337,18 +337,6 @@ class MRA:
             ]
             proj_images = []
             for angle in self.__rotation_angles:
-                rad = angle * np.pi / 180.0
-                new_dir = (
-                    np.cos(rad),
-                    0,
-                    np.sin(rad),
-                    0,
-                    1,
-                    0,
-                    -np.sin(rad),
-                    0,
-                    np.cos(rad),
-                )
                 rotation_transform.SetRotation(rotation_axis, angle)
                 resampled_image = sitk.Resample(
                     image1=image,
@@ -357,7 +345,7 @@ class MRA:
                     interpolator=sitk.sitkLinear,
                     outputOrigin=min_bounds,
                     outputSpacing=new_spc,
-                    outputDirection=new_dir,
+                    outputDirection=[1,0,0,0,1,0,0,0,1],
                 )
                 proj_image = projection[ptype](resampled_image, paxis)
                 proj_image = sitk.DICOMOrient(proj_image, "LPI")
@@ -376,6 +364,7 @@ class MRA:
             logger.exception(e, "Error calculating projections.")
             return self.__return_codes.ERROR_CALCULATING_PROJECTIONS
         return self.__return_codes.NO_ERRORS, proj_images
+
 
     def __save_processed_images(self, acquisition_number, type, output_dir_name, images):
         try:

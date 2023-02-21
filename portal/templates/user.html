@@ -10,7 +10,7 @@
 <script type="module">
     async function set_check() {
         const is_checked = document.getElementById('privacy_mode').checked; 
-        response = await fetch('/user/settings', {
+        response = await fetch('/user_settings', {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',

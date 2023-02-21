@@ -85,7 +85,7 @@ def user(request):
 
 @login_required
 @require_POST
-def settings(request):    
+def user_settings(request):    
     '''
     Updates user settings and returns response.ok if successful
     '''

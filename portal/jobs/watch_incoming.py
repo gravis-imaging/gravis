@@ -16,6 +16,7 @@ import portal.jobs.docker_utils as docker_utils
 from portal.models import Case, ProcessingJob
 from common.constants import GravisNames, GravisFolderNames
 from .cine_generation import GeneratePreviewsJob #, do_job
+from .work_job import do_job
 import common.helper as helper
 
 # logging.basicConfig(filename='watch_incoming.log', filemode='a', format='%(name)s - %(levelname)s - %(message)s')
