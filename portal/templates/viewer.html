@@ -218,15 +218,14 @@
   </div>
 
   <!-- MIP viewer -->
-  <div style="grid-area: d; background-color: black;" class="mb-2 grid-container">
-    <div id="aux-container" class="grid-fill"></div>
-    <div x-cloak x-show="true" class="viewport-overlay grid-fill p-2 no-pointer-events" style="z-index: 1;">
-      <button
-      title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer"
-         :disabled="loading || switching" disabled="disabled"
-         @click="viewer.storeFinding(viewer.renderingEngine.getViewport('VIEW_AUX'));"><i class="fa-solid fa-camera"></i>
-       </button>
-    </div>
+  <div id="aux-container" class="grid-fill" style="grid-area: d; background-color: black;" class="mb-2 grid-container">    
+      <div x-cloak x-show="true" class="viewport-overlay grid-fill p-2 no-pointer-events" style="z-index: 1;">
+        <button
+        title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer"
+          :disabled="loading || switching" disabled="disabled"
+          @click="viewer.storeFinding(viewer.renderingEngine.getViewport('VIEW_AUX'));"><i class="fa-solid fa-camera"></i>
+        </button>
+      </div>   
   </div>
 
   <!-- Chart -->
@@ -270,7 +269,7 @@
         <img class="mb-2 img-fluid" :src="finding.url" width="100%"/>
         <div x-text="finding.name" class="text-expand"></div>
       </template>
-    <template x-if="viewer && viewer.findings && (Object.keys(viewer.findings).length > 0)">
+    <template x-if="viewer.findings && (Object.keys(viewer.findings).length > 0)">
       <div class="mb-2">
       <button title="Store Finding" class="all-pointer-events btn-large btn-primary btn-viewer py-2 px-3 mt-3 mb-3" style="display: block; margin-left: auto; margin-right: auto; box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%);"
       :disabled="loading || switching" disabled="disabled"
