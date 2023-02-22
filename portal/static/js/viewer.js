@@ -276,6 +276,7 @@ class GraspViewer {
             ZoomTool,
             WindowLevelTool,
             StackScrollMouseWheelTool,
+            StackScrollTool,
             VolumeRotateMouseWheelTool,
 
             ToolGroupManager,
@@ -285,7 +286,7 @@ class GraspViewer {
             Enums: csToolsEnums,
         } = cornerstoneTools;
         const { MouseBindings } = csToolsEnums;
-        const tools = [CrosshairsTool, EllipticalROITool, StackScrollMouseWheelTool, VolumeRotateMouseWheelTool, WindowLevelTool, PanTool, ZoomTool, ProbeTool]
+        const tools = [CrosshairsTool, EllipticalROITool, StackScrollMouseWheelTool, StackScrollTool, VolumeRotateMouseWheelTool, WindowLevelTool, PanTool, ZoomTool, ProbeTool]
         tools.map(cornerstoneTools.addTool)
         // Define a tool group, which defines how mouse events map to tool commands for
         // Any viewport using the group
@@ -299,6 +300,8 @@ class GraspViewer {
 
         toolGroupAux.addViewport(this.viewportIds[3], "gravisRenderEngine");
         allGroupTools.map( tool => [toolGroupMain, toolGroupAux].map(group => group.addTool(tool)))
+        
+        toolGroupAux.addTool(StackScrollTool.toolName)
 
         toolGroupMain.addTool(ProbeTool.toolName, {
             customTextLines: (data) => [ data.label ]
@@ -338,23 +341,26 @@ class GraspViewer {
                 modifierKey: Enums.KeyboardBindings.Shift,
             }],
         });
-        toolGroupMain.setToolActive(Tools.WindowLevelTool.toolName, {
-            bindings: [{ 
-                mouseButton: Enums.MouseBindings.Primary,
-                modifierKey: Enums.KeyboardBindings.Ctrl,
-            }],
-        });
-        toolGroupMain.setToolActive(Tools.ZoomTool.toolName, {
-            bindings: [{ 
-                mouseButton: Enums.MouseBindings.Secondary,
-                modifierKey: Enums.KeyboardBindings.Alt,
-            }],
-        });
-        toolGroupMain.setToolActive(Tools.PanTool.toolName, {
-            bindings: [{ 
-                mouseButton: Enums.MouseBindings.Primary,
-                modifierKey: Enums.KeyboardBindings.Alt,
-            }],
+        [toolGroupMain, toolGroupAux].map(g=>{
+            g.setToolActive(Tools.WindowLevelTool.toolName, {
+                bindings: [{ 
+                    mouseButton: Enums.MouseBindings.Primary,
+                    modifierKey: Enums.KeyboardBindings.Ctrl,
+                }],}
+            )
+            g.setToolActive(Tools.ZoomTool.toolName, {
+                bindings: [{ 
+                    mouseButton: Enums.MouseBindings.Secondary,
+                    modifierKey: Enums.KeyboardBindings.Alt,
+                }],
+            });
+            g.setToolActive(Tools.PanTool.toolName, {
+                bindings: [{ 
+                    mouseButton: Enums.MouseBindings.Primary,
+                    modifierKey: Enums.KeyboardBindings.Alt,
+                }],
+            });
+    
         });
 
         toolGroupMain.setToolPassive(Tools.EllipticalROITool.toolName, {
@@ -365,23 +371,6 @@ class GraspViewer {
             ],
         });
 
-        toolGroupAux.setToolActive(Tools.WindowLevelTool.toolName, {
-            bindings: [{ 
-                mouseButton: Enums.MouseBindings.Primary,
-            }],
-        });
-        toolGroupAux.setToolActive(Tools.PanTool.toolName, {
-            bindings: [{ 
-                mouseButton: Enums.MouseBindings.Primary,
-                modifierKey: Enums.KeyboardBindings.Alt,
-            }],
-        });
-        toolGroupAux.setToolActive(Tools.ZoomTool.toolName, {
-            bindings: [{ 
-                mouseButton: Enums.MouseBindings.Secondary,
-                modifierKey: Enums.KeyboardBindings.Alt,
-            }],
-        });
         toolGroupMain.setToolPassive(Tools.ProbeTool.toolName, {
             bindings: [
             {
@@ -389,7 +378,15 @@ class GraspViewer {
             },
             ],
         });
-        [toolGroupMain, toolGroupAux].map(g=>g.setToolActive(Tools.StackScrollMouseWheelTool.toolName))
+        toolGroupAux.setToolActive(Tools.StackScrollTool.toolName,{
+            bindings: [
+                {
+                    mouseButton: Enums.MouseBindings.Primary,
+                },
+            ]})
+
+        toolGroupMain.setToolActive(Tools.StackScrollMouseWheelTool.toolName)
+        toolGroupAux.setToolActive(Tools.StackScrollMouseWheelTool.toolName)
         const synchronizer = Tools.SynchronizerManager.getSynchronizer("SYNC_CAMERAS");
         [...this.viewportIds.slice(0,3)].map(id => synchronizer.add({ renderingEngineId: "gravisRenderEngine", viewportId:id }))
         this.toolsAlreadyActive = true;
