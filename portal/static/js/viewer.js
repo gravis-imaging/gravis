@@ -170,6 +170,15 @@ class GraspViewer {
                 this.renderingEngine.resize(true, true);
             }
             auxViewport.element.oncontextmenu = e=>e.preventDefault();
+            
+            auxViewport.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(500, async (evt) => {                
+                try {
+                    console.log("would cache mip");
+                    await this.cacheMIP()
+                } catch (e) {
+                    console.error(e);
+                }
+            }));
 
             this.renderingEngine.setViewports([...previewViewports, ...viewViewports, auxViewport])
             this.viewportIds = [...viewportIds , auxViewport.viewportId]
@@ -452,33 +461,8 @@ class GraspViewer {
         );
         // console.log("Image IDs",imageIds)
         await this.setVolumeByImageIds(imageIds, series_uid, true);
-    }
+    }    
     
-    async startPreviewMIP(idx) {
-        // Resetting MIP image stack with images at the last saved angle for all time points
-        try {
-            await this.switchMIP(idx, true);
-        } catch (e) {
-            console.error(e);
-        }
-    }
-    async setPreviewMIP(idx) {
-        try {
-            // Update MIP Viewport
-            await this.renderingEngine.getViewport('VIEW_AUX').setImageIdIndex(idx);
-          
-        } catch (e) {
-            console.error(e);
-        }
-    }
-    async stopPreviewMIP(idx) {
-        // Resetting MIP image stack with images at a given time point with all available angles.
-        try {
-            await this.switchMIP(idx, false);
-        } catch (e) {
-            console.error(e);
-        }
-    }
     async startPreview(idx) {
         this.previewViewports.slice(0,3).map((v, n) => {
             v.element.getElementsByTagName('svg')[0].innerHTML = this.viewports[n].element.getElementsByTagName('svg')[0].innerHTML
@@ -548,10 +532,77 @@ class GraspViewer {
            viewport.render()
         }
     }
+    async cacheMIP() {
+        
+        const viewport = this.renderingEngine.getViewport('VIEW_AUX');
+        
+        const ori_dicom_set = studies_data_parsed.find((x)=>x[2]=="ORI")[1]
+        let slice_location = 0.0;
+        try {
+            slice_location = this.mip_details[viewport.targetImageIdIndex]["slice_location"]; 
+        }
+        catch (e) {
+            console.log("mip_details is not initialized yet. setting slice_location to 0.0.")
+        }
+        let imageIdsToPrefetch = (await doFetch(`/api/case/${this.case_id}/dicom_set/${ori_dicom_set}/processed_results/MIP?slice_location=${slice_location}`,null, "GET")).urls;
+        
+        const requestFn = (imageId, options) => cornerstone.imageLoader.loadAndCacheImage(imageId, options);
+        const priority = 0;
+        const requestType = cornerstone.Enums.RequestType.Prefetch;
+        imageIdsToPrefetch.forEach((imageId) => {
+        
+            // IMPORTANT: Request type should be passed if not the 'interaction'
+            // highest priority will be used for the request type in the imageRetrievalPool
+            const options = {
+              targetBuffer: {
+                type: 'Float32Array',
+                offset: null,
+                length: null,
+              },
+              requestType,
+            };
+        
+            cornerstone.imageLoadPoolManager.addRequest(
+              requestFn.bind(null, imageId, options),
+              requestType,
+              // Additional details
+              {
+                imageId,
+              },
+              priority
+              // addToBeginning
+            );
+        });        
+    }
     async switchToIndex(index) {
         const current_info = this.current_study[index];
         await viewer.switchSeries(current_info.series_uid); 
         this.selected_time = current_info.acquisition_seconds; 
+    }
+    async startPreviewMIP(idx) {
+        // Resetting MIP image stack with images at the last saved angle for all time points
+        try {
+            await this.switchMIP(idx, true);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    async setPreviewMIP(idx) {
+        try {
+            // Update MIP Viewport
+            await this.renderingEngine.getViewport('VIEW_AUX').setImageIdIndex(idx);
+          
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    async stopPreviewMIP(idx) {
+        // Resetting MIP image stack with images at a given time point with all available angles.
+        try {
+            await this.switchMIP(idx, false);
+        } catch (e) {
+            console.error(e);
+        }
     }
     async switchStudy(info, case_id, keepCamera=true) {       
 
@@ -589,7 +640,23 @@ class GraspViewer {
         console.log(`Loading index ${selected_index}`)
         console.log(graspVolumeInfo)
         await this.setVolumeBySeries(graspVolumeInfo[selected_index]["series_uid"])
-        document.getElementById("volume-picker").setAttribute("value",selected_index)
+        document.getElementById("volume-picker").setAttribute("value",selected_index)        
+        
+        this.current_study = graspVolumeInfo;
+         
+        // Get MIP metadata info, currently only need slice_locations
+        const current_info = graspVolumeInfo[0];
+        const ori_dicom_set = studies_data_parsed.find((x)=>x[2]=="ORI")[1];
+        try {
+            this.mip_details = (await doFetch(`/api/case/${case_id}/dicom_set/${ori_dicom_set}/mip_metadata?acquisition_number=${current_info.acquisition_number}`,null, "GET")).details;
+                         
+            // Set Initial MIP Image         
+            await this.switchMIP(0, false);
+            await this.setPreviewMIP(0);  
+        }
+        catch (e) {
+            console.error(e); 
+        }
 
         this.volume.load(async ()=>{ 
             console.log("Volume loaded");
@@ -599,19 +666,7 @@ class GraspViewer {
         } catch (e) {
             console.error(e);
         }
-
-        this.current_study = graspVolumeInfo;
         
-        // Get MIP metadata info, currently only need slice_locations
-        const current_info = this.current_study[0];
-        const ori_dicom_set = studies_data_parsed.find((x)=>x[2]=="ORI")[1]
-        try {
-            this.mip_details = (await doFetch(`/api/case/${case_id}/dicom_set/${ori_dicom_set}/mip_metadata?acquisition_number=${current_info.acquisition_number}`,null, "GET")).details;
-        } catch (e) {
-            this.mip_details = null
-            console.warn("Failed to load MIP details")
-            console.error(e);
-        }
         console.log("Study switched");
 
         return graspVolumeInfo
