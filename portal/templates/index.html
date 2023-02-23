@@ -215,28 +215,6 @@
                     }
                 },                
                 {% endif %}
-                {
-                    extend: 'spacer',
-                    style: 'empty'
-                },
-                {
-                    extend: 'spacer',
-                    style: 'empty'
-                },
-                {
-                    text: '<i class="fa-solid fa-upload"></i>',
-                    titleAttr: 'Upload case',
-                    action: function (e, dt, node, config) {
-                        alert("Coming soon!");
-                    }
-                },
-                {
-                    text: '<i class="fa-solid fa-floppy-disk"></i>',
-                    titleAttr: 'Download case',
-                    action: function (e, dt, node, config) {
-                        alert("Coming soon!");
-                    }
-                },
             ],
             initComplete: () => {             
                 $("#tablewrapper").show();
