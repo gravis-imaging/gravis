@@ -1,13 +1,13 @@
-<div class="modal" id="tags_selection_modal" role="dialog" style="overflow:hidden;">
+<div class="modal" id="tags_selection_modal" role="dialog" style="overflow:hidden;" data-mdb-backdrop="static">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Tag Selected Case</h5>
+                <h5 class="modal-title">Tag Case</h5>
                 <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="case_id" name="case_id">
-                <p class="mb-2">Select from available tags or add new one:</p>
+                <p class="mb-2">Select from existing or add new tags:</p>
                 <select class="form-control tags_select2" multiple="multiple" id="select_tags">
                 </select>                               
             </div>
@@ -26,15 +26,7 @@ $(document).ready(function() {
     $('.modal .tags_select2').select2({
         tags: true,
         width: '100%',
-        // templateResult: function (data, container) {
-        //     $(container).css("color", "black");
-        //     return data.text;
-        // },
-        // templateSelection: function (data, container) {
-        //     $(container).css("color", "black");
-        //     return data.text;
-        // },
-        dropdownParent: $('.modal')
+        dropdownParent: $('#tags_selection_modal')
     });
 });
 
