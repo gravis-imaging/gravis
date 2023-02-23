@@ -7,8 +7,8 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="case_id" name="case_id">
-                Select from available tags or add new one:
-                <select class="form-control tags_select2" multiple="multiple" id="select_tags" style="color: black">
+                <p class="mb-2">Select from available tags or add new one:</p>
+                <select class="form-control tags_select2" multiple="multiple" id="select_tags">
                 </select>                               
             </div>
             <div class="modal-footer">
@@ -26,14 +26,14 @@ $(document).ready(function() {
     $('.modal .tags_select2').select2({
         tags: true,
         width: '100%',
-        templateResult: function (data, container) {
-            $(container).css("color", "black");
-            return data.text;
-        },
-        templateSelection: function (data, container) {
-            $(container).css("color", "black");
-            return data.text;
-        },
+        // templateResult: function (data, container) {
+        //     $(container).css("color", "black");
+        //     return data.text;
+        // },
+        // templateSelection: function (data, container) {
+        //     $(container).css("color", "black");
+        //     return data.text;
+        // },
         dropdownParent: $('.modal')
     });
 });

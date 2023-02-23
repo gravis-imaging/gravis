@@ -463,3 +463,22 @@ button:focus:not(:focus-visible) {
     border-left-color: #fff;
     border-right-color: #fff; */
 }
+
+.select2-container--default .select2-selection--multiple {
+    background-color: #424242 !important;
+}
+
+.select2-selection__choice__display {
+    color: #000;
+}
+
+.select2-results__option {
+    color: #000;
+}
+
+.select2-results__option--selected, .select2-results__option--highlighted
+{
+    background-color: #1266f1 !important;
+    color: #FFF;
+}
+
