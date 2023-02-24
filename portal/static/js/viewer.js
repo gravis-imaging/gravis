@@ -1,6 +1,6 @@
 import { AnnotationManager } from "./annotations.js"
 import { StateManager } from "./state.js"
-import { doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch } from "./utils.js"
+import { doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch, chartToImage } from "./utils.js"
 
 const SOP_INSTANCE_UID = '00080018';
 const STUDY_DATE = '00080020';
@@ -656,6 +656,14 @@ class GraspViewer {
     async loadFindings() {
         const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`,{},"GET");
         return result.findings;
+    }
+    async storeChartFinding() {
+        const image = await chartToImage(this.chart);
+        const info = {
+            time: this.selected_time,
+        }
+        const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`, {image_data: image, info: info});
+        this.findings.push(result);        
     }
     async storeFinding(viewport){
         // const viewport = this.viewports[n];

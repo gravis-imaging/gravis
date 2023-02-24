@@ -318,6 +318,8 @@ def store_finding(request, case, source_set, finding_id=None):
     
         related_instance = dicom_set.instances.first() # TODO: pick which instance?
         related_ds = pydicom.dcmread(Path(dicom_set.set_location) / related_instance.instance_location,stop_before_pixels=True)
+        if "^" not in related_ds.PatientName:
+            related_ds.PatientName = str(related_ds.PatientName) + "^"
         sc = sc_from_ref(related_ds,im_array)
         sc.save_as(directory / "finding.dcm")
         

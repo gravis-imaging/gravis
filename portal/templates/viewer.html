@@ -220,6 +220,8 @@
   <!-- MIP viewer -->
   <div style="grid-area: d; background-color: black;" class="mb-2 grid-container">
     <div id="aux-container" class="grid-fill"></div>
+    <div x-cloak x-show="viewer && viewer.mip_details === null" class="grid-fill"  style="z-index: 1;"> 
+      <div style="display: flex;justify-content: center;align-items: center; height:100%; cursor: pointer;">Loading error</div></div>
     <div x-cloak x-show="true" class="viewport-overlay grid-fill p-2 no-pointer-events" style="z-index: 1;">
       <button
       title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer"
@@ -227,15 +229,22 @@
          @click="viewer.storeFinding(viewer.renderingEngine.getViewport('VIEW_AUX'));"><i class="fa-solid fa-camera"></i>
        </button>
     </div>
+
   </div>
 
   <!-- Chart -->
+  <div style="grid-area: f; z-index: 1" class="no-pointer-events">
+    <button
+      title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
+      @click="console.log(viewer.storeChartFinding());"><i class="fa-solid fa-camera"></i>
+     </button>
+  </div>
   <div style="grid-area: f; background-color: black; " class="mb-2 py-3">
     <div id="chart" style="background-color: black; color: white;">
     </div>
   </div>
   <div style="grid-area: f">
-    <template x-if="viewer">    
+    <template x-if="viewer">
       <div style="text-align:right; position:relative;">
         <select class="curve-settings-select" x-model="viewer.chart_options['adjust']" @change="viewer.annotation_manager.updateChart()">
           <option value="normal" autocomplete="off" selected>normal</option>

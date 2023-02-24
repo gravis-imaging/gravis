@@ -161,7 +161,16 @@ const loadImage = async url => {
     })
   }
 
-  async function viewportToImage(viewport) {
+async function encodeSVG(svg_xml, width, height) {
+    const svgData = `data:image/svg+xml,${encodeURIComponent(svg_xml)}`
+    const img = await loadImage(svgData);
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    return await canvas.toDataURL("image/png", 1.0);
+}
+async function viewportToImage(viewport) {
     const element = viewport.element.getElementsByTagName("svg")[0];
     const cloneElement = element.cloneNode(true);
 
@@ -173,14 +182,98 @@ const loadImage = async url => {
     cloneElement.getElementsByTagName("defs")[0].insertAdjacentHTML("afterend",`<image x=0 y=0 width="100%" height=100% href="${pixelData}"></image>`)
 
     const svgAsXML = (new XMLSerializer()).serializeToString(cloneElement)
-    const svgData = `data:image/svg+xml,${encodeURIComponent(svgAsXML)}`
-    const img = await loadImage(svgData);
-    const canvas = document.createElement('canvas');
-    canvas.width = element.clientWidth;
-    canvas.height = element.clientHeight;
-    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-    const dataURL = await canvas.toDataURL("image/png", 1.0);
-    return dataURL;
+
+    return await encodeSVG(svgAsXML, element.clientWidth*2, element.clientHeight*2)
+    // const svgData = `data:image/svg+xml,${encodeURIComponent(svgAsXML)}`
+    // const img = await loadImage(svgData);
+    // const canvas = document.createElement('canvas');
+    // canvas.width = element.clientWidth;
+    // canvas.height = element.clientHeight;
+    // canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    // const dataURL = await canvas.toDataURL("image/png", 1.0);
+    // return dataURL;
+}
+
+async function chartToImage(chart) {
+    const graphWidth = parseFloat(chart.graphDiv.style.width);
+    const legendWidth = 200;
+    const totalWidth = graphWidth + legendWidth;
+    const height = parseFloat(chart.graphDiv.style.height);
+    
+    let svgString = `<svg width="${totalWidth}" height="${height}" viewBox="0 0 ${totalWidth} ${height}" xmlns="http://www.w3.org/2000/svg">
+<style>
+text {
+    font-size: 14px;
+    font-family:"Roboto",sans-serif;
+    fill: white;
+}
+</style>
+<rect width="100%" height="100%" fill="black" />`
+
+    const canvases = chart.graphDiv.getElementsByTagName("canvas");
+    for (const c of canvases) {
+        const pixelData = c.toDataURL("image/png");
+        svgString += `<image x="0" y="0" width="${graphWidth}" height="${height}" href="${pixelData}"></image>`
+    }
+    const labels = chart.graphDiv.getElementsByClassName("dygraph-axis-label")
+    for (const label of labels) {
+        const text = label.textContent 
+        const parentStyle = label.parentElement.style;
+        const x = parseFloat(parentStyle.left);
+        const y = parseFloat(parentStyle.top);
+        const width = parseFloat(parentStyle.width);
+        if (label.classList.contains("dygraph-axis-label-y")) { // It's a y-axis label
+            // "hanging" baseline ends up aligning them right.
+            svgString += `<text x="${x + width}px" y="${y}px" text-anchor="end" dominant-baseline="hanging">${text}</text>`
+        } else if (label.classList.contains("dygraph-axis-label-x")) { // It's an x-axis label
+            if (parentStyle.textAlign == "center") {
+                svgString += `<text x="${x + width/2.0}px" y="${y}px" dominant-baseline="hanging" text-anchor="middle">${text}</text>`
+            } else if (parentStyle.textAlign == "right") {
+                svgString += `<text x="${x + width}px" y="${y}px" dominant-baseline="hanging" text-anchor="end">${text}</text>`
+            } else {
+                svgString += `<text x="${x}px" y="${y}px" text-anchor="start">${text}</text>`
+            }
+        }
+    }
+
+    const legend_entries = chart.graphDiv.getElementsByClassName("dygraph-legend")[0].children
+    let y = 7;
+    let x = 2;
+    for( const entry of legend_entries ) {
+        let text,color;
+        let b = entry.getElementsByTagName("b")[0];
+        if (b) {
+             // This happens when a timepoint is selected
+            let span = b.getElementsByTagName("span")[0]
+            text = span.innerText;
+            color = span.style.color;
+        } else {
+            text = entry.innerText;
+            color = entry.style.color;    
+        }
+        svgString += `<line x1="${graphWidth+x}px" y1="${y}px" x2="${graphWidth+x+20}" y2="${y}px" stroke-width="2" stroke="${color}" />`
+        svgString += `<text x="${graphWidth+x+22}px" y="${y}px" dominant-baseline="central" text-anchor="start" font-weight="bold" style="fill:${color};">${text}</text>`
+        // Arrange into several columns.
+        if (y > height-15) {
+            y = 7;
+            x += 75;
+        } else {
+            y += 15;
+        }
+    }
+    svgString += "</svg>"
+    console.log(svgString);
+
+    return await encodeSVG(svgString, totalWidth*2, height*2)
+    // const svgData = `data:image/svg+xml,${encodeURIComponent(svgString)}`
+    // const img = await loadImage(svgData);
+    // const canvas = document.createElement('canvas');
+    // canvas.width = totalWidth*2;
+    // canvas.height = height*2;
+    // canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    // const dataURL = await canvas.toDataURL("image/png", 1.0);
+    // console.log(img,canvas)
+    // return dataURL;
 }
 
 class Vector {
@@ -240,4 +333,4 @@ const scrollViewportToPoint = (viewport, centerPoint) => {
     // }
     viewport.setCamera(cam);
 }
-export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, Vector };
+export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, Vector, chartToImage };
