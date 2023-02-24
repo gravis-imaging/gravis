@@ -75,9 +75,15 @@ class MRA:
             reader.LoadPrivateTagsOn()
             reader.ReadImageInformation()
             acquisition_number = int(reader.GetMetaData("0020|0012"))
-            slice_location = reader.GetMetaData("0020|1041")
+
             self.__d_files[acquisition_number].append(str(f))
-            self.__d_indexes[acquisition_number].append(int(slice_location))
+
+            # This will sort the dicoms spatially. 
+            im_orientation_patient = np.asarray(list(map(float, reader.GetMetaData("0020|0037").split("\\")))).reshape((2,3))
+            im_position_patient = np.asarray(list(map(float, reader.GetMetaData("0020|0032").split("\\"))))
+            z_axis = np.cross(*im_orientation_patient)
+            z = np.dot(z_axis, im_position_patient)
+            self.__d_indexes[acquisition_number].append(z)
 
         if len(self.__d_files) == 0:
             logger.exception(
