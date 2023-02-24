@@ -74,34 +74,34 @@
                         // Custom field rendering for the status field
                         switch(data) {
                         case 'Received':
-                            return '<span class="badge bg-secondary rounded-pill">'+data+'</span>';
+                            return '<span class="badge bg-secondary">'+data+'</span>';
                             break;
                         case 'Queued':
                             return '<span class="badge bg-primary">'+data+'</span>';
                             break;
                         case 'Processing':
-                            return '<span class="badge bg-light text-dark rounded-pill">'+data+'</span>';
+                            return '<span class="badge bg-light text-dark">'+data+'</span>';
                             break;
                         case 'Ready':
-                            return '<span class="badge bg-info text-dark rounded-pill">'+data+'</span>';
+                            return '<span class="badge bg-info text-dark">'+data+'</span>';
                             break;
                         case 'Viewing':
-                            return '<span class="badge bg-warning text-dark rounded-pill">'+data+'</span>';
+                            return '<span class="badge bg-warning text-dark">'+data+'</span>';
                             break;
                         case 'Complete':
-                            return '<span class="badge bg-success rounded-pill">'+data+'</span>';
+                            return '<span class="badge bg-success">'+data+'</span>';
                             break;
                         case 'Archived':
-                            return '<span class="badge bg-dark rounded-pill">'+data+'</span>';
+                            return '<span class="badge bg-dark">'+data+'</span>';
                             break;
                         case 'Error':
-                            return '<span class="badge bg-danger rounded-pill">'+data+'</span>';
+                            return '<span class="badge bg-danger">'+data+'</span>';
                             break;
                         case 'Delete':
-                            return '<span class="badge bg-danger rounded-pill">'+data+'</span>';
+                            return '<span class="badge bg-danger">'+data+'</span>';
                             break;
                         default:
-                            return '<span class="badge rounded-pill">'+data+'</span>';
+                            return '<span class="badge">'+data+'</span>';
                             break;
                         }                    
                     },            
@@ -113,7 +113,7 @@
                         // Custom field rendering for tags
                         html_element = '';
                         for (const tag of data) {
-                            html_element = html_element + '<span class="badge border border-2 text-light me-1" style="border-color: #FFF!important;">'+tag+'</span>';
+                            html_element = html_element + '<span class="badge border border-1 text-light me-1" style="border-color: #FFF!important; background-color:hsla(0,0%,100%,.15)!important;">'+tag+'</span>';
                         }
                         return html_element;
                     }                    
@@ -159,7 +159,7 @@
                             showCancelButton: true,
                             confirmButtonColor: '#1266f1',
                             cancelButtonColor: '#d33',
-                            confirmButtonText: 'Yes, delete it!'
+                            confirmButtonText: 'Yes'
                             }).then((result) => {
                             if (result.isConfirmed) {                                
                                 const selected_row = case_data_table.row({selected: true}).data();
@@ -176,7 +176,7 @@
                                 .then(response => response.json())
                                 .then(response => {
                                     Swal.fire(
-                                        'Deleted!',
+                                        'Deleted',
                                         'The case has been deleted.',
                                         'success'
                                     ).then((result) => {
@@ -215,28 +215,6 @@
                     }
                 },                
                 {% endif %}
-                {
-                    extend: 'spacer',
-                    style: 'empty'
-                },
-                {
-                    extend: 'spacer',
-                    style: 'empty'
-                },
-                {
-                    text: '<i class="fa-solid fa-upload"></i>',
-                    titleAttr: 'Upload case',
-                    action: function (e, dt, node, config) {
-                        alert("Coming soon!");
-                    }
-                },
-                {
-                    text: '<i class="fa-solid fa-floppy-disk"></i>',
-                    titleAttr: 'Download case',
-                    action: function (e, dt, node, config) {
-                        alert("Coming soon!");
-                    }
-                },
             ],
             initComplete: () => {             
                 $("#tablewrapper").show();
@@ -256,8 +234,7 @@
                 case_data_table.$('tr.selected').removeClass('selected');
                 $(this).addClass('selected');
             }
-        } );
-        
+        } );        
     } );
 
     function openCase(case_id, status, last_read_by_id) {
@@ -268,7 +245,7 @@
         else {
             Swal.fire(
                 'Warning',
-                'The case  is not ready for viewing or locked by another user.', 
+                'The case is not ready for viewing or locked by another user.', 
                 'warning'
             )
         }  

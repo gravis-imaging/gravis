@@ -42,7 +42,6 @@ function showTagCasesInformation(cases_list) {
         alert(e);
     }
 
-    console.log("INSIDE MODAL")
     for(let i=0; i < cases_list.length; i++) {
         var newRow = tag_cases_table_el.insertRow();
 
@@ -62,7 +61,6 @@ function showTagCasesInformation(cases_list) {
     const myModalEl = document.getElementById('tag_cases_details_modal');
     const modal = new mdb.Modal(myModalEl);
     modal.show();
-
 }
 
 </script>

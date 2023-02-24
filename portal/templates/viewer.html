@@ -31,7 +31,7 @@
   <!-- dicom set selection -->
   <div class="" style="margin-right: 2em; width: 100px;">
     <select id="studies" name="studies" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-outline-light btn-lg btn-rounded text-light btn-viewer-toolbar" data-width="100px"
-    @change="loading=true; await $nextTick(); await viewer.switchStudy($event.target.value.split(':::'), case_id);  loading=false;">
+    @change="loading=true; await $nextTick(); await viewer.switchStudy($event.target.value.split(':::'), case_id);  loading=false;" title="Displayed series">
       <!-- <option value="" selected disabled hidden>Select study...</option> -->
       <optgroup label="Displayed Series">
       {% for i in studies %}
@@ -43,7 +43,7 @@
 
   <!-- volume picker -->
   <!-- x-model="value" x-ref="input" x-on:focus="() => { $refs.input.focus() }"  -->
-  <input id='volume-picker' tabindex='1' class="timeslider" title="Displayed Timepoint" type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
+  <input id='volume-picker' tabindex='1' class="timeslider" title="Displayed time point" type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
       @mouseup="previewing = false; previewingMIP = false; viewer.stopPreviewMIP($event.target.value);" 
       @mousedown="if (!previewingMIP) { await viewer.startPreviewMIP($event.target.value); previewingMIP = true; }; viewer.selected_time=viewer.current_study[$event.target.value].acquisition_seconds; viewer.setPreviewMIP($event.target.value);"    
       @input="if (!previewing) { await viewer.startPreview($event.target.value); previewing = true; }; viewer.selected_time=viewer.current_study[$event.target.value].acquisition_seconds; viewer.setPreview($event.target.value); viewer.setPreviewMIP($event.target.value);" 
@@ -57,7 +57,7 @@
  
     <!-- Image manipulation buttons -->
     
-      <button title="Reset Viewers" class="all-pointer-events btn-primary btn-large btn-viewer ms-5" 
+      <button title="Reset viewers" class="all-pointer-events btn-primary btn-large btn-viewer ms-5" 
       :disabled="loading || switching" disabled="disabled" 
       @click="viewer.viewports.map(v=> {v.resetCamera(); v.render()}); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-arrows-to-circle"></i>
       </button>
@@ -72,7 +72,7 @@
             id="dropdownMenuLink"
             data-mdb-toggle="dropdown"
             aria-expanded="false",
-            title="Select Annotation"
+            title="Select annotation"
           >
           <i class="fas fa-map-marker-alt"></i>
         </button>
@@ -84,20 +84,16 @@
         </div>    
       </div>
     
-      <button title="Duplicate Selected Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2" 
+      <button title="Duplicate selected annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2" 
           :disabled="!viewer || loading || switching" disabled="disabled" 
           @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
       </button>
-      <button title="Flip Selected Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2"
+      <button title="Flip selected annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2"
           :disabled="!viewer || loading || switching" disabled="disabled"
           @click="viewer.annotation_manager.flipSelectedAnnotations();">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-symmetry-vertical" viewBox="0 0 16 16">
           <path d="M7 2.5a.5.5 0 0 0-.939-.24l-6 11A.5.5 0 0 0 .5 14h6a.5.5 0 0 0 .5-.5v-11zm2.376-.484a.5.5 0 0 1 .563.245l6 11A.5.5 0 0 1 15.5 14h-6a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .376-.484zM10 4.46V13h4.658L10 4.46z"/>
         </svg>
-      </button>
-      <button title="Save session" class="all-pointer-events btn-primary btn-large btn-viewer ms-2"   
-      :disabled="loading || switching " disabled="disabled" 
-      @click="await viewer.state_manager.save(); $($refs.saved).fadeIn(50); $($refs.saved).fadeOut(800);"><i class="fa-solid fa-floppy-disk"></i>
       </button>
       <div class="ms-2">
         <div class="dropdown">
@@ -108,20 +104,20 @@
             id="dropdownMenuLink"
             data-mdb-toggle="dropdown"
             aria-expanded="false",
-            title="Delete Annotation"
+            title="Delete annotation"
           >
           <i class="fa-solid fa-trash"></i>
         </button>
           <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
             <li>
-            <a title="Delete Selected Annotation" href="#" class="dropdown-item" 
+            <a title="Delete selected annotation" href="#" class="dropdown-item" 
               :disabled="loading || switching"
               @click="viewer.annotation_manager.deleteSelectedAnnotations();">
               Delete Selected
             </a>
             </li>
             <li>
-            <a title="Delete All Annotations" :disabled="loading || switching" href="#" class="dropdown-item" 
+            <a title="Delete all annotations" :disabled="loading || switching" href="#" class="dropdown-item" 
                 @click="viewer.annotation_manager.deleteAllAnnotations();">
                 Delete All
             </a>    
@@ -129,8 +125,12 @@
           </ul>
         </div>    
       </div>      
+      <button title="Save session" class="all-pointer-events btn-primary btn-large btn-viewer" style="margin-left: 1.4rem;"
+      :disabled="loading || switching " disabled="disabled" 
+      @click="await viewer.state_manager.save(); $($refs.saved).fadeIn(50); $($refs.saved).fadeOut(800);"><i class="fa-solid fa-floppy-disk"></i>
+      </button>
 
-      <div class="flex" style="display: flex; margin-left: 1.4rem;">
+      <div class="flex ms-2" style="display: flex;">
         <div class="">
           <div class="dropdown">
             <button
@@ -141,7 +141,7 @@
               id="dropdownMenuLink"
               data-mdb-toggle="dropdown"
               aria-expanded="false",
-              title="Select Session"
+              title="Select session"
             >
             <i class="fas fa-history"></i>
           </button>
@@ -176,7 +176,8 @@
 
   <div id="grasp-view-outer" class="grid-container h-100" style="width: 100%; grid-area: e; background-color: black;" >
     <div x-show="loading" style="z-index:10;" class="no-pointer-events grid-fill">
-      <div style="display: flex;justify-content: center;align-items: center; height:100%">Loading...</div>
+      <div style="display: flex;justify-content: center;align-items: center; height:100%"><div class="spinner-border" style="color: darkgray;" role="status"><span class="visually-hidden"></span></div>
+      </div>
     </div>
     <div x-init="loading = true; await $nextTick();
       viewer = await new GraspViewer($refs.viewer_main, $refs.viewer_preview ); window.viewer = viewer; await viewer.switchStudy([studies_data_parsed[0][0], studies_data_parsed[0][1]], case_id); loading=false;" class="grid-fill grid-container h-100">
@@ -190,24 +191,24 @@
         <template x-for="i in 3">
           <div class="viewport-overlay" :id="'viewport-overlay-'+i" :style="`grid-row: 1; grid-column: ${i}`">
             <!-- Note layout of buttons opening/closing to avoid undesired spaces between buttons -->
-            <button title="Add ROI Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
+            <button title="Add ROI annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
                 :disabled="!viewer || loading || switching" disabled="disabled" 
                 @click="viewer.annotation_manager.addAnnotationToViewport('EllipticalROI',i-1);"><i class="fa-regular fa-circle"></i>
             </button><button
-             title="Add Probe Annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
+             title="Add probe annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
                 :disabled="!viewer || loading || switching" disabled="disabled" 
                 @click="viewer.annotation_manager.addAnnotationToViewport('Probe',i-1);"><i class="fa-solid fa-plus"></i>
             </button><button
-             title="Reset Viewer" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
+             title="Reset viewer" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
               :disabled="!viewer || loading || switching" disabled="disabled" 
                 @click="viewer.viewports[i-1].setZoom(1); viewer.viewports[i-1].setPan([0,0]); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-magnifying-glass-minus"></i>
             </button><button
-             title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
+             title="Store finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
               :disabled="!viewer || loading || switching" disabled="disabled" 
                 @click="viewer.storeFinding(viewer.viewports[i-1]);"><i class="fa-solid fa-camera"></i>
             </button>            
             <template x-if="viewer && viewer.getNativeViewports().indexOf(viewer.viewports[i-1].id) > -1">
-              <div class="viewer-label-native">
+              <div class="viewer-label-native" style="margin-left: 0.5rem;">
                 Native
               </div>
             </template>
@@ -218,7 +219,7 @@
   </div>
 
   <!-- MIP viewer -->
-  <div style="grid-area: d; background-color: black;" class="mb-2 grid-container">
+  <div id="aux-container-outer" class="grid-container mb-2" style="grid-area: d; background-color: black;"> 
     <div id="aux-container" class="grid-fill"></div>
     <div x-cloak x-show="viewer && viewer.mip_details === null" class="grid-fill"  style="z-index: 1;"> 
       <div style="display: flex;justify-content: center;align-items: center; height:100%; cursor: pointer;">Loading error</div></div>
@@ -229,7 +230,6 @@
          @click="viewer.storeFinding(viewer.renderingEngine.getViewport('VIEW_AUX'));"><i class="fa-solid fa-camera"></i>
        </button>
     </div>
-
   </div>
 
   <!-- Chart -->
@@ -281,10 +281,10 @@
       </template>
     <template x-if="viewer && viewer.findings && (Object.keys(viewer.findings).length > 0)">
       <div class="mb-2">
-      <button title="Store Finding" class="all-pointer-events btn-large btn-primary btn-viewer py-2 px-3 mt-3 mb-3" style="display: block; margin-left: auto; margin-right: auto; box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%);"
+      <button title="Store findings in PACS" class="all-pointer-events btn-large btn-primary btn-viewer py-2 px-3 mt-3 mb-3" style="display: block; margin-left: auto; margin-right: auto; box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%);"
       :disabled="loading || switching" disabled="disabled"
       @click="job_loading = true; success = await viewer.transferFindings(); job_loading = false; ref= success? $refs.saved : $refs.failed; $(ref).fadeIn(50); $(ref).fadeOut(1000);">
-      <i class="fas fa-paper-plane"></i>&nbsp;&nbsp;Send to PACS
+      <i class="fas fa-paper-plane"></i>&nbsp;&nbsp;Send
       </button>  
     </div>
     </template>    
@@ -297,16 +297,20 @@
 <div class="offcanvas offcanvas-start " tabindex="-1" id="offcanvasShortcuts" data-mdb-scroll="true"
 data-mdb-backdrop="false" style="background-color: #1266f1;">
 <div class="offcanvas-header">
-  <h5 class="offcanvas-title" id="offcanvasExampleLabel">Keyboard Shortcuts</h5>
+  <h4 class="offcanvas-title" id="offcanvasExampleLabel">Keyboard Shortcuts</h4>
   <button type="button" class="btn-close text-reset" data-mdb-dismiss="offcanvas" aria-label="Close"></button>
 </div>
   <div class="offcanvas-body">
     <div>
-      <p><strong>MPR Viewers</strong></p>
-      <p>
-        <strong>Alt</strong> &minus; Panning<br />
-        <strong>Ctrl</strong> &minus; Windowing
-      </p>
+      <h5 class="mb-3"><strong>Viewers</strong></h5>
+      <table>
+        <tr><td><strong>Scrolling</strong></td><td>&minus; mouse wheel</td></tr>
+        <tr><td><strong>Windowing</strong></td><td>&minus; CTRL + left button</td></tr>
+        <tr><td><strong>Panning</strong></td><td>&minus; ALT + left button</td></tr>
+        <tr><td><strong>Zooming</strong></td><td>&minus; ALT + right button</td></tr>
+        <tr><td><strong>Centering</strong></td><td>&minus; SHIFT + left button</td></tr>
+        <tr><td><strong>Fullscreen</strong></td><td>&minus; double click</td></tr>
+      </table>
     </div>
   </div>
 </div>

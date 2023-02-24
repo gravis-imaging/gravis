@@ -157,7 +157,8 @@ class GraspViewer {
             const auxViewport = this.genViewportDescription("AUX", null, document.getElementById("aux-container"), "VIEW")
 
             auxViewport.element.ondblclick = e => {
-                const el = auxViewport.element;
+                //const el = auxViewport.element;
+                const el = document.getElementById("aux-container-outer");
                 if (el.getAttribute("fullscreen") != "true") {
                     el.setAttribute("fullscreen", "true");
                     el.style.gridArea = "e / e / f / f";
@@ -170,6 +171,15 @@ class GraspViewer {
                 this.renderingEngine.resize(true, true);
             }
             auxViewport.element.oncontextmenu = e=>e.preventDefault();
+            
+            auxViewport.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(500, async (evt) => {                
+                try {
+                    console.log("would cache mip");
+                    await this.cacheMIP()
+                } catch (e) {
+                    console.error(e);
+                }
+            }));
 
             this.renderingEngine.setViewports([...previewViewports, ...viewViewports, auxViewport])
             this.viewportIds = [...viewportIds , auxViewport.viewportId]
@@ -229,15 +239,18 @@ class GraspViewer {
                 }));
             });         
         }
-    
-    
+        
     createViewportGrid(n=4) {
         const viewportGrid = document.createElement('div');
         viewportGrid.className = 'viewer-grid';
         var elements = [];
         for (var i=0; i<n; i++) {
             var el = document.createElement('div');
-            el.className = "viewer-element"
+            // Add class to display border on the right side between viewers except the last one
+            el.className = "viewer-element viewer-element-border"
+            if (i==n-1) {
+                el.className = "viewer-element"
+            }
             viewportGrid.appendChild(el);
             elements.push(el)
             resizeObserver.observe(el);
@@ -271,6 +284,7 @@ class GraspViewer {
 
     createTools() {
         const cornerstoneTools = window.cornerstone.tools;
+
         const {
             PanTool,
             ZoomTool,
@@ -278,13 +292,13 @@ class GraspViewer {
             StackScrollMouseWheelTool,
             StackScrollTool,
             VolumeRotateMouseWheelTool,
-
             ToolGroupManager,
             CrosshairsTool,
             EllipticalROITool,
             ProbeTool,
             Enums: csToolsEnums,
         } = cornerstoneTools;
+
         const { MouseBindings } = csToolsEnums;
         const tools = [CrosshairsTool, EllipticalROITool, StackScrollMouseWheelTool, StackScrollTool, VolumeRotateMouseWheelTool, WindowLevelTool, PanTool, ZoomTool, ProbeTool]
         tools.map(cornerstoneTools.addTool)
@@ -301,23 +315,23 @@ class GraspViewer {
         toolGroupAux.addViewport(this.viewportIds[3], "gravisRenderEngine");
         allGroupTools.map( tool => [toolGroupMain, toolGroupAux].map(group => group.addTool(tool)))
         
-        toolGroupAux.addTool(StackScrollTool.toolName)
+        toolGroupAux.addTool(StackScrollTool.toolName);
 
         toolGroupMain.addTool(ProbeTool.toolName, {
             customTextLines: (data) => [ data.label ]
         });
-        toolGroupMain.addTool(EllipticalROITool.toolName,
-            {
-                centerPointRadius: 1,
-                customTextLines: (data) => [ data.label ]
-            });
+
+        toolGroupMain.addTool(EllipticalROITool.toolName, {
+            centerPointRadius: 1,
+            customTextLines: (data) => [ data.label ]
+        });
         
         var styles = cornerstone.tools.annotation.config.style.getDefaultToolStyles()
         styles.global.lineWidth = "1"
         cornerstone.tools.annotation.config.style.setDefaultToolStyles(styles)
         toolGroupMain.addTool(CrosshairsTool.toolName, {
             getReferenceLineColor: (id) => { return ({"VIEW_AX": "rgb(255, 255, 100)",
-                                                      "VIEW_SAG": "rgb(100, 100, 255)",
+                                                      "VIEW_SAG": "rgb(18, 102, 241)",
                                                       "VIEW_COR": "rgb(255, 100, 100)",})[id]},
             getReferenceLineRotatable: (id) => false,
             getReferenceLineSlabThicknessControlsOn: (id) => false,
@@ -325,6 +339,7 @@ class GraspViewer {
           });
         return toolGroupMain;
     }
+
     enableTools() {
         if (this.toolsAlreadyActive) {
             return
@@ -333,7 +348,6 @@ class GraspViewer {
         const Enums = Tools.Enums;
         const toolGroupMain = Tools.ToolGroupManager.getToolGroup(`STACK_TOOL_GROUP_MAIN`);
         const toolGroupAux = Tools.ToolGroupManager.getToolGroup(`STACK_TOOL_GROUP_AUX`);
-
 
         toolGroupMain.setToolActive(Tools.CrosshairsTool.toolName, {
             bindings: [{ 
@@ -360,30 +374,30 @@ class GraspViewer {
                     modifierKey: Enums.KeyboardBindings.Alt,
                 }],
             });
-    
         });
 
         toolGroupMain.setToolPassive(Tools.EllipticalROITool.toolName, {
             bindings: [
-            {
-                mouseButton: Enums.MouseBindings.Primary,
-            },
+                {
+                    mouseButton: Enums.MouseBindings.Primary,
+                },
             ],
         });
 
         toolGroupMain.setToolPassive(Tools.ProbeTool.toolName, {
             bindings: [
-            {
-                mouseButton: Enums.MouseBindings.Primary,
-            },
+                {
+                    mouseButton: Enums.MouseBindings.Primary,
+                },
             ],
         });
+
         toolGroupAux.setToolActive(Tools.StackScrollTool.toolName,{
             bindings: [
                 {
                     mouseButton: Enums.MouseBindings.Primary,
                 },
-            ]})
+        ]});
 
         toolGroupMain.setToolActive(Tools.StackScrollMouseWheelTool.toolName)
         toolGroupAux.setToolActive(Tools.StackScrollMouseWheelTool.toolName)
@@ -391,6 +405,7 @@ class GraspViewer {
         [...this.viewportIds.slice(0,3)].map(id => synchronizer.add({ renderingEngineId: "gravisRenderEngine", viewportId:id }))
         this.toolsAlreadyActive = true;
     }
+
     async setVolumeByImageIds(imageIds, volumeName, keepCamera=true) {
         // const volumeName = series_uid; // Id of the volume less loader prefix
         const volumeLoaderScheme = 'cornerstoneStreamingImageVolume'; // Loader id which defines which volume loader to use
@@ -452,38 +467,14 @@ class GraspViewer {
         );
         // console.log("Image IDs",imageIds)
         await this.setVolumeByImageIds(imageIds, series_uid, true);
-    }
+    }    
     
-    async startPreviewMIP(idx) {
-        // Resetting MIP image stack with images at the last saved angle for all time points
-        try {
-            await this.switchMIP(idx, true);
-        } catch (e) {
-            console.error(e);
-        }
-    }
-    async setPreviewMIP(idx) {
-        try {
-            // Update MIP Viewport
-            await this.renderingEngine.getViewport('VIEW_AUX').setImageIdIndex(idx);
-          
-        } catch (e) {
-            console.error(e);
-        }
-    }
-    async stopPreviewMIP(idx) {
-        // Resetting MIP image stack with images at a given time point with all available angles.
-        try {
-            await this.switchMIP(idx, false);
-        } catch (e) {
-            console.error(e);
-        }
-    }
     async startPreview(idx) {
         this.previewViewports.slice(0,3).map((v, n) => {
             v.element.getElementsByTagName('svg')[0].innerHTML = this.viewports[n].element.getElementsByTagName('svg')[0].innerHTML
         });
     }
+
     async setPreview(idx) {
         try {
             requestIdleCallback( (()=>this.chart.renderGraph_()).bind(this))
@@ -504,6 +495,7 @@ class GraspViewer {
     getVolumeVOI(viewport) {
         return viewport.getDefaultActor().actor.getProperty().getRGBTransferFunction(0).getRange()
     }
+
     async updatePreview(n=null, idx=0) {
         let update = [n]
         if (n==null){
@@ -517,6 +509,7 @@ class GraspViewer {
             this.previewViewports[n].setVOI({lower, upper});
         }))
     }
+
     async switchSeries(series_uid) {
         this.chart.renderGraph_()
         await this.setVolumeBySeries(series_uid);
@@ -524,6 +517,7 @@ class GraspViewer {
             this.volume.load( e => { console.log("Volume finished loading",e); resolve() });
         });
     }    
+
     async switchMIP(index, preview) {
         const current_info = this.current_study[index];
         const viewport = this.renderingEngine.getViewport('VIEW_AUX');
@@ -548,11 +542,84 @@ class GraspViewer {
            viewport.render()
         }
     }
+
+    async cacheMIP() {
+        
+        const viewport = this.renderingEngine.getViewport('VIEW_AUX');
+        
+        const ori_dicom_set = studies_data_parsed.find((x)=>x[2]=="ORI")[1]
+        let slice_location = 0.0;
+        try {
+            slice_location = this.mip_details[viewport.targetImageIdIndex]["slice_location"]; 
+        }
+        catch (e) {
+            console.log("mip_details is not initialized yet. setting slice_location to 0.0.")
+        }
+        let imageIdsToPrefetch = (await doFetch(`/api/case/${this.case_id}/dicom_set/${ori_dicom_set}/processed_results/MIP?slice_location=${slice_location}`,null, "GET")).urls;
+        
+        const requestFn = (imageId, options) => cornerstone.imageLoader.loadAndCacheImage(imageId, options);
+        const priority = 0;
+        const requestType = cornerstone.Enums.RequestType.Prefetch;
+        imageIdsToPrefetch.forEach((imageId) => {
+        
+            // IMPORTANT: Request type should be passed if not the 'interaction'
+            // highest priority will be used for the request type in the imageRetrievalPool
+            const options = {
+              targetBuffer: {
+                type: 'Float32Array',
+                offset: null,
+                length: null,
+              },
+              requestType,
+            };
+        
+            cornerstone.imageLoadPoolManager.addRequest(
+              requestFn.bind(null, imageId, options),
+              requestType,
+              // Additional details
+              {
+                imageId,
+              },
+              priority
+              // addToBeginning
+            );
+        });        
+    }
+
     async switchToIndex(index) {
         const current_info = this.current_study[index];
         await viewer.switchSeries(current_info.series_uid); 
         this.selected_time = current_info.acquisition_seconds; 
     }
+
+    async startPreviewMIP(idx) {
+        // Resetting MIP image stack with images at the last saved angle for all time points
+        try {
+            await this.switchMIP(idx, true);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async setPreviewMIP(idx) {
+        try {
+            // Update MIP Viewport
+            await this.renderingEngine.getViewport('VIEW_AUX').setImageIdIndex(idx);
+          
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async stopPreviewMIP(idx) {
+        // Resetting MIP image stack with images at a given time point with all available angles.
+        try {
+            await this.switchMIP(idx, false);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
     async switchStudy(info, case_id, keepCamera=true) {       
 
         const [study_uid, dicom_set] = info;
@@ -589,7 +656,23 @@ class GraspViewer {
         console.log(`Loading index ${selected_index}`)
         console.log(graspVolumeInfo)
         await this.setVolumeBySeries(graspVolumeInfo[selected_index]["series_uid"])
-        document.getElementById("volume-picker").setAttribute("value",selected_index)
+        document.getElementById("volume-picker").setAttribute("value",selected_index)        
+        
+        this.current_study = graspVolumeInfo;
+         
+        // Get MIP metadata info, currently only need slice_locations
+        const current_info = graspVolumeInfo[0];
+        const ori_dicom_set = studies_data_parsed.find((x)=>x[2]=="ORI")[1];
+        try {
+            this.mip_details = (await doFetch(`/api/case/${case_id}/dicom_set/${ori_dicom_set}/mip_metadata?acquisition_number=${current_info.acquisition_number}`,null, "GET")).details;
+                         
+            // Set Initial MIP Image         
+            await this.switchMIP(0, false);
+            await this.setPreviewMIP(0);  
+        }
+        catch (e) {
+            console.error(e); 
+        }
 
         this.volume.load(async ()=>{ 
             console.log("Volume loaded");
@@ -599,23 +682,12 @@ class GraspViewer {
         } catch (e) {
             console.error(e);
         }
-
-        this.current_study = graspVolumeInfo;
         
-        // Get MIP metadata info, currently only need slice_locations
-        const current_info = this.current_study[0];
-        const ori_dicom_set = studies_data_parsed.find((x)=>x[2]=="ORI")[1]
-        try {
-            this.mip_details = (await doFetch(`/api/case/${case_id}/dicom_set/${ori_dicom_set}/mip_metadata?acquisition_number=${current_info.acquisition_number}`,null, "GET")).details;
-        } catch (e) {
-            this.mip_details = null
-            console.warn("Failed to load MIP details")
-            console.error(e);
-        }
         console.log("Study switched");
 
         return graspVolumeInfo
     }
+
     async setPreviewStackForViewport(n, dest_viewport) {
         const viewport = this.viewports[n];
         const cam = viewport.getCamera();
@@ -639,6 +711,7 @@ class GraspViewer {
         // console.log(cornerstone.requestPoolManager.getRequestPool().interaction)
         // cornerstone.tools.utilities.stackPrefetch.enable(dest_viewport.element);
     }
+
     getNativeViewports() {
         let native_viewports = [];
         for (var v of viewer.viewports) {
@@ -653,6 +726,7 @@ class GraspViewer {
         }
         return native_viewports;
     }
+
     async loadFindings() {
         const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`,{},"GET");
         return result.findings;
@@ -679,10 +753,12 @@ class GraspViewer {
         const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`, {image_data: image, info: info});
         this.findings.push(result);
     }
+
     async deleteFinding(id){
         const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding/${id}`,{}, "DELETE");
         this.findings = await this.loadFindings()
     }
+
     async renameFinding(finding){
         let prompt_result = prompt("Finding name?")
         if (! prompt_result ) return;
@@ -702,6 +778,7 @@ class GraspViewer {
         }
         return true;
     }
+
     async goToFinding(finding) {
         if (finding.data.viewportId != "VIEW_AUX") {
             for (const v of this.viewports) {
