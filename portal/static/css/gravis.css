@@ -398,19 +398,27 @@ button:focus:not(:focus-visible) {
   width: 12px;
   height: 34px;
   border: 0;
-  background-color: #fff;
+  background-color: #FFF;
   cursor: pointer;
   margin-top: -13px;
   border-radius: 2px;
-  box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%);  
+  box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%);   
 }
 
 .timeslider::-webkit-slider-thumb:hover {
-  background-color: #ffff66;
+  background-color: #EEE;
 }
 
 .timeslider::-moz-range-thumb:hover {
-  background-color: #ffff66;
+  background-color: #EEE;
+}
+
+.timeslider-loading::-webkit-slider-thumb, .timeslider-loading::-webkit-slider-thumb:hover {
+    background-color: #999 !important; 
+}
+  
+.timeslider::-moz-range-thumb, .timeslider::-moz-range-thumb:hover {
+    background-color: #999  !important;  
 }
 
 .timeslider::-moz-range-thumb {
