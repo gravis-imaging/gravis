@@ -117,43 +117,47 @@ def do_docker_job(job_id):
 
         except Exception as e:
             process_job_error(job_id, e)
-            logger.error(e)
-            logger.error(
+            logger.exception(
                 f"Error running docker container. Image for tag {docker_tag} not found."
             )  # handle_error
             processing_success = False
 
-    if processing_success:
-        # TODO figure out sub/mip from dicom tags
-        job.complete = True
-        try:
-            subfolders = [ f.path for f in os.scandir(output_folder) if f.is_dir() ]
-            for folder in subfolders:
-                register_dicom_set_success, error = dicom_set_utils.register(
-                    folder, job.case, "Processed", job_id
-                )
-                if not register_dicom_set_success:
-                    process_job_error(job_id, error)
-                    return False
+    if not processing_success:
+        raise Exception("Processing failed.")
+
+    # TODO figure out sub/mip from dicom tags
+    job.complete = True
+    try:
+        subfolders = [ f.path for f in os.scandir(output_folder) if f.is_dir() ]
+        for folder in subfolders:
+            register_dicom_set_success, error = dicom_set_utils.register(
+                folder, job.case, "Processed", job_id
+            )
+            if not register_dicom_set_success:
+                process_job_error(job_id, error)
+                return False
 
 
-            # register_dicom_set_success, error = dicom_set_utils.register(
-            #     output_folder + "/mip", job.case, "Processed", "MIP", job_id
-            # )
-            # if not register_dicom_set_success:
-            #     process_job_error(job_id, error)
-            #     return False
-            job.status = "Success"
-            # job.dicom_set = dicom_set
-            job.case.status = Case.CaseStatus.READY
-            job.case.save()
-            job.save()
-        except Exception as e:
-            process_job_error(job_id, e)
-            logger.error(
-                f"Error creating output DICOMSet for {input_folder} for case {job.case}."
-            )  # handle_error
-            processing_success = False
+        # register_dicom_set_success, error = dicom_set_utils.register(
+        #     output_folder + "/mip", job.case, "Processed", "MIP", job_id
+        # )
+        # if not register_dicom_set_success:
+        #     process_job_error(job_id, error)
+        #     return False
+        job.status = "Success"
+        # job.dicom_set = dicom_set
+        job.case.status = Case.CaseStatus.READY
+        job.case.save()
+        job.save()
+    except Exception as e:
+        process_job_error(job_id, e)
+        logger.error(
+            f"Error creating output DICOMSet for {input_folder} for case {job.case}."
+        )  # handle_error
+        processing_success = False
+
+    if not processing_success:
+        raise Exception("Processing failed.")
 
     return processing_success
 
@@ -165,7 +169,7 @@ def process_job_error(job_id, error_description):
     except Exception as e:
         logger.exception(f"ProcessingJob with id {job_id} does not exist.")
         return False
-    folder_name = os.path.basename(os.path.dirname(job.case.case_location))
+    folder_name = Path(job.case.case_location).name # "foo/bar" -> bar, "foo/bar/" => bar
     print("ERROR FOLDER!!!: ", folder_name)
     dicom_set_utils.move_files(
         Path(job.case.case_location), Path(settings.ERROR_FOLDER) / folder_name

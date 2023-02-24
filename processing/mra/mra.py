@@ -132,7 +132,7 @@ class MRA:
             beginning_times_volumes.clear()
             # print("min_intensity_index ", self.__min_intensity_index)
         except Exception as e:
-            logger.exception(e, "Error while calculating minimum intensity index.")
+            logger.exception("Error while calculating minimum intensity index.")
             return self.__return_codes.CANNOT_CALCULATE_INTENSITY_INDEX      
 
         # print("=====MEMORY USAGE AFTER CALCULATING MIN INTENSITY AFTER CLEARING=====")
@@ -274,7 +274,7 @@ class MRA:
             self.__tags_to_save_dict[acquisition_number] = series_tag_values
             image = sitk.Cast(image, sitk.sitkFloat32)
         except Exception as e:
-            logger.exception(e, f"Problem loading DICOM files for acquisition number: {acquisition_number}.")
+            logger.exception(f"Problem loading DICOM files for acquisition number: {acquisition_number}.")
             return self.__return_codes.DICOM_READING_ERROR
         return self.__return_codes.NO_ERRORS, image
 
@@ -286,7 +286,7 @@ class MRA:
             #  set all negative pixels to zero
             subtracted_image = sitk.Threshold(subtracted_image, 0, math.inf, 0)
         except Exception as e:
-            logger.exception(e, "Error while subtracting images.")
+            logger.exception("Error while subtracting images.")
             return self.__return_codes.ERROR_CALCULATING_SUBTRACTED_IMAGES
         return self.__return_codes.NO_ERRORS, subtracted_image
 
@@ -368,7 +368,7 @@ class MRA:
                 slice_volume = sitk.Threshold(slice_volume, 0, math.inf, 0)                
                 proj_images.append((angle, slice_volume))
         except Exception as e:
-            logger.exception(e, "Error calculating projections.")
+            logger.exception("Error calculating projections.")
             return self.__return_codes.ERROR_CALCULATING_PROJECTIONS
         return self.__return_codes.NO_ERRORS, proj_images
 
@@ -493,7 +493,7 @@ class MRA:
                     writer.Execute(image_slice)
                     i += 1
         except Exception as e:
-            logger.exception(e, f"Error saving files in {output_dir_name}.")
+            logger.exception(f"Error saving files in {output_dir_name}.")
             return self.__return_codes.ERROR_SAVING_FILES
         return self.__return_codes.NO_ERRORS
 

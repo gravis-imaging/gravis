@@ -361,21 +361,23 @@ def trigger_queued_cases():
             logger.exception(
                 f"Exception creating a new processing job for {dicom_set.set_location} "
             )
-        else:
-            try:
-                result = django_rq.enqueue(
-                    docker_utils.do_docker_job,
-                    new_job.id,
-                    on_success=create_sub_previews,
-                    on_failure=report_failure,
-                )
-                new_job.rq_id = result.id
-                new_job.save()
-            except Exception as e:
-                docker_utils.process_job_error(new_job.id, e)
-                logger.exception(
-                    f"Exception enqueueing a new processing job for {dicom_set.set_location} "
-                )
+            continue
+
+        try:
+            main_processing_job = django_rq.enqueue(
+                docker_utils.do_docker_job,
+                new_job.id,
+                on_success=create_sub_previews,
+                on_failure=report_failure,
+            )
+            new_job.rq_id = main_processing_job.id
+            new_job.save()
+        except Exception as e:
+            docker_utils.process_job_error(new_job.id, e)
+            logger.exception(
+                f"Exception enqueueing a new processing job for {dicom_set.set_location} "
+            )
+            continue
 
         try:            
             job = ProcessingJob(
@@ -391,7 +393,8 @@ def trigger_queued_cases():
                 # job_timeout=60*60*4,
                 on_success=report_success,
                 on_failure=report_failure,
-                ) 
+                depends_on=main_processing_job
+            )
             job.rq_id = result.id
             job.save()
         except Exception as e:
