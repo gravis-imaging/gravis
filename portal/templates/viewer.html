@@ -43,7 +43,7 @@
 
   <!-- volume picker -->
   <!-- x-model="value" x-ref="input" x-on:focus="() => { $refs.input.focus() }"  -->
-  <input id='volume-picker' tabindex='1' class="timeslider" title="Displayed time point" type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
+  <input id='volume-picker' tabindex='1' class="timeslider" :class="!(loading || switching || job_loading) || 'timeslider-loading'" title="Displayed time point" type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
       @mouseup="previewing = false; previewingMIP = false; viewer.stopPreviewMIP($event.target.value);" 
       @mousedown="if (!previewingMIP) { await viewer.startPreviewMIP($event.target.value); previewingMIP = true; }; viewer.selected_time=viewer.current_study[$event.target.value].acquisition_seconds; viewer.setPreviewMIP($event.target.value);"    
       @input="if (!previewing) { await viewer.startPreview($event.target.value); previewing = true; }; viewer.selected_time=viewer.current_study[$event.target.value].acquisition_seconds; viewer.setPreview($event.target.value); viewer.setPreviewMIP($event.target.value);" 
