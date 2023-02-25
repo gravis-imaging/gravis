@@ -42,12 +42,17 @@ def login_request(request):
             password = form.cleaned_data.get("password")
             user = authenticate(username=username, password=password)
             if user is not None:
+                try:
+                    UserProfile.objects.get(user=user.id)
+                except UserProfile.DoesNotExist:                
+                    UserProfile.objects.create(user=user)
                 login(request, user)
                 return redirect("/")
             else:
                 messages.error(request, "Invalid username or password.")
         else:
             messages.error(request, "Invalid username or password.")
+
     form = AuthenticationForm()
     return render(request, "login.html", context={"form": form, "build_version": settings.GRAVIS_VERSION})
 
@@ -56,8 +61,6 @@ def logout_request(request):
     logout(request)
     return redirect("/login")
 
-
-# TODO: Status viewer from django rq - Case Information button is clicked
 
 @login_required
 def index(request):

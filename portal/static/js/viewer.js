@@ -760,7 +760,24 @@ class GraspViewer {
     }
 
     async renameFinding(finding){
-        let prompt_result = prompt("Finding name?")
+
+        const { value: input_value } = await Swal.fire({
+            input: 'text',
+            inputLabel: 'Finding Description',
+            inputPlaceholder: 'Describe the finding here...',
+            showCancelButton: true,
+            confirmButtonColor: '#1266f1',
+            cancelButtonColor: '#d33',            
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'Please provide a description'
+                }
+            }            
+        })
+
+        let prompt_result = input_value;
+
+        // let prompt_result = prompt("Finding name?")
         if (! prompt_result ) return;
         prompt_result = prompt_result.trim();
         if (! prompt_result ) return;

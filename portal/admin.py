@@ -20,14 +20,13 @@ class CustomUserAdmin(UserAdmin):
         return super(CustomUserAdmin, self).get_inline_instances(request, obj)
 
 
-
-
 class DicomSetInline(admin.TabularInline):
     model = DICOMSet
 class CaseAdmin(admin.ModelAdmin):
     inlines = [
         DicomSetInline,
     ]
+
 
 admin.site.unregister(User)
 admin.site.register(User, CustomUserAdmin)

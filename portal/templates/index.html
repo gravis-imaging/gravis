@@ -46,18 +46,14 @@
 {% endblock %}
 
 {% block addedscripts %}
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js" crossorigin></script>
 <script type="text/javascript" src="/static/js/datatables.min.js" crossorigin></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" crossorigin></script>
 
-{% include "modal_case_tags_select.html" %}
+{% include "modal_case_tags.html" %}
 
-<script>   
-    
-    $(document).ready(function () {
-               
-        var case_data_table = $('#casetable').DataTable({
-           
+<script>       
+    $(document).ready(function () {               
+        var case_data_table = $('#casetable').DataTable({           
             dom: "<'row browsertoolbar align-items-end'<'col-sm-12 col-md-6 browserbuttons'B><'col-sm-12 col-md-6'f>>" + "<'row'<'col-sm-12'tr>>" + "<'row'<'col-sm-12 col-md-5'><'col-sm-12 col-md-7'p>>",
             ajax: "/browser/get_cases_all",
             deferRender: true,
@@ -137,6 +133,7 @@
                         openCase(selected_row.case_id, selected_row.status, selected_row.last_read_by_id); 
                     }
                 },
+                {% if user.is_staff %}
                 {
                     extend: "selectedSingle",
                     text: '<i class="fas fa-lock-open"></i>',
@@ -145,7 +142,6 @@
                         alert("Coming soon!");
                     }
                 },
-                {% if user.is_staff %}
                 {
                     extend: "selectedSingle",
                     text: '<i class="fas fa-trash"></i>',
@@ -155,7 +151,7 @@
                         Swal.fire({
                             title: 'Are you sure?',
                             text: "Do you really want to delete the case?",
-                            icon: 'warning',
+                            icon: 'question',
                             showCancelButton: true,
                             confirmButtonColor: '#1266f1',
                             cancelButtonColor: '#d33',
@@ -187,6 +183,7 @@
                         })
                     }
                 },
+                {% endif %}
                 {
                     extend: "selectedSingle",
                     text: '<i class="fas fa-list-alt"></i>',
@@ -214,7 +211,6 @@
                         case_data_table.ajax.reload();
                     }
                 },                
-                {% endif %}
             ],
             initComplete: () => {             
                 $("#tablewrapper").show();
@@ -243,15 +239,14 @@
             window.open(link, "_self");
         }
         else {
-            Swal.fire(
-                'Warning',
-                'The case is not ready for viewing or locked by another user.', 
-                'warning'
-            )
+            Swal.fire({
+                title: "Locked",
+                text: 'Case is not ready for viewing or locked by another user.', 
+                icon: 'info'
+            })
         }  
     }
     
 </script>
 
 {% endblock %}
-

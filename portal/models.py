@@ -89,6 +89,7 @@ class SuccessfulProcessingJobManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(status__iexact='success')
 
+
 class ProcessingJob(models.Model):
     """
     A model to represent processing results for a specific gravis case.
@@ -126,9 +127,11 @@ class ProcessingJob(models.Model):
         #     )
         # ]
 
+
 class DICOMSetSuccessfulProcessingJobManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(processing_job__status__iexact='Success')
+
 
 class DICOMSet(models.Model):
     """
@@ -185,6 +188,7 @@ class Finding(models.Model):
     class Meta:
         db_table = "gravis_finding"
 
+
 class SessionInfo(models.Model):
     case = models.ForeignKey(
         Case,
@@ -206,6 +210,7 @@ class SessionInfo(models.Model):
         return dict(cameras=self.cameras, annotations=self.annotations, voi=self.voi, session_id=self.id)
     class Meta:
         db_table = "gravis_session"
+
 
 class DICOMInstance(models.Model):
     """
@@ -288,9 +293,6 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.user.username
+
     class Meta:
         db_table = "gravis_user_profile"
-
-
-
-     
