@@ -406,19 +406,19 @@ button:focus:not(:focus-visible) {
 }
 
 .timeslider::-webkit-slider-thumb:hover {
-  background-color: #EEE;
+  background-color: #DEDEDE;
 }
 
 .timeslider::-moz-range-thumb:hover {
-  background-color: #EEE;
+  background-color: #DEDEDE;
 }
 
 .timeslider-loading::-webkit-slider-thumb, .timeslider-loading::-webkit-slider-thumb:hover {
-    background-color: #999 !important; 
+    background-color: #777 !important; 
 }
   
 .timeslider::-moz-range-thumb, .timeslider::-moz-range-thumb:hover {
-    background-color: #999  !important;  
+    background-color: #777  !important;  
 }
 
 .timeslider::-moz-range-thumb {

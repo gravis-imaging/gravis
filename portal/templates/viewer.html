@@ -233,17 +233,11 @@
   </div>
 
   <!-- Chart -->
-  <div style="grid-area: f; z-index: 1" class="no-pointer-events">
-    <button
-      title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
-      @click="console.log(viewer.storeChartFinding());"><i class="fa-solid fa-camera"></i>
-     </button>
-  </div>
   <div style="grid-area: f; background-color: black; " class="mb-2 py-3">
     <div id="chart" style="background-color: black; color: white;">
     </div>
   </div>
-  <div style="grid-area: f">
+  <div style="grid-area: f;">
     <template x-if="viewer">
       <div style="text-align:right; position:relative;">
         <select class="curve-settings-select" x-model="viewer.chart_options['adjust']" @change="viewer.annotation_manager.updateChart()">
@@ -258,6 +252,12 @@
         </select>
       </div>    
     </template>
+  </div>
+  <div style="grid-area: f; position:relative;" class="no-pointer-events">
+    <button
+      title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" style="position: absolute; bottom: 0.5rem; right: 0.5rem;"
+      @click="console.log(viewer.storeChartFinding());"><i class="fa-solid fa-camera"></i>
+     </button>
   </div>
    
   <!-- Findings -->
