@@ -53,7 +53,6 @@
 {% include "modal_case_tags_select.html" %}
 
 <script>   
-    
     $(document).ready(function () {
                
         var case_data_table = $('#casetable').DataTable({
@@ -150,41 +149,20 @@
                     extend: "selectedSingle",
                     text: '<i class="fas fa-trash"></i>',
                     titleAttr: 'Remove case',
-                    action: function (e, dt, node, config) {
-                        
-                        Swal.fire({
-                            title: 'Are you sure?',
-                            text: "Do you really want to delete the case?",
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonColor: '#1266f1',
-                            cancelButtonColor: '#d33',
-                            confirmButtonText: 'Yes'
-                            }).then((result) => {
-                            if (result.isConfirmed) {                                
-                                const selected_row = case_data_table.row({selected: true}).data();
-                                const case_id = selected_row.case_id;
-                                fetch('/cases/', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Accept': 'application/json',
-                                        'Content-Type': 'application/json',
-                                        'X-CSRFToken': '{{ csrf_token }}',
-                                    },
-                                    body: JSON.stringify({ "case_id": case_id })
-                                })
-                                .then(response => response.json())
-                                .then(response => {
-                                    Swal.fire(
-                                        'Deleted',
-                                        'The case has been deleted.',
-                                        'success'
-                                    ).then((result) => {
-                                        window.location.reload();
-                                    })
-                                })
+                    action: async function (e, dt, node, config) {
+                        const case_id = case_data_table.row({selected: true}).data().case_id;
+
+                        const result = await confirmPrompt("Do you really want to delete the case?", "Are you sure?", async () => {
+                            try {
+                                return await doFetch('/cases/', { "case_id": case_id });
+                            } catch (e) {
+                                Swal.showValidationMessage(`Error deleting case: ${e}`)
                             }
                         })
+                        if (result.isConfirmed) {
+                            await successPrompt("The case has been deleted.");
+                            $('#casetable').DataTable().ajax.reload();
+                        }
                     }
                 },
                 {
@@ -192,8 +170,7 @@
                     text: '<i class="fas fa-list-alt"></i>',
                     titleAttr: 'Case information',
                     action: function (e, dt, node, config) {
-                        const selected_row = case_data_table.row({selected: true}).data();
-                        const case_id = selected_row.case_id;
+                        const case_id = case_data_table.row({selected: true}).data().case_id;
                         showCaseInformation(case_id);                        
                     }
                 },                
@@ -241,13 +218,8 @@
         if ( ["Ready", "Viewing", "Complete"].includes(status) && (last_read_by_id == "{{ user.username }}" || last_read_by_id == "") )  {                                      
             const link = '/viewer/'+case_id;
             window.open(link, "_self");
-        }
-        else {
-            Swal.fire(
-                'Warning',
-                'The case is not ready for viewing or locked by another user.', 
-                'warning'
-            )
+        } else {
+            errorPrompt("The case is not ready for viewing or locked by another user.")
         }  
     }
     

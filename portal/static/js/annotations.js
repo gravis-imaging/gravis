@@ -1,4 +1,4 @@
-import { doFetch, HSLToRGB, Vector, scrollViewportToPoint } from "./utils.js"
+import { doFetch, HSLToRGB, Vector, scrollViewportToPoint, confirmPrompt } from "./utils.js"
 
 class AnnotationManager {
     viewer;
@@ -122,28 +122,21 @@ class AnnotationManager {
     }
     
     async deleteAllAnnotations() {
-        let result = await Swal.fire({
-            title: 'Are you sure?',
-            text: "Do you really want to delete all annotations?",
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#1266f1',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes'
-            })
-        if (result.isConfirmed) {
-            let annotations = this.getAllAnnotations();
-            if ( !annotations ) {
-                return;
-            }
-            for (var a of annotations) {
-                if (!a) { continue }
-                cornerstone.tools.annotation.state.removeAnnotation(a.annotationUID)
-                delete this.annotations[a.annotationUID];
-            }
-            this.updateChart();
-            cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,this.viewer.viewportIds)
+        const result = await confirmPrompt("Do you really want to delete all annotations?")
+        if (!result.isConfirmed) {
+            return;
         }
+        const annotations = this.getAllAnnotations();
+        if ( !annotations ) {
+            return;
+        }
+        for (var a of annotations) {
+            if (!a) { continue }
+            cornerstone.tools.annotation.state.removeAnnotation(a.annotationUID)
+            delete this.annotations[a.annotationUID];
+        }
+        this.updateChart();
+        cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,this.viewer.viewportIds)
     }
 
     flipSelectedAnnotations() {

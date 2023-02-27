@@ -32,26 +32,14 @@ $(document).ready(function() {
 
 // Retrieves that information for the given case from the server and shows a modal popup window with
 // the information
-function showTagsDialog(case_id) {
-    let retrieve_tags = $.ajax({ 
-        type: 'GET',
-        dataType: "json",
-        url: '/browser/get_case_tags_and_all_tags/'+case_id,
-        async: true,
-        error: function () {
-            // Show error if the data cannot be read from server
-            Swal.fire(
-                'Error',
-                'Unable to find case information.',
-                'error'
-            )
-        },
-        success: function(result) {},
-        timeout: 3000                    
-    });
-    $.when( retrieve_tags ).done(function( data ) {
+async function showTagsDialog(case_id) {
+    try { 
+        const data = await doFetch('/browser/get_case_tags_and_all_tags/'+case_id, {},"GET")
         displayTagsInformation(case_id, data.case_tags, data.tags);
-    });
+    } catch (e){
+        await errorPrompt("Unable to find tag information.")
+        console.error(e);
+    }
 }
 
 // Renders the retrieved JSON information in modal window and displays it 
@@ -89,32 +77,13 @@ async function updateCaseTags() {
     for (let i = 0; i < selected.length; i++) {
         tags.push(selected[i].text);
     }
-    const response = await sendData({tags: tags, case_id: case_id})
-    if(response.ok) {
-        // window.location.reload();
+    try {
+        await doFetch('/update_case_tags/',({tags: tags, case_id: case_id}))
         $('#casetable').DataTable().ajax.reload();
         $('#tags_selection_modal').modal('hide');
+    } catch (e) {
+        errorPrompt(e);
     }
-    else {
-        await Swal.fire(
-            'Error',
-                await response.text(),
-            'error'
-        )
-    };   
-}
-
-// after tags are updated in the dialog, need to update the database
-async function sendData(data){
-  return await fetch('/update_case_tags/', {
-    method: 'POST',
-    headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'X-CSRFToken': '{{ csrf_token }}',
-    },
-    body: JSON.stringify(data)
-  });
 }
 
 </script>

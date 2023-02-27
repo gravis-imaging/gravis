@@ -60,17 +60,24 @@ async function doJob(type, case_, params, force=false) {
 
 
 async function doFetch(url, body, method="POST") {
-    let raw_result = await fetch(url, {
+    const response = await fetch(url, {
         method: method, 
         credentials: 'same-origin',        
         headers: {
+            'Accept': 'application/json',
             'Content-Type': 'application/json',
             'X-CSRFToken': csrftoken,
         },
         ...( method=="GET"? {} : {body: JSON.stringify(body)})
     })
-    let text = await raw_result.text();
-    
+    if (!response.ok) {
+        throw new Error(response.statusText)
+    }
+
+    const text = await response.text();
+    if (text.length == 0) {
+        return text
+    }
     try {
         return JSON.parse(text)
     } catch (e) {
@@ -333,4 +340,64 @@ const scrollViewportToPoint = (viewport, centerPoint) => {
     // }
     viewport.setCamera(cam);
 }
-export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, Vector, chartToImage };
+
+const CommonSwal = Swal.mixin({
+    showClass: {
+        backdrop: 'swal2-noanimation',
+        popup: '',
+        icon: ''
+    },
+    hideClass: {
+        popup: '',
+    },
+})
+
+async function confirmPrompt(text, title="Are you sure?", preConfirm=null) {
+    let extra = {}
+    if (preConfirm) {
+        extra = {
+            preConfirm: preConfirm,
+            showLoaderOnConfirm: true,
+            allowOutsideClick: () => !Swal.isLoading()
+        }
+    }
+    return await CommonSwal.fire({
+        title: title,
+        text: text,  
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonColor: "#1266f1",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes",
+        ...extra,
+    })
+}
+
+async function errorPrompt(text) {
+    return await CommonSwal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: text
+    })
+}
+
+
+async function successPrompt(text) {
+    return await CommonSwal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: text
+    })
+}
+
+
+async function inputPrompt(label, title, placeholder) {
+    return await CommonSwal.fire({
+        input: "text",
+        inputTitle: title,
+        inputLabel: label,
+        inputPlaceholder: placeholder,
+    })
+}
+
+export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, Vector, chartToImage, confirmPrompt, inputPrompt, errorPrompt, successPrompt };

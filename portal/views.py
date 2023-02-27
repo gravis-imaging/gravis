@@ -70,10 +70,10 @@ def index(request):
 @login_required
 def user(request):
     obj, created = UserProfile.objects.get_or_create(
-        user=request.user, 
-        defaults={ 
-            'user_id':request.user, 
-            'privacy_mode':False 
+        user = request.user, 
+        defaults = { 
+            'user_id':request.user.id, 
+            'privacy_mode': False 
         }
     )
     context = {

@@ -318,27 +318,16 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
 
 <script defer type="module">
   import { GraspViewer, doJob } from "/static/js/viewer.js"
-  import { doFetch } from "/static/js/utils.js"
   window.GraspViewer = GraspViewer;
   window.doJob = doJob;
-  window.doFetch = doFetch;
-  </script>
+</script>
 
 <script>
-  function closeCurrentCase() {
-    Swal.fire({
-      title: 'Are you sure?',
-      text: "Unsaved findings will be lost.",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#1266f1',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Close'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        // TODO
-      }
-    })    
+  async function closeCurrentCase() {
+    const result = await window.confirmPrompt("Unsaved findings will be lost.")
+    if (result.isConfirmed) {
+      // TODO
+    }
   }
 </script>
 

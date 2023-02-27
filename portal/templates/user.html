@@ -10,23 +10,11 @@
 <script type="module">
     async function set_check() {
         const is_checked = document.getElementById('privacy_mode').checked; 
-        response = await fetch('/user_settings', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}',
-            },
-            body: JSON.stringify({'privacy_mode' : is_checked})
-        })
-                
-        if(!response.ok) {
-            await Swal.fire(
-                'Error',
-                await response.text(),
-                'error'
-            )
-        } 
+        try {
+            await doFetch("/user_settings", {"privacy_mode": is_checked})
+        } catch (e) {
+            errorPrompt('Update failed.'); 
+        }   
     }   
     window.set_check = set_check;
 </script>

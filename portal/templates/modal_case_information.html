@@ -79,13 +79,9 @@ function showCaseInformation(case_id) {
         type: 'GET',
         url: '/browser/get_case/'+case_id,
         dataType: 'json',
-        error: function () {
+        error: async function (e) {
             // Show error if the data cannot be read from server
-            Swal.fire(
-                'Error',
-                'Unable to find case information.',
-                'error'
-            )
+            await errorPrompt("Unable to find case information.")
         },
         success: function (data) {
             // Call helper function to display modal window with information
