@@ -29,7 +29,9 @@ function getCookie(name) {
     return cookieValue;
 }
 
+
 window.csrftoken = getCookie('csrftoken');
+
 
 function HSLToRGB (h, s, l) {
     s /= 100;
@@ -159,7 +161,8 @@ const loadImage = async url => {
       img.onload = () => resolve(img)
       img.onerror = reject
     })
-  }
+}
+
 
 async function encodeSVG(svg_xml, width, height) {
     const svgData = `data:image/svg+xml,${encodeURIComponent(svg_xml)}`
@@ -170,6 +173,8 @@ async function encodeSVG(svg_xml, width, height) {
     canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
     return await canvas.toDataURL("image/png", 1.0);
 }
+
+
 async function viewportToImage(viewport) {
     const element = viewport.element.getElementsByTagName("svg")[0];
     const cloneElement = element.cloneNode(true);
@@ -193,6 +198,7 @@ async function viewportToImage(viewport) {
     // const dataURL = await canvas.toDataURL("image/png", 1.0);
     // return dataURL;
 }
+
 
 async function chartToImage(chart) {
     const graphWidth = parseFloat(chart.graphDiv.style.width);
@@ -276,6 +282,7 @@ text {
     // return dataURL;
 }
 
+
 class Vector {
     static sub(arr_a,arr_b) {
         let r = Array(arr_a.length);
@@ -315,6 +322,8 @@ class Vector {
         return true;
     }
 }
+
+
 const scrollViewportToPoint = (viewport, centerPoint) => {
     let cam = viewport.getCamera();
     const moveAmount = Vector.dot(cam.viewPlaneNormal, centerPoint) - Vector.dot(cam.viewPlaneNormal, cam.focalPoint)
@@ -333,4 +342,6 @@ const scrollViewportToPoint = (viewport, centerPoint) => {
     // }
     viewport.setCamera(cam);
 }
+
+
 export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, Vector, chartToImage };

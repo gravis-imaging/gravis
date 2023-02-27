@@ -201,7 +201,6 @@ class AnnotationManager {
         delete this.annotations[annotation_info.uid];
         await this.updateChart()
     }
-
     
     goToAnnotation(uid) {
         const annotation_info = this.annotations[uid];
@@ -212,11 +211,9 @@ class AnnotationManager {
         cornerstone.tools.annotation.selection.setAnnotationSelected(uid, true, false);
         this.viewer.renderingEngine.renderViewports([annotation_info.viewportId]);
         cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,[annotation_info.viewportId]) 
-
     }
 
     initChart() {    
-
         const div = document.getElementById("chart");
 
         var g = new Dygraph(div, [],

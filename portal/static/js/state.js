@@ -20,6 +20,7 @@ class StateManager {
         }
         return annotations;
     }
+
     _calcState() {
         if (!this.viewer.viewports[0].getDefaultActor()) {
             return;
@@ -34,6 +35,7 @@ class StateManager {
         } 
         return { cameras, voi, annotations };
     }
+
     _applyState(state) {
         state.cameras.map((c,n)=> {
             this.viewer.viewports[n].setCamera(c);
@@ -63,6 +65,7 @@ class StateManager {
         this.current_state = state;
         this.viewer.annotation_manager.updateChart();
     }
+
     async save() {
         if (!this.viewer.case_id) return;
         console.info("Saving state.")
@@ -74,6 +77,7 @@ class StateManager {
             this.changed = false;
         }
     }
+
     async load() {
         if (!this.viewer.case_id) return;
         var state;
@@ -96,6 +100,7 @@ class StateManager {
         this.just_loaded = true;
         this.session_id = state.session_id;
     }
+
     async switchSession(id) {
         const state = await doFetch(`/api/case/${this.viewer.case_id}/session/${id}`,{},"GET")
         // this.session_list = (await doFetch(`/api/case/${this.viewer.case_id}/sessions`,{},"GET")).sessions
@@ -106,6 +111,7 @@ class StateManager {
         this.just_loaded = true;
         this.session_id = state.session_id;
     }
+
     async newSession() {
         const state = await doFetch(`/api/case/${this.viewer.case_id}/session/new`,{},"POST")
         this.session_list = (await doFetch(`/api/case/${this.viewer.case_id}/sessions`,{},"GET")).sessions
@@ -116,7 +122,7 @@ class StateManager {
         this.session_id = state.session_id;
     }
 
-    startBackgroundSave(){ 
+    startBackgroundSave() { 
         if (this.background_save_interval) {
             return;
         }
@@ -133,7 +139,7 @@ class StateManager {
         this.background_save_interval = setInterval(saveStateSoon.bind(this), 1000);
     }
 
-    stopBackgroundSave(){
+    stopBackgroundSave() {
         if (this.background_save_interval) {
             clearInterval(this.background_save_interval);
         }

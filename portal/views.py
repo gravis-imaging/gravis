@@ -9,10 +9,11 @@ from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.views.static import serve
+from django.contrib.auth.models import User
 # from django.contrib.staticfiles import views as static_views
 
-
 from .models import Case, DICOMInstance, Tag, UserProfile
+from .forms import UserForm, ProfileForm, ProfileUpdateForm
 
 logger = logging.getLogger(__name__)
 
@@ -72,36 +73,31 @@ def index(request):
 
 @login_required
 def user(request):
-    obj, created = UserProfile.objects.get_or_create(
-        user=request.user, 
-        defaults={ 
-            'user_id':request.user, 
-            'privacy_mode':False 
-        }
-    )
-    context = {
-        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user),
-        "privacy_mode": obj.privacy_mode
-    }
-    return render(request, "user.html", context)
+    current_user = get_object_or_404(User,username=request.user)
 
+    if request.method == 'POST':
+        print(request.POST)
+        form = ProfileUpdateForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:           
+                current_user.userprofile.privacy_mode = bool(form.cleaned_data.get("privacy_mode"))
+                current_user.userprofile.save() 
+                print("Current user saved!")
+            except Exception as e:
+                print("Error while saving profile data")
+                print(e)
+                return HttpResponseBadRequest('Unable to save data')   
+        else:
+            return HttpResponseBadRequest('Invalid form data')   
+        
+    user_form = UserForm(instance=request.user)
+    profile_form = ProfileForm(instance=request.user.userprofile)
 
-@login_required
-@require_POST
-def user_settings(request):    
-    '''
-    Updates user settings and returns response.ok if successful
-    '''
-    data = json.loads(request.body)
-    privacy_mode = data['privacy_mode']
-    UserProfile.objects.update_or_create(  # update_or_create returns (obj, created) tuple, currently not needed
-        user=request.user,
-        defaults={
-            'user_id':request.user,
-            'privacy_mode':privacy_mode,
-        }
-    )
-    return HttpResponse()
+    return render(request, "user.html", {
+        'viewer_cases': Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user),
+        'user_form': user_form, 
+        'profile_form': profile_form,
+    })
 
 
 @login_required
@@ -147,7 +143,6 @@ def add_case(request):
 
 
 def extract_case(case_object):
-
     return { 
         'case_id': str(case_object.id),
         "patient_name": case_object.patient_name,

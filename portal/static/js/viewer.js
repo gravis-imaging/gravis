@@ -2,6 +2,7 @@ import { AnnotationManager } from "./annotations.js"
 import { StateManager } from "./state.js"
 import { doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch, chartToImage } from "./utils.js"
 
+
 const SOP_INSTANCE_UID = '00080018';
 const STUDY_DATE = '00080020';
 const STUDY_TIME = '00080030';
@@ -11,9 +12,11 @@ const SERIES_INSTANCE_UID = '0020000E';
 const STUDY_INSTANCE_UID = '0020000D';
 const SERIES_DESCRIPTION = '0008103E';
 
+
 function getMeta(data, val) {
     return data[val].Value[0]
 }
+
 
 function getImageId(instanceMetaData, wadoRsRoot) {
     const StudyInstanceUID = getMeta(instanceMetaData,STUDY_INSTANCE_UID)
@@ -33,11 +36,11 @@ function getImageId(instanceMetaData, wadoRsRoot) {
       '/frames/1';
 }
 
+
 async function cacheMetadata(
     studySearchOptions,
     wadoRsRoot,
-  ){
-    
+  ) {    
     const client = new dicomweb.DICOMwebClient({ url: wadoRsRoot });
     let metadata = await (studySearchOptions.seriesInstanceUID? 
             client.retrieveSeriesMetadata(studySearchOptions) :
@@ -65,8 +68,9 @@ const resizeObserver = new ResizeObserver(() => {
     if (renderingEngine) {
       renderingEngine.resize(true, true);
     }
-  });
-  
+});
+
+
 function debounce(delay, callback) {
     let timeout
     return (...args) => {
@@ -76,6 +80,8 @@ function debounce(delay, callback) {
         }, delay)
     }
 }
+
+
 class GraspViewer {
     renderingEngine;
     viewportIds = [];
@@ -98,12 +104,14 @@ class GraspViewer {
     mip_details = [];
 
     findings;
+
     constructor( ...inp ) {
         return (async () => {
             await this.initialize(...inp);
             return this;
           })();   
-         }
+        }
+
         async initialize( main, preview ) {
             // Force cornerstone to try to use GPU rendering even if it thinks the GPU is weak.
             cornerstone.setUseCPURendering(false);

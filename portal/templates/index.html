@@ -1,7 +1,7 @@
 {% extends 'portal.html' %}
 
 {% block header %}
-<link rel="stylesheet" type="text/css" href="/static/css/datatables.min.css" crossorigin />
+<link rel="stylesheet" type="text/css" href="/static/css/external/datatables.min.css" crossorigin />
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
 {% endblock %}
@@ -46,7 +46,7 @@
 {% endblock %}
 
 {% block addedscripts %}
-<script type="text/javascript" src="/static/js/datatables.min.js" crossorigin></script>
+<script type="text/javascript" src="/static/js/external/datatables.min.js" crossorigin></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" crossorigin></script>
 
 {% include "modal_case_tags.html" %}

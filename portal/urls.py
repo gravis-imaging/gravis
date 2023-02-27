@@ -21,7 +21,6 @@ urlpatterns = [
     path("viewer/<str:case>", views.viewer, name="viewer"),
     path("config/", views.config, name="config"),
     path("user/", views.user, name="user"),
-    path("user_settings", views.user_settings, name='user_settings'), 
     path("cases/", CaseView()),
     path("media/<path:path>", views.serve_media),
     path("update_case_tags/", views.update_case_tags),
