@@ -127,8 +127,6 @@ class AnnotationManager {
             text: "Do you really want to delete all annotations?",
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#1266f1',
-            cancelButtonColor: '#d33',
             confirmButtonText: 'Yes'
             })
         if (result.isConfirmed) {

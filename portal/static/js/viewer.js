@@ -774,8 +774,6 @@ class GraspViewer {
             inputLabel: 'Finding Description',
             inputPlaceholder: 'Describe the finding here...',
             showCancelButton: true,
-            confirmButtonColor: '#1266f1',
-            cancelButtonColor: '#d33',            
             inputValidator: (value) => {
                 if (!value) {
                     return 'Please provide a description'
