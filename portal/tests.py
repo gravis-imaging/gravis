@@ -20,9 +20,11 @@ from .jobs import watch_incoming
 def redis():
     django_rq.queues.get_redis_connection = FakeRedisConnSingleton()
 
+
 def test_example(fs: FakeFilesystem):
     fs.create_dir(Path(settings.INCOMING_FOLDER) / "test" )
     assert (Path(settings.INCOMING_FOLDER) / "test").exists()
+
 
 def generate_ds(location):
     ds = Dataset()

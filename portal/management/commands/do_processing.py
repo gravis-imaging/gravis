@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from portal.models import Case
 from portal.jobs.watch_incoming import trigger_queued_cases 
 
+
 class Command(BaseCommand):
 
     def add_arguments(self, parser):

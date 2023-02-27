@@ -4,6 +4,7 @@ import pydicom
 import numpy as np
 import sys
 
+
 start_time = time.time() 
 timepoints = 120
 slices_per_volume = 144

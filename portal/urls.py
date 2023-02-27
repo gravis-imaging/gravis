@@ -5,6 +5,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
+
 urlpatterns = [
     path("login/", views.login_request, name="login"),
     path("logout/", views.logout_request, name="logout"),
@@ -13,7 +14,7 @@ urlpatterns = [
     path("browser/get_cases_all", views.browser_get_cases_all),
     path("browser/get_tags_all", views.browser_get_tags_all),
     path("browser/get_case_tags_and_all_tags/<str:case_id>", views.browser_get_case_tags_and_all_tags),
-    path("browser/get_case/<str:case>", views.browser_get_case),
+    path("browser/get_case/<str:case_id>", views.browser_get_case),
     path("browser/delete_case/<str:case_id>", views.browser_delete_case),
 
     # path("docker_job/", views.docker_job),

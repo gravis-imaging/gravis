@@ -11,7 +11,7 @@ from uuid import uuid4
 from django.conf import settings
 import django_rq
 
-import portal.jobs.dicom_set_utils as dicom_set_utils
+import portal.jobs.dicomset_utils as dicomset_utils
 import portal.jobs.docker_utils as docker_utils
 from portal.models import Case, ProcessingJob
 from common.constants import GravisNames, GravisFolderNames
@@ -71,7 +71,7 @@ def process_error_folder(
     case: Case, incoming_folder: Path, error_folder: Path, lock: Path
 ):
 
-    dicom_set_utils.move_files(incoming_folder, error_folder)
+    dicomset_utils.move_files(incoming_folder, error_folder)
     if not case is None:
         case.status = Case.CaseStatus.ERROR
         case.case_location = str(error_folder)
@@ -158,7 +158,7 @@ def process_folder(job_id: int, incoming_case: Path):
         return False
 
     # Move files
-    if not dicom_set_utils.move_files(incoming_case, input_dest_folder):
+    if not dicomset_utils.move_files(incoming_case, input_dest_folder):
         # new_case.delete()
         process_error_folder(new_case, incoming_case, error_folder, lock)
         job.status = "Fail"
@@ -168,7 +168,7 @@ def process_folder(job_id: int, incoming_case: Path):
         job.save()
         return False
 
-    register_dicom_set_success, error = dicom_set_utils.register(
+    register_dicom_set_success, error = dicomset_utils.register(
         str(input_dest_folder), new_case, "Incoming", job_id, "ORI"
     )
     if not register_dicom_set_success:

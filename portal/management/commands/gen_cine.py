@@ -1,9 +1,8 @@
 from django.core.management.base import BaseCommand
+import django_rq
 
 from portal.jobs.cine_generation import GeneratePreviewsJob, do_job
 from portal.models import Case, DICOMInstance, DICOMSet, ProcessingJob
-
-import django_rq
 
 
 class Command(BaseCommand):

@@ -15,6 +15,7 @@ from django.contrib.auth.models import User
 from .models import Case, DICOMInstance, Tag, UserProfile
 from .forms import UserForm, ProfileForm, ProfileUpdateForm
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -186,12 +187,12 @@ def browser_get_case_tags_and_all_tags(request, case_id):
 
 
 @login_required
-def browser_get_case(request, case):
+def browser_get_case(request, case_id):
     '''
     Returns information about the given case in JSON format. Returns 404 page if
     case ID does not exist
     '''
-    case = get_object_or_404(Case, id=case)
+    case = get_object_or_404(Case, id=case_id)
     json_data = get_case_information(case)
     return JsonResponse(json_data, safe=False)
 

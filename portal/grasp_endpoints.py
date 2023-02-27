@@ -21,6 +21,7 @@ from portal.models import *
 
 
 cross = (lambda x,y:np.cross(x,y))
+
 def show_array(a):
     print(f"""P2
 {a.shape[1]} {a.shape[0]}
@@ -44,7 +45,6 @@ def case_metadata(request, case, dicom_set, study=None):
     if study:
         q = q.filter(study_uid=study)
     series = q.values(*fields).order_by('series_uid').distinct('series_uid').all()
-
     
     result = [{
         f:k[f] for f in fields
@@ -278,6 +278,7 @@ def sc_from_ref(reference_dataset, pixel_array):
     sc.FrameOfReferenceUID = reference_dataset.FrameOfReferenceUID
     return sc
 
+
 @login_required
 def store_finding(request, case, source_set, finding_id=None):
     dicom_set = DICOMSet.objects.get(id=int(source_set))
@@ -335,6 +336,7 @@ def store_finding(request, case, source_set, finding_id=None):
         finding.save()
         return JsonResponse(finding.to_dict())
 
+
 @login_required
 def handle_session(request, case, session_id=None):
     if request.method == "POST":
@@ -344,16 +346,19 @@ def handle_session(request, case, session_id=None):
     else:
         return HttpResponseNotAllowed(["POST","GET"])
 
+
 @login_required
 def new_session(request,case):
     session = SessionInfo(case=Case.objects.get(id=case), cameras=[], voi={}, annotations=[], user=request.user)
     session.save()
     return JsonResponse(session.to_dict())
 
+
 @login_required
 def all_sessions(request,case):
     sessions = SessionInfo.objects.filter(case=Case.objects.get(id=case), user=request.user)
     return JsonResponse(dict(sessions=[dict(id=s.id, created_at=s.created_at.timestamp(), updated_at=s.updated_at.timestamp()) for s in sessions]))
+
 
 def update_session(request,case,session_id=None):
     new_state = json.loads(request.body)
@@ -371,6 +376,7 @@ def update_session(request,case,session_id=None):
     session.updated_at = timezone.now()
     session.save()
     return JsonResponse(dict(error="", action="", ok=True))
+
 
 def get_session(request, case, session_id=None):
     if session_id:
