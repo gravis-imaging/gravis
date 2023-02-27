@@ -25,7 +25,7 @@
   const studies_data_parsed = JSON.parse(document.getElementById('studies_data').textContent);    
 </script>
 <div class="grid"
-  x-data="{ viewer: null, previewing: false, previewingMIP: false, switching: false, loading: false, job_loading: null, case_id: {{case.id}} }" >
+  x-data="{ viewer: null, previewing: false, previewingMIP: false, switching: false, loading: false, job_loading: null, case_id: {{current_case.id}} }" >
   <!-- dicom set selector -->
   <div class="toolbar-area">
     <!-- dicom set selection -->

@@ -114,8 +114,9 @@ def config(request):
 
 
 @login_required
-def viewer(request, case):
-    case = get_object_or_404(Case, id=case)
+def viewer(request, case_id):
+    case = get_object_or_404(Case, id=case_id)
+    # TODO: Check if current user is allowed to view case
     
     case.viewed_by = request.user
     case.last_read_by = request.user
@@ -125,26 +126,17 @@ def viewer(request, case):
     
     context = {
         "studies": [(k.study_uid,k.dicom_set.id, k.dicom_set.type) for k in instances],
-        "current_case": extract_case(instances[0].dicom_set.case),
+        "current_case": get_case_information(case),
         "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user),
         "original_dicom_set_id": instances[0].dicom_set.id,
     }
     return render(request, "viewer.html", context)
 
-    
-@login_required
-def add_case(request):
-    # TODO: Enable viewing and deleting only when "Ready" 
-    cases = Case.objects.filter(viewed_by=request.user)
-    context = {
-        "cases": [(k.id) for k in cases],
-    }
-    return render(request, "portal.html", context)
 
-
-def extract_case(case_object):
+def get_case_information(case_object):
     return { 
-        'case_id': str(case_object.id),
+        "id": case_object.id,
+        "case_id": str(case_object.id), # Not sure why necessary to convert to string here!?
         "patient_name": case_object.patient_name,
         "mrn": case_object.mrn,
         "acc": case_object.acc,
@@ -170,7 +162,7 @@ def browser_get_cases_all(request):
     case_data = []
     all_cases = Case.objects.all()
     for case in all_cases:
-        case_data.append(extract_case(case))
+        case_data.append(get_case_information(case))
 
     return JsonResponse({"data": case_data}, safe=False)
 
@@ -190,7 +182,6 @@ def browser_get_case_tags_and_all_tags(request, case_id):
     and tags specific to the current case.
     '''
     case = get_object_or_404(Case, id=case_id)
-
     return JsonResponse({"tags": [tag.name for tag in Tag.objects.all()], "case_tags": [tag.name for tag in case.tags.all()]}, safe=False)
 
 
@@ -201,8 +192,7 @@ def browser_get_case(request, case):
     case ID does not exist
     '''
     case = get_object_or_404(Case, id=case)
-
-    json_data = extract_case(case)
+    json_data = get_case_information(case)
     return JsonResponse(json_data, safe=False)
 
 
@@ -246,6 +236,15 @@ def update_tags(request):
     tags = body['tags']
     for tag_name in tags:
         tag = get_object_or_404(Tag, name=tag_name)
-        tag.delete()          
-        
+        tag.delete()                  
+
+    return HttpResponse() 
+
+
+@login_required
+@require_POST
+def browser_delete_case(request, case_id):
+    case=get_object_or_404(Case, id=case_id)
+    case.status = Case.CaseStatus.DELETE
+    case.save()
     return HttpResponse() 

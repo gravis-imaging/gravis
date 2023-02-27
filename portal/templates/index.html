@@ -146,8 +146,16 @@
                     extend: "selectedSingle",
                     text: '<i class="fas fa-trash"></i>',
                     titleAttr: 'Remove case',
-                    action: function (e, dt, node, config) {
-                        
+                    action: function (e, dt, node, config) {          
+                        const selected_row = case_data_table.row({selected: true}).data();
+                        if (!canModifyCaseStatus(selected_row.status, selected_row.last_read_by_id, "delete")) {
+                            Swal.fire({
+                                title: "Locked",
+                                text: 'Case is locked and cannot be deleted now.', 
+                                icon: 'info'
+                            });                            
+                            return;
+                        }
                         Swal.fire({
                             title: 'Are you sure?',
                             text: "Do you really want to delete the case?",
@@ -156,29 +164,34 @@
                             confirmButtonColor: '#1266f1',
                             cancelButtonColor: '#d33',
                             confirmButtonText: 'Yes'
-                            }).then((result) => {
+                        }).then((result) => {
                             if (result.isConfirmed) {                                
                                 const selected_row = case_data_table.row({selected: true}).data();
                                 const case_id = selected_row.case_id;
-                                fetch('/cases/', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Accept': 'application/json',
-                                        'Content-Type': 'application/json',
-                                        'X-CSRFToken': '{{ csrf_token }}',
+                                $.ajax({
+                                    headers: { "X-CSRFToken": '{{csrf_token}}' },
+                                    type: 'POST',
+                                    url: '/browser/delete_case/'+String(case_id),
+                                    processData: false,
+                                    contentType: false,
+                                    success: function () {
+                                        Swal.fire(
+                                            'Deleted',
+                                            'The case has been deleted.',
+                                            'success'
+                                        ).then((result) => {
+                                            case_data_table.ajax.reload();
+                                        })                       
                                     },
-                                    body: JSON.stringify({ "case_id": case_id })
-                                })
-                                .then(response => response.json())
-                                .then(response => {
-                                    Swal.fire(
-                                        'Deleted',
-                                        'The case has been deleted.',
-                                        'success'
-                                    ).then((result) => {
-                                        window.location.reload();
-                                    })
-                                })
+                                    error: function () {            
+                                        swalInit.fire({
+                                            title: 'Error',
+                                            text: 'A problem occurred while deleting the case. Please try again.',
+                                            icon: 'error',
+                                            showCloseButton: true
+                                        });                        
+                                    },
+                                });                                    
                             }
                         })
                     }
@@ -234,7 +247,7 @@
     } );
 
     function openCase(case_id, status, last_read_by_id) {
-        if ( ["Ready", "Viewing", "Complete"].includes(status) && (last_read_by_id == "{{ user.username }}" || last_read_by_id == "") )  {                                      
+        if (canModifyCaseStatus(status, last_read_by_id, "open")) {
             const link = '/viewer/'+case_id;
             window.open(link, "_self");
         }
@@ -246,6 +259,28 @@
             })
         }  
     }
+
+    function canModifyCaseStatus(status, last_read_by_id, operation) {
+        if ((status=="Received") || (status=="Queued") || (status=="Processing")) {
+            return false;
+        }
+
+        if ((status=="Ready") || (status=="Complete")) {
+            return true;
+        }
+
+        if ((status=="Viewing")) {
+            if (last_read_by_id=="{{user.username}}") {
+                return true;
+            } else {
+                return false;
+            }                
+        }
+
+        // In other states, changing case status currently not supported        
+        return false;
+    }
+
     
 </script>
 
