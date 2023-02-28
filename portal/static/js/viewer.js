@@ -203,17 +203,10 @@ class GraspViewer {
             this.renderingEngine.renderViewports([...this.viewportIds, ...this.previewViewports]);
             this.chart = this.annotation_manager.initChart();
             
-            cornerstone.eventTarget.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_MODIFIED",(evt) => { 
-                if (this.state_manager.just_loaded) { 
-                    // Loading annotations seems to emit this event, so we'll ignore the first one after a load
-                    this.state_manager.just_loaded = false;
-                    return;
-                }
-                this.state_manager.setChanged();
-            });
+
             // Prompt the user if there are unsaved changes.
             // TODO: this is a bit overzealous, just mousing over an annotation can trigger a "modified" event.
-            addEventListener('beforeunload', (event) => { if (this.state_manager.changed) { event.returnValue = "ask"; return "ask"; } });
+            addEventListener('beforeunload', (event) => { if (this.state_manager.getChanged()) { event.returnValue = "ask"; return "ask"; } });
 
             cornerstone.eventTarget.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_MODIFIED",debounce(100, (evt) => {
                 this.annotation_manager.updateChart()
@@ -776,19 +769,22 @@ class GraspViewer {
             showCancelButton: true,
             inputValidator: (value) => {
                 if (!value) {
-                    return 'Please provide a description'
+                    return "Please provide a description";
                 }
-            }            
+                if (value.length > 100) {
+                    return "The description must be fewer than 100 characters.";
+                }
+            },
+            preConfirm: async (value) => {
+                try {
+                    await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding/${finding.id}`,{name:value}, "PATCH");
+                    finding.name = value;
+                } catch (e) {
+                    Swal.showValidationMessage("A problem occurred while editing this finding. Please try again.")
+                }
+            },
+            ...(finding.name? {inputValue: finding.name}: {})
         })
-
-        let prompt_result = input_value;
-
-        // let prompt_result = prompt("Finding name?")
-        if (! prompt_result ) return;
-        prompt_result = prompt_result.trim();
-        if (! prompt_result ) return;
-        finding.name = prompt_result;
-        const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding/${finding.id}`,{name:finding.name}, "PATCH");
         // this.findings = await this.loadFindings()
     }
 
@@ -845,6 +841,14 @@ class GraspViewer {
             document.getElementById("volume-picker").value = new_selected_index;
             await this.switchToIndex(new_selected_index); 
         }
+    }
+
+    async showFinding(finding) {
+        const el = document.getElementById('finding_modal');
+        const modal = new mdb.Modal(el)
+        modal.show();
+        document.getElementById("finding_modal_img").setAttribute("src",finding.url)
+        document.getElementById("finding_modal_description").innerText = finding.name;
     }
 }
 

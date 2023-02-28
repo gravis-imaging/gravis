@@ -61,7 +61,7 @@ async function doJob(type, case_, params, force=false) {
 }
 
 
-async function doFetch(url, body, method="POST") {
+async function doFetch(url, body={}, method="POST") {
     const response = await fetch(url, {
         method: method, 
         credentials: 'same-origin',        
@@ -382,19 +382,18 @@ async function confirmPrompt(text, title="Are you sure?", preConfirm=null) {
     })
 }
 
-async function errorPrompt(text) {
+async function errorPrompt(text,title="Error") {
     return await CommonSwal.fire({
-        icon: 'error',
-        title: 'Error',
+        icon: "error",
+        title: title,
         text: text
     })
 }
 
-
-async function successPrompt(text) {
+async function successPrompt(text, title="Success") {
     return await CommonSwal.fire({
-        icon: 'success',
-        title: 'Success',
+        icon: "success",
+        title: title,
         text: text
     })
 }

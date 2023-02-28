@@ -269,29 +269,63 @@
       <div class="mb-2 img-thumbnail" style="background-color: #000; box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%);  ">
         <div style="float:right;">       
           <button title="Go to finding" class="btn-dark btn-large btn-viewer me-2 my-2"
+          :disabled="!viewer || loading || switching" disabled="disabled"
           @click="loading = true; await viewer.goToFinding(finding); loading = false;"><i class="fa-solid fa-map-marker-alt"></i>
-          </button><button title="Rename" class="btn-dark btn-large btn-viewer me-2 my-2"
+          </button>
+          <button title="Rename" class="btn-dark btn-large btn-viewer me-2 my-2"
+          :disabled="!viewer || loading || switching" disabled="disabled"
           @click="await viewer.renameFinding(finding);"><i class="fa-solid fa-pencil"></i>
-          </button><button title="Delete" class="btn-dark btn-large btn-viewer me-2 my-2"
+          </button>
+          <button title="Delete" class="btn-dark btn-large btn-viewer me-2 my-2"
+          :disabled="!viewer || loading || switching" disabled="disabled"
           @click="await viewer.deleteFinding(finding.id);"><i class="fa-solid fa-trash"></i></button>
         </div>
-        <img class="mb-2 img-fluid" :src="finding.url" width="100%"/>
+        <img class="mb-2 img-fluid" :src="finding.url" width="100%" @click="viewer.showFinding(finding)"/>
         <div x-text="finding.name" class="text-expand"></div>
       </template>
-    <template x-if="viewer && viewer.findings && (Object.keys(viewer.findings).length > 0)">
-      <div class="mb-2">
-      <button title="Store findings in PACS" class="all-pointer-events btn-large btn-primary btn-viewer py-2 px-3 mt-3 mb-3" style="display: block; margin-left: auto; margin-right: auto; box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%);"
-      :disabled="loading || switching" disabled="disabled"
-      @click="job_loading = true; success = await viewer.transferFindings(); job_loading = false; ref= success? $refs.saved : $refs.failed; $(ref).fadeIn(50); $(ref).fadeOut(1000);">
-      <i class="fas fa-paper-plane"></i>&nbsp;&nbsp;Send
-      </button>  
+      <template x-if="viewer && viewer.findings && (Object.keys(viewer.findings).length > 0)">
+        <div class="mb-2">
+        <button title="Store findings in PACS" class="all-pointer-events btn-large btn-primary btn-viewer py-2 px-3 mt-3 mb-3" style="display: block; margin-left: auto; margin-right: auto; box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%);"
+        :disabled="!viewer || loading || switching" disabled="disabled"
+        @click="job_loading = true; success = await viewer.transferFindings(); job_loading = false; ref= success? $refs.saved : $refs.failed; $(ref).fadeIn(50); $(ref).fadeOut(1000);">
+        <i class="fas fa-paper-plane"></i>&nbsp;&nbsp;Send
+        </button>  
+        </div>
+      </template>    
     </div>
-    </template>    
+   </div>
   </div>
-</div>
-</div>
 
 {% include "modal_case_information.html" %}
+<div class="modal" id="finding_modal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+      <div class="modal-content">
+          <div class="modal-header">
+              <h5 class="modal-title" id="exampleModalLabel">Finding</h5>
+              <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            {% comment %}
+             There's got to be a better way to style the image... struggled to get the image height to shrink to fit.
+            {% endcomment %}
+              <img id="finding_modal_img" style="height:calc(100% - 5em); max-width: 100%;
+              display: inline-block; position: relative;
+              left: 50%; transform: translateX(-50%);"/>
+              <table class="table table-sm">
+                <tbody>
+                    <tr>
+                        <td style="width:0">Description:</td>
+                        <td><span id="finding_modal_description">&nbsp;</span></td>
+                    </tr>
+                </tbody>
+              </table>
+          </div>
+          <div class="modal-footer">
+              <button type="button" class="btn btn-primary" data-mdb-dismiss="modal">Close</button>
+          </div>
+      </div>
+  </div>
+</div>
 
 <div class="offcanvas offcanvas-start " tabindex="-1" id="offcanvasShortcuts" data-mdb-scroll="true"
 data-mdb-backdrop="false" style="background-color: #1266f1;">

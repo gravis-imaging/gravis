@@ -1,4 +1,4 @@
-import { doFetch } from "./utils.js";
+import { confirmPrompt, doFetch, errorPrompt } from "./utils.js";
 
 class StateManager {
     viewer;
@@ -62,7 +62,7 @@ class StateManager {
                 annotationState.addAnnotation(this.viewer.viewports[0].element,a)
             }
         }
-        this.current_state = state;
+        this.current_state = JSON.parse(JSON.stringify(state)); // deep copy for safekeeping
         this.viewer.annotation_manager.updateChart();
     }
 
@@ -73,7 +73,7 @@ class StateManager {
         if (state) {
             await doFetch(`/api/case/${this.viewer.case_id}/session/${this.session_id}`, state)
             // localStorage.setItem(this.viewer.case_id, JSON.stringify(state));
-            this.current_state = state;
+            this.current_state = JSON.parse(JSON.stringify(state)); // deep copy for safekeeping
             this.changed = false;
         }
     }
@@ -102,14 +102,25 @@ class StateManager {
     }
 
     async switchSession(id) {
-        const state = await doFetch(`/api/case/${this.viewer.case_id}/session/${id}`,{},"GET")
-        // this.session_list = (await doFetch(`/api/case/${this.viewer.case_id}/sessions`,{},"GET")).sessions
-        this.viewer.viewports.map(v=>v.resetCamera());
-        this._applyState(state)
-        this.viewer.renderingEngine.renderViewports(this.viewer.viewportIds);
-        this.changed = false;
-        this.just_loaded = true;
-        this.session_id = state.session_id;
+        if (this.getChanged()) {
+            const result = await confirmPrompt("Discard changes and switch session?", "Unsaved changes detected")
+            if (!result.isConfirmed) {
+                return;
+            }
+        }
+        try {
+            const state = await doFetch(`/api/case/${this.viewer.case_id}/session/${id}`,{},"GET")
+            // this.session_list = (await doFetch(`/api/case/${this.viewer.case_id}/sessions`,{},"GET")).sessions
+            this.viewer.viewports.map(v=>v.resetCamera());
+            this._applyState(state)
+            this.viewer.renderingEngine.renderViewports(this.viewer.viewportIds);
+            this.changed = false;
+            this.just_loaded = true;
+            this.session_id = state.session_id;
+        } catch (e) {
+            console.error(e);
+            await errorPrompt("Failed to switch session.");
+        }
     }
 
     async newSession() {
@@ -145,8 +156,39 @@ class StateManager {
         }
     }
 
-    setChanged() {
+    setChanged(reason) {
         this.changed = true;
+        // if (reason) {
+        //     console.log("Changed:", reason)
+        // }
+        return true;
+    }
+
+    getChanged() {
+        if (this.changed) {
+            return true;
+        }
+        const loaded_annotations = this.current_state.annotations;
+        const annotations = this._calcAnnotations();
+
+        // Number of annotations differs
+        if (annotations.length != loaded_annotations.length) {
+            return this.setChanged();
+        }
+        const loaded_annotations_dict = {}
+        for (const a of loaded_annotations) {
+            loaded_annotations_dict[a.annotationUID] = a;
+        }
+
+        for ( const a of annotations) {
+            const old_version = loaded_annotations_dict[a.annotationUID]
+            if (!old_version) return this.setChanged("new annotation");
+            const old_data = old_version.data;
+            if (JSON.stringify(old_data.handles.points) !== JSON.stringify(a.data.handles.points)) return this.setChanged("points");
+            if (old_data.label != a.data.label) return this.setChanged("label");
+            if (JSON.stringify(old_data.handles.textBox.worldPosition) !== JSON.stringify(a.data.handles.textBox.worldPosition)) return this.setChanged("textbox");
+        }
+        return false;
     }
 }
 
