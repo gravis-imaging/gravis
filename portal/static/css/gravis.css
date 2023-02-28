@@ -305,6 +305,7 @@ button:focus:not(:focus-visible) {
 .navbar_patient_info:hover {
     color: #FFF!important;
     background-color: #1266f1!important;
+    border-radius: 3px;
 }
 
 .navbar_case_list.active {
@@ -472,7 +473,6 @@ button:focus:not(:focus-visible) {
     display: none;
 }
 
-
 .select2-container--default .select2-selection--multiple {
     background-color: #424242 !important;
     min-height: 39px !important;
@@ -540,16 +540,20 @@ textarea.select2-search__field {
     color: #FFF !important;
 }
 
+.swal2-icon.swal2-error [class^=swal2-x-mark-line] {
+    background-color: #FFF !important;
+}
+
 .swal2-styled {
     box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%)!important;
 }
 
 .swal2-styled.swal2-confirm {
-    background-color: #1266f1 !important;
+    background-color: #1266f1;
 }
 
 .swal2-styled.swal2-cancel {
-    background-color: #d33 !important;
+    background-color: #d33;
 }
 
 .swal2-input:focus, .swal2-file:focus, .swal2-textarea:focus {

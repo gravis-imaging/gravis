@@ -25,7 +25,7 @@ urlpatterns = [
 
     path("media/<path:path>", views.serve_media),
     path("viewer/<str:case_id>", views.viewer, name="viewer"),
-    path("status/<str:case_id>/<str:new_status>", views.case_status, name="viewer"),
+    path("status/<str:case_id>/<str:new_status>/", views.case_status, name="viewer"),
     path("update_case_tags/", views.update_case_tags),
     path("update_tags/", views.update_tags),
 

@@ -327,18 +327,29 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
 
   function closeCurrentCase() {
     Swal.fire({
-      title: 'Are you sure?',
-      text: "Unsaved findings will be lost.",
-      icon: 'warning',
+      title: 'Close case?',
+      text: "Unsaved annotations will be lost.",
+      icon: 'question',
+      showDenyButton: true,
       showCancelButton: true,
-      confirmButtonText: 'Close'
+      confirmButtonText: 'Set to Ready',
+      denyButtonText: 'Set to Complete',
+      cancelButtonText: 'Cancel',      
+      confirmButtonColor: '#1266f1',
+      denyButtonColor: '#198754',
+      cancelButtonColor: '#d33',
     })
     .then((result) => {
-      if (result.isConfirmed) {
+      if ((result.isConfirmed) || (result.isDenied)) {
         try {
-          // TODO
-          doFetch(`/status`, {})          
-          window.open(link, "/");        
+          targetURL = '/status/'+String({{current_case.id}})+'/';
+          if (result.isConfirmed) {
+            targetURL += 'ready/';
+          } else {
+            targetURL += 'complete/';
+          }
+          doFetch(targetURL, {})          
+          window.open("/", "_self");        
         } catch (e) {
           console.warn(e)
           Swal.fire({
