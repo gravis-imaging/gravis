@@ -321,9 +321,10 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
   window.GraspViewer = GraspViewer;
   window.doJob = doJob;
   window.doFetch = doFetch;
-  </script>
+</script>
 
 <script>
+
   function closeCurrentCase() {
     Swal.fire({
       title: 'Are you sure?',
@@ -331,11 +332,24 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Close'
-    }).then((result) => {
+    })
+    .then((result) => {
       if (result.isConfirmed) {
-        // TODO
+        try {
+          // TODO
+          doFetch(`/status`, {})          
+          window.open(link, "/");        
+        } catch (e) {
+          console.warn(e)
+          Swal.fire({
+              title: 'Error',
+              text: "Unable to close case. Check logs.",
+              icon: 'error',
+          });            
+          return;
+        }                
       }
-    })    
+    });    
   }
 </script>
 

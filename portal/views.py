@@ -134,6 +134,11 @@ def viewer(request, case_id):
     return render(request, "viewer.html", context)
 
 
+@login_required
+def case_status(request, case_id, new_status):
+    return HttpResponse() 
+
+
 def get_case_information(case_object):
     return { 
         "id": case_object.id,
