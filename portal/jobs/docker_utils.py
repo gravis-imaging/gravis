@@ -7,7 +7,7 @@ import docker
 
 from django.conf import settings
 
-import portal.jobs.dicom_set_utils as dicom_set_utils
+import portal.jobs.dicomset_utils as dicomset_utils
 from portal.models import Case, ProcessingJob
 from common.constants import DockerReturnCodes
 
@@ -45,7 +45,7 @@ def do_docker_job(job_id):
             GRAVIS_IN_DIR="/tmp/data/",
             GRAVIS_OUT_DIR="/tmp/output/",
             GRAVIS_ANGLE_STEP=10,
-            GRAVIS_MIP_FULL_ROTATION=0, # This is True/False, need to pass 0 or 1 otherwise everything is converted to True.
+            GRAVIS_MIP_FULL_ROTATION=1, # This is True/False, need to pass 0 or 1 otherwise everything is converted to True.
             GRAVIS_NUM_BOTTOM_SLICES=20,
             DOCKER_RETURN_CODES=DockerReturnCodes.toDict(),
         )
@@ -130,7 +130,7 @@ def do_docker_job(job_id):
     try:
         subfolders = [ f.path for f in os.scandir(output_folder) if f.is_dir() ]
         for folder in subfolders:
-            register_dicom_set_success, error = dicom_set_utils.register(
+            register_dicom_set_success, error = dicomset_utils.register(
                 folder, job.case, "Processed", job_id
             )
             if not register_dicom_set_success:
@@ -138,7 +138,7 @@ def do_docker_job(job_id):
                 return False
 
 
-        # register_dicom_set_success, error = dicom_set_utils.register(
+        # register_dicom_set_success, error = dicomset_utils.register(
         #     output_folder + "/mip", job.case, "Processed", "MIP", job_id
         # )
         # if not register_dicom_set_success:
@@ -171,7 +171,7 @@ def process_job_error(job_id, error_description):
         return False
     folder_name = Path(job.case.case_location).name # "foo/bar" -> bar, "foo/bar/" => bar
     print("ERROR FOLDER!!!: ", folder_name)
-    dicom_set_utils.move_files(
+    dicom_setutils.move_files(
         Path(job.case.case_location), Path(settings.ERROR_FOLDER) / folder_name
     )
     job.case.status = Case.CaseStatus.ERROR

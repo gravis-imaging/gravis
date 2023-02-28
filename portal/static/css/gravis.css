@@ -406,19 +406,19 @@ button:focus:not(:focus-visible) {
 }
 
 .timeslider::-webkit-slider-thumb:hover {
-  background-color: #EEE;
+  background-color: #DEDEDE;
 }
 
 .timeslider::-moz-range-thumb:hover {
-  background-color: #EEE;
+  background-color: #DEDEDE;
 }
 
 .timeslider-loading::-webkit-slider-thumb, .timeslider-loading::-webkit-slider-thumb:hover {
-    background-color: #999 !important; 
+    background-color: #777 !important; 
 }
   
 .timeslider::-moz-range-thumb, .timeslider::-moz-range-thumb:hover {
-    background-color: #999  !important;  
+    background-color: #777  !important;  
 }
 
 .timeslider::-moz-range-thumb {
@@ -472,12 +472,6 @@ button:focus:not(:focus-visible) {
     display: none;
 }
 
-.list-group .list-tag-item {
-    color: #f1f9fb!important; 
-    /* border-top: 1px solid #0091b5;
-    border-left-color: #fff;
-    border-right-color: #fff; */
-}
 
 .select2-container--default .select2-selection--multiple {
     background-color: #424242 !important;
@@ -548,4 +542,32 @@ textarea.select2-search__field {
 
 .swal2-styled {
     box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%)!important;
+}
+
+.swal2-styled.swal2-confirm {
+    background-color: #1266f1 !important;
+}
+
+.swal2-styled.swal2-cancel {
+    background-color: #d33 !important;
+}
+
+.swal2-input:focus, .swal2-file:focus, .swal2-textarea:focus {
+    border: 1px solid #1266f1 !important;
+    outline: none;
+    /* box-shadow: inset 0 1px 1px rgb(0 0 0 / 6%), 0 0 0 3px rgb(100 150 200 / 50%); */
+    box-shadow: inset 0 0 0 1px #1266f1!important;
+}
+
+.swal2-input-label {
+    color: #FFF !important;
+}
+
+.list-tag-item {
+    border-bottom-right-radius: 0px !important;
+    border-bottom-left-radius: 0px !important;
+}
+
+.list-group .list-tag-item {
+    color: #FFF !important; 
 }

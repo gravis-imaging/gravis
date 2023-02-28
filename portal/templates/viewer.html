@@ -1,8 +1,8 @@
 {% extends 'portal.html' %}
 
 {% block header %}
-<script src="/static/js/dygraph.min.js"></script>
-<link rel="stylesheet" href="/static/css/dygraph.min.css" />
+<script src="/static/js/external/dygraph.min.js"></script>
+<link rel="stylesheet" href="/static/css/external/dygraph.min.css" />
 {% endblock %}
 
 {% block addedscripts %}
@@ -25,21 +25,36 @@
   const studies_data_parsed = JSON.parse(document.getElementById('studies_data').textContent);    
 </script>
 <div class="grid"
-  x-data="{ viewer: null, previewing: false, previewingMIP: false, switching: false, loading: false, job_loading: null, case_id: {{case.id}} }" >
+  x-data="{ viewer: null, previewing: false, previewingMIP: false, switching: false, loading: false, job_loading: null, case_id: {{current_case.id}} }" >
   <!-- dicom set selector -->
   <div class="toolbar-area">
-  <!-- dicom set selection -->
-  <div class="" style="margin-right: 2em; width: 100px;">
-    <select id="studies" name="studies" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-outline-light btn-lg btn-rounded text-light btn-viewer-toolbar" data-width="100px"
-    @change="loading=true; await $nextTick(); await viewer.switchStudy($event.target.value.split(':::'), case_id);  loading=false;" title="Displayed series">
-      <!-- <option value="" selected disabled hidden>Select study...</option> -->
-      <optgroup label="Displayed Series">
-      {% for i in studies %}
-      <option value="{{i.0}}:::{{i.1}}">{{ i.2 }}</option>
-      {% endfor %}
-      </optgroup>      
-    </select>
-  </div>    
+    <!-- dicom set selection -->
+    <div class="me-2" style="width: 100px;">
+      <select id="studies" name="studies" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-outline-light btn-lg btn-rounded text-light btn-viewer-toolbar" data-width="100px"
+      @change="loading=true; await $nextTick(); await viewer.switchStudy($event.target.value.split(':::'), case_id);  loading=false;" title="Displayed series">
+        <!-- <option value="" selected disabled hidden>Select study...</option> -->
+        <optgroup label="Displayed Series">
+        {% for i in studies %}
+        <option value="{{i.0}}:::{{i.1}}">{{ i.2 }}</option>
+        {% endfor %}
+        </optgroup>      
+      </select>
+    </div>    
+
+      <!-- Indicators -->
+      <div class="ms-2 me-3" style="width:1.8em; height: 28px; margin-top: auto; margin-bottom: auto;">
+        <div :class="(loading || switching || job_loading) || 'invisible'" class="spinner-grow spinner-grow-sm ms-2" role="status" style="position:absolute; z-index: 1; color: hsla(0,0%,100%,.2); margin-top: 0.3em;">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <div x-ref="saved" class="ms-2" role="status" style="display: none; position:absolute; color: hsla(128,70%,70%,.3);">
+          <i class="fa-solid fa-floppy-disk"></i>
+          <span class="visually-hidden">Saved</span>
+        </div>
+        <div x-ref="failed" class="ms-2" role="status" style="display: none; position:absolute; color: hsla(0,100%,50%,1);">
+            <i class="fa-solid fa-xmark"></i>
+            <span class="visually-hidden">Failed</span>
+        </div>
+      </div>
 
   <!-- volume picker -->
   <!-- x-model="value" x-ref="input" x-on:focus="() => { $refs.input.focus() }"  -->
@@ -57,7 +72,7 @@
  
     <!-- Image manipulation buttons -->
     
-      <button title="Reset viewers" class="all-pointer-events btn-primary btn-large btn-viewer ms-5" 
+      <button title="Reset viewers" class="all-pointer-events btn-primary btn-large btn-viewer" style="margin-left: 3.5rem;"
       :disabled="loading || switching" disabled="disabled" 
       @click="viewer.viewports.map(v=> {v.resetCamera(); v.render()}); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-arrows-to-circle"></i>
       </button>
@@ -154,23 +169,7 @@
             </ul>
           </div>    
         </div>
-
-
-      <!-- Indicators -->
-      <div class="ms-3" style="width:1.8em; height: 30px; margin-top: auto; margin-bottom: auto;">
-        <div :class="(loading || switching || job_loading) || 'invisible'" class="spinner-grow spinner-grow-sm ms-2" role="status" style="position:absolute; z-index: 1; color: hsla(0,0%,100%,.2);  margin-top: 0.3em;">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-        <div x-ref="saved" class="ms-2" role="status" style="display: none; position:absolute; color: hsla(128,70%,70%,.3);">
-          <i class="fa-solid fa-floppy-disk"></i>
-          <span class="visually-hidden">Saved</span>
-        </div>
-        <div x-ref="failed" class="ms-2" role="status" style="display: none; position:absolute; color: hsla(0,100%,50%,1);">
-            <i class="fa-solid fa-xmark"></i>
-            <span class="visually-hidden">Failed</span>
-        </div>
-
-      </div>
+      
     </div> 
   </div>
 
@@ -233,17 +232,11 @@
   </div>
 
   <!-- Chart -->
-  <div style="grid-area: f; z-index: 1" class="no-pointer-events">
-    <button
-      title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
-      @click="console.log(viewer.storeChartFinding());"><i class="fa-solid fa-camera"></i>
-     </button>
-  </div>
   <div style="grid-area: f; background-color: black; " class="mb-2 py-3">
     <div id="chart" style="background-color: black; color: white;">
     </div>
   </div>
-  <div style="grid-area: f">
+  <div style="grid-area: f;">
     <template x-if="viewer">
       <div style="text-align:right; position:relative;">
         <select class="curve-settings-select" x-model="viewer.chart_options['adjust']" @change="viewer.annotation_manager.updateChart()">
@@ -258,6 +251,12 @@
         </select>
       </div>    
     </template>
+  </div>
+  <div style="grid-area: f; position:relative;" class="no-pointer-events">
+    <button
+      title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" style="position: absolute; bottom: 0.5rem; right: 0.5rem;"
+      @click="console.log(viewer.storeChartFinding());"><i class="fa-solid fa-camera"></i>
+     </button>
   </div>
    
   <!-- Findings -->

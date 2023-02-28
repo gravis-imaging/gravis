@@ -1,13 +1,14 @@
 
 from shlex import split
 from pathlib import Path
-
 from django.conf import settings
 
 from portal.models import ProcessingJob
 from portal.jobs.work_job import WorkJobView
 
 from subprocess import CalledProcessError, check_output, STDOUT
+
+
 class SendFindingsJob(WorkJobView):
     type="SEND_FINDINGS"
 
@@ -22,6 +23,7 @@ class SendFindingsJob(WorkJobView):
         62: "EXITCODE_CANNOT_SEND_REQUEST",
         65: "EXITCODE_CANNOT_ADD_PRESENTATION_CONTEXT",
     }
+
     @classmethod
     def get_command(cls, job, in_dicom):
         # params = job.parameters
@@ -38,6 +40,7 @@ class SendFindingsJob(WorkJobView):
         return split(
             f"""dcmsend {target_host} {target_port} {in_dicom} -aet {aet_source} -aec {aet_target} -nuc -to 60 """ # +crf {dcmsend_status_file}
         )
+
     @classmethod
     def do_job(cls, job: ProcessingJob):
         findings = job.case.findings.all()
@@ -55,3 +58,5 @@ class SendFindingsJob(WorkJobView):
                 print(result)
 
         return {}, []
+
+        

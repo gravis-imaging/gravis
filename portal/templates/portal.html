@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load portaltags %}
 
 {% block body %}
 <header class="mb-5">
@@ -41,10 +40,7 @@
                           </li>
                           {% for case in viewer_cases %}                         
                           <li>
-                            {% if request.resolver_match.url_name == "viewer" %}
-                                {% url_case_id request.get_full_path as id %}      
-                            {% endif %}                                                
-                            <a class="navbar_case_list dropdown-item {% if request.resolver_match.url_name == "viewer" and id == case.id %}active" href="#{% else %}" href="/viewer/{{ case.id }}{% endif %}">{{ case.patient_name }} {% if case.num_spokes != "" %}({{ case.num_spokes}} spokes) {% endif %}</a>
+                            <a class="navbar_case_list dropdown-item {% if request.resolver_match.url_name == "viewer" and current_case.id == case.id %}active" href="#{% else %}" href="/viewer/{{ case.id }}{% endif %}">{{ case.patient_name }} {% if case.num_spokes != "" %}({{ case.num_spokes}} spokes) {% endif %}</a>
                           </li>  
                           {% endfor %}                        
                         </ul>
@@ -61,10 +57,8 @@
                 {% if request.resolver_match.url_name == "viewer" %}  
                 <ul class="nav navbar-nav mx-auto">
                     <li class="nav-item menuitems-top" >                                             
-                        {% url_case_id request.get_full_path as id %}
-                        {% case_info viewer_cases id as case %}
-                        <a href="#" onclick="showCaseInformation({{ case.id }});">
-                            <h5 class="navbar_patient_info nav-link mb-0">{{ case.patient_name }} {% if case.num_spokes != "" %}({{ case.num_spokes}} spokes){% endif %}</h5>                         
+                        <a href="#" onclick="showCaseInformation({{ current_case.case_id }});">
+                            <h5 class="navbar_patient_info nav-link mb-0">{{ current_case.patient_name }} {% if current_case.num_spokes != "" %}({{ current_case.num_spokes}} spokes){% endif %}</h5>                         
                         </a>
                     </li>
                 </ul>

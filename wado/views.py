@@ -19,6 +19,7 @@ import numpy as np
 
 from portal.models import *
 
+
 logger = logging.getLogger(__name__)
 
 

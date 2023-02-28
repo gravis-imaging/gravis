@@ -9,10 +9,12 @@ from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.views.static import serve
+from django.contrib.auth.models import User
 # from django.contrib.staticfiles import views as static_views
 
-
 from .models import Case, DICOMInstance, Tag, UserProfile
+from .forms import UserForm, ProfileForm, ProfileUpdateForm
+
 
 logger = logging.getLogger(__name__)
 
@@ -42,12 +44,17 @@ def login_request(request):
             password = form.cleaned_data.get("password")
             user = authenticate(username=username, password=password)
             if user is not None:
+                try:
+                    UserProfile.objects.get(user=user.id)
+                except UserProfile.DoesNotExist:                
+                    UserProfile.objects.create(user=user)
                 login(request, user)
                 return redirect("/")
             else:
                 messages.error(request, "Invalid username or password.")
         else:
             messages.error(request, "Invalid username or password.")
+
     form = AuthenticationForm()
     return render(request, "login.html", context={"form": form, "build_version": settings.GRAVIS_VERSION})
 
@@ -56,8 +63,6 @@ def logout_request(request):
     logout(request)
     return redirect("/login")
 
-
-# TODO: Status viewer from django rq - Case Information button is clicked
 
 @login_required
 def index(request):
@@ -69,36 +74,31 @@ def index(request):
 
 @login_required
 def user(request):
-    obj, created = UserProfile.objects.get_or_create(
-        user = request.user, 
-        defaults = { 
-            'user_id':request.user.id, 
-            'privacy_mode': False 
-        }
-    )
-    context = {
-        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user),
-        "privacy_mode": obj.privacy_mode
-    }
-    return render(request, "user.html", context)
+    current_user = get_object_or_404(User,username=request.user)
 
+    if request.method == 'POST':
+        print(request.POST)
+        form = ProfileUpdateForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:           
+                current_user.userprofile.privacy_mode = bool(form.cleaned_data.get("privacy_mode"))
+                current_user.userprofile.save() 
+                print("Current user saved!")
+            except Exception as e:
+                print("Error while saving profile data")
+                print(e)
+                return HttpResponseBadRequest('Unable to save data')   
+        else:
+            return HttpResponseBadRequest('Invalid form data')   
+        
+    user_form = UserForm(instance=request.user)
+    profile_form = ProfileForm(instance=request.user.userprofile)
 
-@login_required
-@require_POST
-def user_settings(request):    
-    '''
-    Updates user settings and returns response.ok if successful
-    '''
-    data = json.loads(request.body)
-    privacy_mode = data['privacy_mode']
-    UserProfile.objects.update_or_create(  # update_or_create returns (obj, created) tuple, currently not needed
-        user=request.user,
-        defaults={
-            'user_id':request.user,
-            'privacy_mode':privacy_mode,
-        }
-    )
-    return HttpResponse()
+    return render(request, "user.html", {
+        'viewer_cases': Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user),
+        'user_form': user_form, 
+        'profile_form': profile_form,
+    })
 
 
 @login_required
@@ -115,8 +115,9 @@ def config(request):
 
 
 @login_required
-def viewer(request, case):
-    case = get_object_or_404(Case, id=case)
+def viewer(request, case_id):
+    case = get_object_or_404(Case, id=case_id)
+    # TODO: Check if current user is allowed to view case
     
     case.viewed_by = request.user
     case.last_read_by = request.user
@@ -126,27 +127,17 @@ def viewer(request, case):
     
     context = {
         "studies": [(k.study_uid,k.dicom_set.id, k.dicom_set.type) for k in instances],
-        "current_case": extract_case(instances[0].dicom_set.case),
+        "current_case": get_case_information(case),
         "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user),
         "original_dicom_set_id": instances[0].dicom_set.id,
     }
     return render(request, "viewer.html", context)
 
-    
-@login_required
-def add_case(request):
-    # TODO: Enable viewing and deleting only when "Ready" 
-    cases = Case.objects.filter(viewed_by=request.user)
-    context = {
-        "cases": [(k.id) for k in cases],
-    }
-    return render(request, "portal.html", context)
 
-
-def extract_case(case_object):
-
+def get_case_information(case_object):
     return { 
-        'case_id': str(case_object.id),
+        "id": case_object.id,
+        "case_id": str(case_object.id), # Not sure why necessary to convert to string here!?
         "patient_name": case_object.patient_name,
         "mrn": case_object.mrn,
         "acc": case_object.acc,
@@ -172,7 +163,7 @@ def browser_get_cases_all(request):
     case_data = []
     all_cases = Case.objects.all()
     for case in all_cases:
-        case_data.append(extract_case(case))
+        case_data.append(get_case_information(case))
 
     return JsonResponse({"data": case_data}, safe=False)
 
@@ -192,19 +183,17 @@ def browser_get_case_tags_and_all_tags(request, case_id):
     and tags specific to the current case.
     '''
     case = get_object_or_404(Case, id=case_id)
-
     return JsonResponse({"tags": [tag.name for tag in Tag.objects.all()], "case_tags": [tag.name for tag in case.tags.all()]}, safe=False)
 
 
 @login_required
-def browser_get_case(request, case):
+def browser_get_case(request, case_id):
     '''
     Returns information about the given case in JSON format. Returns 404 page if
     case ID does not exist
     '''
-    case = get_object_or_404(Case, id=case)
-
-    json_data = extract_case(case)
+    case = get_object_or_404(Case, id=case_id)
+    json_data = get_case_information(case)
     return JsonResponse(json_data, safe=False)
 
 
@@ -248,6 +237,15 @@ def update_tags(request):
     tags = body['tags']
     for tag_name in tags:
         tag = get_object_or_404(Tag, name=tag_name)
-        tag.delete()          
-        
+        tag.delete()                  
+
+    return HttpResponse() 
+
+
+@login_required
+@require_POST
+def browser_delete_case(request, case_id):
+    case=get_object_or_404(Case, id=case_id)
+    case.status = Case.CaseStatus.DELETE
+    case.save()
     return HttpResponse() 

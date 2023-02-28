@@ -7,8 +7,10 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from portal.models import Case, DICOMInstance, DICOMSet, ProcessingJob
 
+
 def do_job(View,id):
     View._do_job(id)
+
 
 @method_decorator(login_required, name='dispatch')
 class WorkJobView(View):
@@ -34,7 +36,6 @@ class WorkJobView(View):
             result["dicom_sets"] = dicom_sets
         # job.result.dicom_set.instances()
         return JsonResponse(result)
-
 
     def post(self, request, *args, **kwargs):
         json_in = json.loads(request.body)
@@ -85,5 +86,4 @@ class WorkJobView(View):
             d.save()
 
         job.save()
-
 

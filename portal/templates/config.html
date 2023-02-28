@@ -55,7 +55,7 @@
             <template x-for="tag in tags">
               <li class="list-group-item list-tag-item d-flex justify-content-between align-items-center">
                 <div class="ms-2 me-auto" id="selected-tags" >
-                  <input @change="count += ($event.target.checked) ? +$event.target.value : -$event.target.value;" class="tag-check form-check-input me-1" type="checkbox" value="1" x-bind:name="tag[0]"/>
+                  <input @change="count += ($event.target.checked) ? +$event.target.value : -$event.target.value;" class="tag-check form-check-input me-2" type="checkbox" value="1" x-bind:name="tag[0]"/>
                   <span x-text="tag[0]"></span>
                 </div>              
                 <div style="width:70px">
@@ -69,18 +69,18 @@
           </ul>
         </div>
         <div>
-          <button type="button"  x-bind:disabled="!(count > 0)" @click="tags = await updateCaseTags(tags); count=0;" class="btn btn-primary mt-4"><i class="fa-solid fa-trash"></i>&nbsp;&nbsp;Delete</button>
+          <button type="button" x-bind:disabled="!(count > 0)" @click="tags = await updateCaseTags(tags); count=0;" class="btn btn-primary mt-4"><i class="fa-solid fa-trash"></i>&nbsp;&nbsp;Delete</button>
         </div>
       </div>
 
       <div class="tab-pane" id="v-pills-app-mra" role="tabpanel" aria-labelledby="v-pills-app-mra-tab">
         <h4>Application &minus; GRASP MRA</h4>
-        TODO
+        <p class="mt-4">TODO</p>
       </div>
 
       <div class="tab-pane" id="v-pills-app-onco" role="tabpanel" aria-labelledby="v-pills-app-onco-tab">
         <h4>Application &minus; GRASP Onco</h4>
-        TODO
+        <p class="mt-4">TODO</p>
       </div>
 
     </div>
@@ -89,22 +89,11 @@
 </div>
 <!-- Tabs content -->
 
-{% include "modal_config_tag_cases_information.html" %}
+{% include "modal_config_tags_caselist.html" %}
 {% endblock %}
 
 {% block addedscripts %}
-
 <script>
-
-$(document).ready(function(){
-    $('a[role="tab"]').on('show.bs.tab', function(e) {
-        localStorage.setItem('activeTab', $(e.target).attr('href'));
-    });
-    let activeTab = localStorage.getItem('activeTab');
-    if(activeTab){
-        $('#v-pills-tab a[href="' + activeTab + '"]').tab('show');
-    }
-});
 
 function showCasesInfo(element) {
   let cases_list = eval(element);
@@ -142,6 +131,4 @@ async function updateCaseTags(all_tags) {
 }
 </script>
 
-
 {% endblock %}
-

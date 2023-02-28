@@ -1,7 +1,7 @@
 {% extends 'portal.html' %}
 
 {% block header %}
-<link rel="stylesheet" type="text/css" href="/static/css/datatables.min.css" crossorigin />
+<link rel="stylesheet" type="text/css" href="/static/css/external/datatables.min.css" crossorigin />
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
 {% endblock %}
@@ -46,17 +46,14 @@
 {% endblock %}
 
 {% block addedscripts %}
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js" crossorigin></script>
-<script type="text/javascript" src="/static/js/datatables.min.js" crossorigin></script>
+<script type="text/javascript" src="/static/js/external/datatables.min.js" crossorigin></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" crossorigin></script>
 
-{% include "modal_case_tags_select.html" %}
+{% include "modal_case_tags.html" %}
 
-<script>   
-    $(document).ready(function () {
-               
-        var case_data_table = $('#casetable').DataTable({
-           
+<script>       
+    $(document).ready(function () {               
+        var case_data_table = $('#casetable').DataTable({           
             dom: "<'row browsertoolbar align-items-end'<'col-sm-12 col-md-6 browserbuttons'B><'col-sm-12 col-md-6'f>>" + "<'row'<'col-sm-12'tr>>" + "<'row'<'col-sm-12 col-md-5'><'col-sm-12 col-md-7'p>>",
             ajax: "/browser/get_cases_all",
             deferRender: true,
@@ -116,8 +113,7 @@
                         }
                         return html_element;
                     }                    
-                },            
-                        
+                },                                    
             ], 
             select: {
                 style: 'single'
@@ -136,6 +132,7 @@
                         openCase(selected_row.case_id, selected_row.status, selected_row.last_read_by_id); 
                     }
                 },
+                {% if user.is_staff %}
                 {
                     extend: "selectedSingle",
                     text: '<i class="fas fa-lock-open"></i>',
@@ -144,27 +141,30 @@
                         alert("Coming soon!");
                     }
                 },
-                {% if user.is_staff %}
                 {
                     extend: "selectedSingle",
                     text: '<i class="fas fa-trash"></i>',
                     titleAttr: 'Remove case',
                     action: async function (e, dt, node, config) {
                         const case_id = case_data_table.row({selected: true}).data().case_id;
+                        const selected_row = case_data_table.row({selected: true}).data();
+                        if (!canModifyCaseStatus(selected_row.status, selected_row.last_read_by_id, "delete")) {
+                            await errorPrompt("Case is locked and cannot be deleted now.", "Locked")
+                            return;
+                        }
 
                         const result = await confirmPrompt("Do you really want to delete the case?", "Are you sure?", async () => {
                             try {
-                                return await doFetch('/cases/', { "case_id": case_id });
+                                await doFetch(`/browser/delete_case/${case_id}`);
+                                await successPrompt("The case has been deleted.");
+                                case_data_table.ajax.reload();
                             } catch (e) {
-                                Swal.showValidationMessage(`Error deleting case: ${e}`)
+                                Swal.showValidationMessage("A problem occurred while deleting the case. Please try again.")
                             }
                         })
-                        if (result.isConfirmed) {
-                            await successPrompt("The case has been deleted.");
-                            $('#casetable').DataTable().ajax.reload();
-                        }
                     }
                 },
+                {% endif %}
                 {
                     extend: "selectedSingle",
                     text: '<i class="fas fa-list-alt"></i>',
@@ -191,7 +191,6 @@
                         case_data_table.ajax.reload();
                     }
                 },                
-                {% endif %}
             ],
             initComplete: () => {             
                 $("#tablewrapper").show();
@@ -215,15 +214,36 @@
     } );
 
     function openCase(case_id, status, last_read_by_id) {
-        if ( ["Ready", "Viewing", "Complete"].includes(status) && (last_read_by_id == "{{ user.username }}" || last_read_by_id == "") )  {                                      
+        if (canModifyCaseStatus(status, last_read_by_id, "open")) {
             const link = '/viewer/'+case_id;
             window.open(link, "_self");
         } else {
             errorPrompt("The case is not ready for viewing or locked by another user.")
         }  
     }
+
+    function canModifyCaseStatus(status, last_read_by_id, operation) {
+        if ((status=="Received") || (status=="Queued") || (status=="Processing")) {
+            return false;
+        }
+
+        if ((status=="Ready") || (status=="Complete")) {
+            return true;
+        }
+
+        if ((status=="Viewing")) {
+            if (last_read_by_id=="{{user.username}}") {
+                return true;
+            } else {
+                return false;
+            }                
+        }
+
+        // In other states, changing case status currently not supported        
+        return false;
+    }
+
     
 </script>
 
 {% endblock %}
-
