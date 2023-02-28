@@ -280,7 +280,7 @@
           :disabled="!viewer || loading || switching" disabled="disabled"
           @click="await viewer.deleteFinding(finding.id);"><i class="fa-solid fa-trash"></i></button>
         </div>
-        <img class="mb-2 img-fluid" :src="finding.url" width="100%" @click="viewer.showFinding(finding)"/>
+        <img class="mb-2 img-fluid" style="cursor: pointer;" :src="finding.url" width="100%" @click="viewer.showFinding(finding)"/>
         <div x-text="finding.name" class="text-expand"></div>
       </template>
       <template x-if="viewer && viewer.findings && (Object.keys(viewer.findings).length > 0)">
@@ -310,7 +310,7 @@
             {% endcomment %}
               <img id="finding_modal_img" style="height:calc(100% - 5em); max-width: 100%;
               display: inline-block; position: relative;
-              left: 50%; transform: translateX(-50%);"/>
+              left: 50%; transform: translateX(-50%); "/>
               <table class="table table-sm">
                 <tbody>
                     <tr>
@@ -353,7 +353,6 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
   import { GraspViewer, doJob } from "/static/js/viewer.js"
   window.GraspViewer = GraspViewer;
   window.doJob = doJob;
-  window.doFetch = doFetch;
 </script>
 
 <script>

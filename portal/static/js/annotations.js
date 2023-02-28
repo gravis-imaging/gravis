@@ -15,7 +15,7 @@ class AnnotationManager {
     }
 
     async updateChart() {
-        if (! this.viewer.volume.imageData ) {
+        if (!this.viewer.volume || !this.viewer.volume.imageData ) {
             return;
         }
         let annotations = this.getAllAnnotations();
