@@ -74,42 +74,26 @@
 
 // Retrieves that information for the given case from the server and shows a modal popup window with
 // the information
-function showCaseInformation(case_id) {
-    $.ajax({
-        type: 'GET',
-        url: '/browser/get_case/'+case_id,
-        dataType: 'json',
-        error: async function (e) {
-            // Show error if the data cannot be read from server
-            await errorPrompt("Unable to find case information.")
-        },
-        success: function (data) {
-            // Call helper function to display modal window with information
-            displayReceivedCaseInformation(data);
-        },
-        complete: function (data) {
-        },
-        timeout: 3000
-    });
+async function showCaseInformation(case_id) {
+    try {
+        const result = await doFetch('/browser/get_case/'+case_id)
+        displayReceivedCaseInformation(result);
+    } catch(e) {
+        console.error(e);
+        await errorPrompt("Unable to find case information.")
+    }
 }
 
 // Renders the retrieved JSON information in modal window and displays it 
 function displayReceivedCaseInformation(caseData) {
-
-    // Pass data to UI elements and provide default value in case entry is missing in provided JSON object
-    document.getElementById("case_details_patient_name").innerText = caseData.patient_name || "Missing";
-    document.getElementById("case_details_mrn").innerText = caseData.mrn || "Missing";
-    document.getElementById("case_details_acc").innerText = caseData.acc || "Missing";
-    document.getElementById("case_details_num_spokes").innerText = caseData.num_spokes || "Missing";
-    document.getElementById("case_details_case_type").innerText = caseData.case_type || "Missing";
-    document.getElementById("case_details_exam_time").innerText = caseData.exam_time || "Missing";
-    document.getElementById("case_details_receive_time").innerText = caseData.receive_time || "Missing";
-    document.getElementById("case_details_status").innerText = caseData.status || "Missing";
-    document.getElementById("case_details_twix_id").innerText = caseData.twix_id || "Missing";
-    document.getElementById("case_details_case_location").innerText = caseData.case_location || "Missing";
-    document.getElementById("case_details_viewed_by_id").innerText = caseData.viewed_by_id || "Missing";
-    document.getElementById("case_details_last_read_by_id").innerText = caseData.last_read_by_id || "Missing";
-    document.getElementById("case_details_settings").innerText = JSON.stringify(caseData.settings, null, 4)  || "{}";
+    function display_field(id, value) {
+        // Pass data to UI elements and provide default value in case entry is missing in provided JSON object
+        document.getElementById("case_details_"+id).innerText = (value || caseData[id]) || "Missing";
+    }
+    for ( const id of ["patient_name","mrn","acc","num_spokes","case_type","exam_time","receive_time","status","twix_id","case_location","viewed_by_id","last_read_by_id"]) {
+        display_field(id)
+    }
+    display_field("settings",JSON.stringify(caseData.settings, null, 4)  || "{}");
     
     // Display the modal window
     const myModalEl = document.getElementById('case_details_modal');
