@@ -319,14 +319,47 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
   import { GraspViewer, doJob } from "/static/js/viewer.js"
   window.GraspViewer = GraspViewer;
   window.doJob = doJob;
+  window.doFetch = doFetch;
 </script>
 
 <script>
-  async function closeCurrentCase() {
-    const result = await window.confirmPrompt("Unsaved findings will be lost.")
-    if (result.isConfirmed) {
-      // TODO
-    }
+
+  function closeCurrentCase() {
+    Swal.fire({
+      title: 'Close case?',
+      text: "Unsaved annotations will be lost.",
+      icon: 'question',
+      showDenyButton: true,
+      showCancelButton: true,
+      confirmButtonText: 'Set to Ready',
+      denyButtonText: 'Set to Complete',
+      cancelButtonText: 'Cancel',      
+      confirmButtonColor: '#1266f1',
+      denyButtonColor: '#198754',
+      cancelButtonColor: '#d33',
+    })
+    .then((result) => {
+      if ((result.isConfirmed) || (result.isDenied)) {
+        try {
+          targetURL = '/status/'+String({{current_case.id}})+'/';
+          if (result.isConfirmed) {
+            targetURL += 'ready/';
+          } else {
+            targetURL += 'complete/';
+          }
+          doFetch(targetURL, {})          
+          window.open("/", "_self");        
+        } catch (e) {
+          console.warn(e)
+          Swal.fire({
+              title: 'Error',
+              text: "Unable to close case. Check logs.",
+              icon: 'error',
+          });            
+          return;
+        }                
+      }
+    });    
   }
 </script>
 

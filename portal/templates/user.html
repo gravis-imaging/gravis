@@ -6,7 +6,6 @@
         <h2><i class="fas fa-angle-double-right text-primary text-primary"></i>&nbsp;&nbsp;User Settings</h2>        
     </div>
 </div>
-
 <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <div class="form-check form-switch">
@@ -14,8 +13,35 @@
         {% if profile_form.privacy_mode.value %}checked{% endif %} />
         <label class="form-check-label ms-2" for="privacy_mode">Privacy Mode</label>
     </div> 
-
     <button class="btn btn-primary mt-4" type="submit"><i class="fas fa-check me-2"></i>Update</button>
 </form>
+{% endblock %}
    
+{% block addedscripts %}
+<script>
+{% if show_confirm %}
+$(document).ready(function () {   
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'bottom-right',
+        iconColor: 'white',
+        customClass: {
+            popup: 'colored-toast'
+        },
+        showConfirmButton: false,
+        timer: 1000,
+        timerProgressBar: true,
+        showClass: {
+            backdrop: 'swal2-noanimation', // disable backdrop animation
+            popup: '',                     // disable popup animation
+        },        
+        });
+    Toast.fire({
+        icon: 'success',
+        title: 'Saved',
+        popup: '',  
+    });           
+});
+{% endif %} 
+</script>
 {% endblock %}

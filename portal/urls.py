@@ -7,9 +7,11 @@ from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 
 urlpatterns = [
+    path("", views.index, name="index"),
     path("login/", views.login_request, name="login"),
     path("logout/", views.logout_request, name="logout"),
-    path("", views.index, name="index"),
+    path("user/", views.user, name="user"),
+    path("config/", views.config, name="config"),
 
     path("browser/get_cases_all", views.browser_get_cases_all),
     path("browser/get_tags_all", views.browser_get_tags_all),
@@ -21,10 +23,9 @@ urlpatterns = [
     # path("work_test/", views.work_queue_test),
     # path("work_status/<int:id>/", views.work_status),
 
-    path("viewer/<str:case_id>", views.viewer, name="viewer"),
-    path("config/", views.config, name="config"),
-    path("user/", views.user, name="user"),
     path("media/<path:path>", views.serve_media),
+    path("viewer/<str:case_id>", views.viewer, name="viewer"),
+    path("status/<str:case_id>/<str:new_status>/", views.case_status, name="viewer"),
     path("update_case_tags/", views.update_case_tags),
     path("update_tags/", views.update_tags),
 

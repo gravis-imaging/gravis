@@ -75,6 +75,7 @@ def index(request):
 @login_required
 def user(request):
     current_user = get_object_or_404(User,username=request.user)
+    show_confirm = False
 
     if request.method == 'POST':
         print(request.POST)
@@ -83,7 +84,7 @@ def user(request):
             try:           
                 current_user.userprofile.privacy_mode = bool(form.cleaned_data.get("privacy_mode"))
                 current_user.userprofile.save() 
-                print("Current user saved!")
+                show_confirm = True
             except Exception as e:
                 print("Error while saving profile data")
                 print(e)
@@ -98,6 +99,7 @@ def user(request):
         'viewer_cases': Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user),
         'user_form': user_form, 
         'profile_form': profile_form,
+        'show_confirm': show_confirm,
     })
 
 
@@ -134,6 +136,28 @@ def viewer(request, case_id):
     return render(request, "viewer.html", context)
 
 
+@login_required
+@require_POST
+def case_status(request, case_id, new_status):
+    case = get_object_or_404(Case, id=case_id)
+
+    if case.status != Case.CaseStatus.VIEWING:
+        return HttpResponseBadRequest
+
+    case.viewed_by = None;
+
+    if new_status=="ready":
+        case.status = Case.CaseStatus.READY
+        case.save()
+    elif new_status=="complete":
+        case.status = Case.CaseStatus.COMPLETE
+        case.save()
+    else:
+        return HttpResponseBadRequest
+
+    return HttpResponse() 
+
+
 def get_case_information(case_object):
     return { 
         "id": case_object.id,
@@ -149,8 +173,8 @@ def get_case_information(case_object):
         "twix_id": case_object.twix_id,
         "case_location": case_object.case_location,
         "settings": case_object.settings,
-        "last_read_by_id": case_object.last_read_by.username if case_object.last_read_by_id else "",
-        "viewed_by_id": case_object.viewed_by.username if case_object.viewed_by_id else "",
+        "last_read_by_id": case_object.last_read_by.username if case_object.last_read_by_id != None else "None",
+        "viewed_by_id": case_object.viewed_by.username if case_object.viewed_by_id != None else "None",
         "tags": [tag.name for tag in case_object.tags.all()]
     }
 
