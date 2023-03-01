@@ -590,11 +590,8 @@ class GraspViewer {
         // const info = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/processed_json/CINE`);
         const index = cornerstone.utilities.transformWorldToIndex(volume.imageData, cam.focalPoint);
 
-        const view = ["SAG", "COR","AX"][cam.viewPlaneNormal.findIndex(x=>Math.abs(x)==1)];
-        const cine_urls = await (
-            await fetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/preview/${view}/${index.join()}`, {
-            method: 'GET',   credentials: 'same-origin'
-        })).json();
+        const view = ["SAG", "COR", "AX"][cam.viewPlaneNormal.findIndex(x=>Math.abs(x)==1)];
+        const cine_urls = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/preview/${view}/${index.join()}`, {}, "GET")
         // console.log("Preview info:", info)
         // dest_viewport = dest_viewport? dest_viewport : this.viewports[3]
         // dest_viewport.setProperties( { voiRange: viewport.getProperties().voiRange });
@@ -643,7 +640,7 @@ class GraspViewer {
             imageIdIndex: viewport.currentImageIdIndex? viewport.currentImageIdIndex : null
             // center_index: cornerstone.utilities.transformWorldToIndex(viewport.getDefaultImageData(), viewport.getCamera().focalPoint),
         }
-        const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`, {image_data: image, info: info});
+        const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`, {image_data: image, data: info});
         this.findings.push(result);
     }
 

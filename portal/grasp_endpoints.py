@@ -302,8 +302,8 @@ def store_finding(request, case, source_set, finding_id=None):
         finding.save()
         return JsonResponse({})
     elif request.method == "POST":
-        data = json.loads(request.body.decode("utf-8"))
-        with urlopen(data["image_data"]) as response:
+        request_data = json.loads(request.body.decode("utf-8"))
+        with urlopen(request_data["image_data"]) as response:
             image_data = response.read()
         directory = Path(dicom_set.case.case_location) / "findings" / str(uuid.uuid4())
         directory.mkdir()
@@ -331,7 +331,7 @@ def store_finding(request, case, source_set, finding_id=None):
                 file_location = filename.relative_to(Path(dicom_set.case.case_location)),
                 dicom_location = (directory / "finding.dcm").relative_to(Path(dicom_set.case.case_location)),
                 # name = data.get("name",None),
-                # data = data.get("data",None)
+                data = request_data.get("data",None)
                 )
         finding.save()
         return JsonResponse(finding.to_dict())

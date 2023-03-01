@@ -204,8 +204,8 @@
             </button><button
              title="Store finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
               :disabled="!viewer || loading || switching" disabled="disabled" 
-                @click="viewer.storeFinding(viewer.viewports[i-1]);"><i class="fa-solid fa-camera"></i>
-            </button>            
+                @click="loading = true; await viewer.storeFinding(viewer.viewports[i-1]); loading = false;"><i class="fa-solid fa-camera"></i>
+            </button>
             <template x-if="viewer && viewer.getNativeViewports().indexOf(viewer.viewports[i-1].id) > -1">
               <div class="viewer-label-native" style="margin-left: 0.5rem;">
                 Native
