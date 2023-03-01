@@ -171,7 +171,7 @@ def process_job_error(job_id, error_description):
         return False
     folder_name = Path(job.case.case_location).name # "foo/bar" -> bar, "foo/bar/" => bar
     print("ERROR FOLDER!!!: ", folder_name)
-    dicom_setutils.move_files(
+    dicomset_utils.move_files(
         Path(job.case.case_location), Path(settings.ERROR_FOLDER) / folder_name
     )
     job.case.status = Case.CaseStatus.ERROR

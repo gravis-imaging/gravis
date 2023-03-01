@@ -1,5 +1,6 @@
 import { AnnotationManager } from "./annotations.js"
 import { StateManager } from "./state.js"
+import { MIPManager } from "./mip.js"
 import { doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch, chartToImage } from "./utils.js"
 
 
@@ -182,8 +183,7 @@ class GraspViewer {
             
             auxViewport.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(500, async (evt) => {                
                 try {
-                    console.log("would cache mip");
-                    await this.cacheMIP()
+                    await this.mip_manager.cache();
                 } catch (e) {
                     console.error(e);
                 }
@@ -195,8 +195,9 @@ class GraspViewer {
             this.viewports = viewportIds.map((c)=>this.renderingEngine.getViewport(c))
             this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c))
 
-            this.annotation_manager = new AnnotationManager(this)
-            this.state_manager = new StateManager(this)
+            this.annotation_manager = new AnnotationManager(this);
+            this.state_manager = new StateManager(this);
+            this.mip_manager = new MIPManager(this, auxViewport);
 
             cornerstone.tools.synchronizers.createVOISynchronizer("SYNC_CAMERAS");
             this.createTools();
@@ -487,7 +488,6 @@ class GraspViewer {
                 // Get closest preview image if only fraction of preview images were generated.
                 await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / this.current_study.length));
             })
-          
         } catch (e) {
             console.error(e);
         }
@@ -512,113 +512,17 @@ class GraspViewer {
     }
 
     async switchSeries(series_uid) {
-        this.chart.renderGraph_()
+        this.chart.renderGraph_();
         await this.setVolumeBySeries(series_uid);
         await new Promise( resolve => {
             this.volume.load( e => { console.log("Volume finished loading",e); resolve() });
         });
     }    
 
-    async switchMIP(index, preview) {
-        const current_info = this.current_study[index];
-        const viewport = this.renderingEngine.getViewport('VIEW_AUX');
-        const cam = viewport.getCamera();
-        const ori_dicom_set = studies_data_parsed.find((x)=>x[2]=="ORI")[1]
-        const slice_location = this.mip_details[viewport.targetImageIdIndex]["slice_location"];
-
-        // In the preview mode need to get all time points for the given angle (slice_location)
-        // In the regular, not preview mode, need to get all angles (slice_locations) for the given time point
-        let mip_urls = {}
-        if (preview) {
-            mip_urls = (await doFetch(`/api/case/${this.case_id}/dicom_set/${ori_dicom_set}/processed_results/MIP?slice_location=${slice_location}`,null, "GET")).urls;
-        }
-        else {
-            mip_urls = (await doFetch(`/api/case/${this.case_id}/dicom_set/${ori_dicom_set}/processed_results/MIP?acquisition_number=${current_info.acquisition_number}`,null, "GET")).urls;
-        } 
-
-        if ( mip_urls.length > 0 ) {
-           await viewport.setStack(mip_urls, viewport.targetImageIdIndex);
-           cornerstone.tools.utilities.stackPrefetch.enable(viewport.element);
-           if (!cam.focalPoint.every( k => k==0 )) viewport.setCamera(cam);
-           viewport.render()
-        }
-    }
-
-    async cacheMIP() {
-        
-        const viewport = this.renderingEngine.getViewport('VIEW_AUX');
-        
-        const ori_dicom_set = studies_data_parsed.find((x)=>x[2]=="ORI")[1]
-        let slice_location = 0.0;
-        try {
-            slice_location = this.mip_details[viewport.targetImageIdIndex]["slice_location"]; 
-        }
-        catch (e) {
-            console.log("mip_details is not initialized yet. setting slice_location to 0.0.")
-        }
-        let imageIdsToPrefetch = (await doFetch(`/api/case/${this.case_id}/dicom_set/${ori_dicom_set}/processed_results/MIP?slice_location=${slice_location}`,null, "GET")).urls;
-        
-        const requestFn = (imageId, options) => cornerstone.imageLoader.loadAndCacheImage(imageId, options);
-        const priority = 0;
-        const requestType = cornerstone.Enums.RequestType.Prefetch;
-        imageIdsToPrefetch.forEach((imageId) => {
-        
-            // IMPORTANT: Request type should be passed if not the 'interaction'
-            // highest priority will be used for the request type in the imageRetrievalPool
-            const options = {
-              targetBuffer: {
-                type: 'Float32Array',
-                offset: null,
-                length: null,
-              },
-              requestType,
-            };
-        
-            cornerstone.imageLoadPoolManager.addRequest(
-              requestFn.bind(null, imageId, options),
-              requestType,
-              // Additional details
-              {
-                imageId,
-              },
-              priority
-              // addToBeginning
-            );
-        });        
-    }
-
     async switchToIndex(index) {
         const current_info = this.current_study[index];
         await viewer.switchSeries(current_info.series_uid); 
         this.selected_time = current_info.acquisition_seconds; 
-    }
-
-    async startPreviewMIP(idx) {
-        // Resetting MIP image stack with images at the last saved angle for all time points
-        try {
-            await this.switchMIP(idx, true);
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    async setPreviewMIP(idx) {
-        try {
-            // Update MIP Viewport
-            await this.renderingEngine.getViewport('VIEW_AUX').setImageIdIndex(idx);
-          
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    async stopPreviewMIP(idx) {
-        // Resetting MIP image stack with images at a given time point with all available angles.
-        try {
-            await this.switchMIP(idx, false);
-        } catch (e) {
-            console.error(e);
-        }
     }
 
     async switchStudy(info, case_id, keepCamera=true) {       
@@ -634,15 +538,15 @@ class GraspViewer {
             this.findings = await this.loadFindings();
         }
 
-        const graspVolumeInfo = await (await fetch(`/api/case/${case_id}/dicom_set/${dicom_set}/study/${study_uid}/metadata`, {
-            method: 'GET',   credentials: 'same-origin'
-        })).json()
+        const graspVolumeInfo = await doFetch(`/api/case/${case_id}/dicom_set/${dicom_set}/study/${study_uid}/metadata`, {}, "GET")
 
         document.getElementById("volume-picker").setAttribute("min",0)
         document.getElementById("volume-picker").setAttribute("max",graspVolumeInfo.length-1)
 
         let selected_index = 0
-        console.log(`Selected time: ${this.selected_time}`)
+        // console.log(`Selected time: ${this.selected_time}`)
+        
+        // Try to select the same time point as we are currently on
         if ( this.selected_time ) {
             for (const [index, info] of graspVolumeInfo.entries()) { 
                 if ( Math.abs(info.acquisition_seconds - this.selected_time) < 0.001 ) {
@@ -654,30 +558,18 @@ class GraspViewer {
         } else {
             this.selected_time = graspVolumeInfo[0].acquisition_seconds;
         }
-        console.log(`Loading index ${selected_index}`)
-        console.log(graspVolumeInfo)
+        // console.log(`Loading index ${selected_index}`)
+        // console.log(graspVolumeInfo)
         await this.setVolumeBySeries(graspVolumeInfo[selected_index]["series_uid"])
         document.getElementById("volume-picker").setAttribute("value",selected_index)        
         
         this.current_study = graspVolumeInfo;
          
-        // Get MIP metadata info, currently only need slice_locations
-        const current_info = graspVolumeInfo[0];
-        const ori_dicom_set = studies_data_parsed.find((x)=>x[2]=="ORI")[1];
-        try {
-            this.mip_details = (await doFetch(`/api/case/${case_id}/dicom_set/${ori_dicom_set}/mip_metadata?acquisition_number=${current_info.acquisition_number}`,null, "GET")).details;
-                         
-            // Set Initial MIP Image         
-            await this.switchMIP(0, false);
-            await this.setPreviewMIP(0);  
-        }
-        catch (e) {
-            console.error(e); 
-        }
+        this.mip_manager.init(graspVolumeInfo, selected_index);
 
-        this.volume.load(async ()=>{ 
-            console.log("Volume loaded");
-        })
+        await new Promise( resolve => {
+            this.volume.load( e => { console.log("Volume finished loading",e); resolve() });
+        });
         try {
             await this.updatePreview();
         } catch (e) {
