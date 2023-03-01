@@ -9,6 +9,10 @@
                 <table class="table table-sm">
                     <tbody>
                         <tr>
+                            <td>Case ID:</td>
+                            <td><span class="patient_info" id="case_details_case_id">&nbsp;</span></td>
+                        </tr>
+                        <tr>
                             <td>Patient Name:</td>
                             <td><span class="patient_info" id="case_details_patient_name">&nbsp;</span></td>
                         </tr>
@@ -90,10 +94,10 @@ function displayReceivedCaseInformation(caseData) {
         // Pass data to UI elements and provide default value in case entry is missing in provided JSON object
         document.getElementById("case_details_"+id).innerText = (value || caseData[id]) || "Missing";
     }
-    for ( const id of ["patient_name","mrn","acc","num_spokes","case_type","exam_time","receive_time","status","twix_id","case_location","viewed_by_id","last_read_by_id"]) {
+    for ( const id of ["case_id","patient_name","mrn","acc","num_spokes","case_type","exam_time","receive_time","status","twix_id","case_location","viewed_by_id","last_read_by_id"]) {
         display_field(id)
     }
-    display_field("settings",JSON.stringify(caseData.settings, null, 4)  || "{}");
+    display_field("settings", JSON.stringify(caseData.settings, null, 4)  || "{}");
     
     // Display the modal window
     const myModalEl = document.getElementById('case_details_modal');

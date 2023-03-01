@@ -234,6 +234,12 @@
             }                
         }
 
+        {% if user.is_staff %}
+        if (status=="Error") {
+            return true;
+        }
+        {% endif %}
+
         // In other states, changing case status currently not supported        
         return false;
     }    
