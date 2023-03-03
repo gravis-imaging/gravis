@@ -19,6 +19,12 @@
 </style>
 {% endblock %}
 
+{% block extra_nav %}
+<li class="nav-item menuitems-top">
+  <a class="nav-link" aria-current="page" href="#" onclick="closeCurrentCase();"><i class="far fa-window-close"></i>&nbsp;&nbsp;Close</a>
+</li>
+{% endblock %}
+
 {% block content %}
 {{ studies|json_script:"studies_data" }}
 <script type="text/javascript">
@@ -48,6 +54,35 @@
         should_disable: function() {
           return !this.viewer || !this.viewer.current_study || this.loading || this.switching;
         },
+        volume_picker: {
+          async ['@mouseup']() {
+            this.previewing = false;
+            this.viewer.mip_manager.stopPreview(this.$event.target.value);
+          },
+          async ['@mousedown']() {
+            const v=this.$event.target.value;
+            await this.viewer.mip_manager.startPreview(v); 
+            this.viewer.mip_manager.setPreview(v);
+          },
+          async ['@input']() {
+            const v = this.$event.target.value; 
+            this.previewing = true;
+            await this.viewer.startPreview(v);
+            this.viewer.selected_time = this.viewer.current_study[v].acquisition_seconds;
+            this.viewer.setPreview(v);
+            this.viewer.mip_manager.setPreview(v);
+          },
+          async ['@change']() { 
+            this.switching = true;
+            await this.viewer.switchToIndex(this.$event.target.value);
+            this.switching = false;
+          },
+          [':disabled']() { 
+            return this.should_disable() 
+          },
+          ['@keyup.left']:"",
+          ['@keyup.right']:"",
+        }
     }))});
 </script>
 <div class="grid"
@@ -85,14 +120,7 @@
   <!-- volume picker -->
   <!-- x-model="value" x-ref="input" x-on:focus="() => { $refs.input.focus() }"  -->
   <input id='volume-picker' tabindex='1' class="timeslider" :class="should_disable() && 'timeslider-loading'" title="Displayed time point" type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
-      @mouseup="previewing = false; viewer.mip_manager.stopPreview($event.target.value);" 
-      @mousedown="const v=$event.target.value; await viewer.mip_manager.startPreview(v); viewer.mip_manager.setPreview(v);"    
-      @input="const v=$event.target.value; previewing = true; await viewer.startPreview(v); viewer.selected_time=viewer.current_study[v].acquisition_seconds; viewer.setPreview(v); viewer.mip_manager.setPreview(v);" 
-      @change="switching = true; await viewer.switchToIndex($event.target.value); switching = false;"
-      :disabled="should_disable" disabled="disabled" 
-      @keyup.left=""
-      @keyup.right=""
-      >
+      x-bind="volume_picker" disabled="disabled">
       </input>
       <label for='volume-picker' x-text="viewer && viewer.selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>
  
@@ -381,8 +409,24 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
 
 <script>
 
-  function closeCurrentCase() {
-    Swal.fire({
+  async function closeCurrentCase() {
+    function handler(confirmed) {
+        return (async () => {
+        try {
+          targetURL = '/status/'+String({{current_case.id}})+'/';
+          if (confirmed) {
+            targetURL += 'ready/';
+          } else {
+            targetURL += 'complete/';
+          }
+          await doFetch(targetURL, {})          
+          window.open("/", "_self");        
+        } catch (e) {
+          console.warn(e)
+          Swal.showValidationMessage("Unable to close case. Check logs.")
+        }
+    })}
+    await Swal.fire({
       title: 'Close case?',
       text: "Unsaved annotations will be lost.",
       icon: 'question',
@@ -394,29 +438,10 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
       confirmButtonColor: '#1266f1',
       denyButtonColor: '#198754',
       cancelButtonColor: '#d33',
+      showLoaderOnConfirm: true,
+      preConfirm: handler(true),
+      preDeny: handler(false)
     })
-    .then((result) => {
-      if ((result.isConfirmed) || (result.isDenied)) {
-        try {
-          targetURL = '/status/'+String({{current_case.id}})+'/';
-          if (result.isConfirmed) {
-            targetURL += 'ready/';
-          } else {
-            targetURL += 'complete/';
-          }
-          doFetch(targetURL, {})          
-          window.open("/", "_self");        
-        } catch (e) {
-          console.warn(e)
-          Swal.fire({
-              title: 'Error',
-              text: "Unable to close case. Check logs.",
-              icon: 'error',
-          });            
-          return;
-        }                
-      }
-    });    
   }
 </script>
 

@@ -46,11 +46,7 @@
                         </ul>
                     </li>                              
                     {% endif %}     
-                    {% if request.resolver_match.url_name == "viewer" %}
-                    <li class="nav-item menuitems-top">
-                        <a class="nav-link" aria-current="page" href="#" onclick="closeCurrentCase();"><i class="far fa-window-close"></i>&nbsp;&nbsp;Close</a>
-                    </li>           
-                    {% endif %}     
+                    {% block extra_nav %}{% endblock %}
                     
                 </ul>
                 <!-- Patient name for the current case -->
