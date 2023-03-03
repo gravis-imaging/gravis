@@ -354,7 +354,6 @@ const CommonSwal = Swal.mixin({
     showClass: {
         backdrop: 'swal2-noanimation',
         popup: '',
-        icon: ''
     },
     hideClass: {
         popup: '',
@@ -374,6 +373,7 @@ async function confirmPrompt(text, title="Are you sure?", preConfirm=null) {
         title: title,
         text: text,  
         icon: "question",
+        iconColor: "#FFF",
         showCancelButton: true,
         confirmButtonColor: "#1266f1",
         cancelButtonColor: "#d33",
@@ -386,7 +386,17 @@ async function errorPrompt(text,title="Error") {
     return await CommonSwal.fire({
         icon: "error",
         title: title,
-        text: text
+        text: text,
+        iconColor: "#FFF"
+    })
+}
+
+async function infoPrompt(text,title="Information") {
+    return await CommonSwal.fire({
+        icon: "info",
+        title: title,
+        text: text,
+        iconColor: "#FFF"
     })
 }
 
@@ -394,10 +404,10 @@ async function successPrompt(text, title="Success") {
     return await CommonSwal.fire({
         icon: "success",
         title: title,
-        text: text
+        text: text,
+        iconColor: "#FFF"
     })
 }
-
 
 async function inputPrompt(label, title, placeholder) {
     return await CommonSwal.fire({
@@ -435,4 +445,4 @@ async function successToast(title) {
         title: title,
     });
 }
-export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, Vector, chartToImage, confirmPrompt, inputPrompt, errorPrompt, errorToast, successPrompt, successToast };
+export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, Vector, chartToImage, confirmPrompt, inputPrompt, errorPrompt, errorToast, successPrompt,infoPrompt, successToast };

@@ -133,7 +133,7 @@
                     text: '<i class="fas fa-lock-open"></i>',
                     titleAttr: 'Unlock case',
                     action: function (e, dt, node, config) {
-                        alert("Coming soon!");
+                        infoPrompt("Feature coming soon!");
                     }
                 },
                 {
@@ -144,10 +144,9 @@
                         const case_id = case_data_table.row({selected: true}).data().case_id;
                         const selected_row = case_data_table.row({selected: true}).data();
                         if (!canModifyCaseStatus(selected_row.status, selected_row.last_read_by_id, "delete")) {
-                            await errorPrompt("Case is locked and cannot be deleted now.", "Locked")
+                            await infoPrompt("Case is locked and cannot be deleted now.", "Locked");
                             return;
                         }
-
                         const result = await confirmPrompt("Do you really want to delete the case?", "Are you sure?", async () => {
                             try {
                                 await doFetch(`/browser/delete_case/${case_id}`);
@@ -213,7 +212,7 @@
             const link = '/viewer/'+case_id;
             window.open(link, "_self");
         } else {
-            errorPrompt("The case is not ready for viewing or locked by another user.")
+            infoPrompt("Case is not ready for viewing or has been opened by another user.", "Locked");
         }  
     }
 
