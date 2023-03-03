@@ -158,9 +158,9 @@ class StateManager {
 
     setChanged(reason) {
         this.changed = true;
-        // if (reason) {
-        //     console.log("Changed:", reason)
-        // }
+        if (reason) {
+            console.log("Changed:", reason)
+        }
         return true;
     }
 
@@ -168,12 +168,15 @@ class StateManager {
         if (this.changed) {
             return true;
         }
+        if (!this.current_state) {
+            return false;
+        }
         const loaded_annotations = this.current_state.annotations;
         const annotations = this._calcAnnotations();
 
         // Number of annotations differs
         if (annotations.length != loaded_annotations.length) {
-            return this.setChanged();
+            return this.setChanged("number of annotations differs");
         }
         const loaded_annotations_dict = {}
         for (const a of loaded_annotations) {

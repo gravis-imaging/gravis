@@ -408,4 +408,31 @@ async function inputPrompt(label, title, placeholder) {
     })
 }
 
-export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, Vector, chartToImage, confirmPrompt, inputPrompt, errorPrompt, successPrompt };
+const ToastSwal = CommonSwal.mixin({
+    toast: true,
+    position: 'bottom-right',
+    customClass: {
+        popup: 'colored-toast'
+    },
+    timer: 3000,
+    showConfirmButton: false,
+    showClass: {
+        backdrop: 'swal2-noanimation', // disable backdrop animation
+        popup: '',                     // disable popup animation
+    },        
+})
+async function errorToast(title) {
+    ToastSwal.fire({
+        icon: 'error',
+        iconColor: 'red',
+        title: title,
+    });
+}
+async function successToast(title) {
+    ToastSwal.fire({
+        icon: 'info',
+        iconColor: 'green',
+        title: title,
+    });
+}
+export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, Vector, chartToImage, confirmPrompt, inputPrompt, errorPrompt, errorToast, successPrompt, successToast };

@@ -1,7 +1,7 @@
 import { AnnotationManager } from "./annotations.js"
 import { StateManager } from "./state.js"
 import { MIPManager } from "./mip.js"
-import { doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch, chartToImage } from "./utils.js"
+import { doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch, chartToImage, successToast } from "./utils.js"
 
 
 const SOP_INSTANCE_UID = '00080018';
@@ -206,12 +206,7 @@ class GraspViewer {
             this.createTools();
             this.renderingEngine.renderViewports([...this.viewportIds, ...this.previewViewports]);
             this.chart = this.annotation_manager.initChart();
-            
-
-            // Prompt the user if there are unsaved changes.
-            // TODO: this is a bit overzealous, just mousing over an annotation can trigger a "modified" event.
-            addEventListener('beforeunload', (event) => { if (this.state_manager.getChanged()) { event.returnValue = "ask"; return "ask"; } });
-            
+                       
             // cornerstone.eventTarget.addEventListener(cornerstone.Enums.Events.IMAGE_LOAD_ERROR, (evt) => {
             //     console.error("Image load error", evt)
             // })
@@ -481,7 +476,7 @@ class GraspViewer {
         await this.setVolumeByImageIds(imageIds, series_uid, true);
     }    
     
-    async startPreview(idx) {
+    startPreview(idx) {
         this.previewViewports.slice(0,3).map((v, n) => {
             v.element.getElementsByTagName('svg')[0].innerHTML = this.viewports[n].element.getElementsByTagName('svg')[0].innerHTML
         });
@@ -489,15 +484,16 @@ class GraspViewer {
 
     async setPreview(idx) {
         try {
-            requestIdleCallback( (()=>this.chart.renderGraph_()).bind(this))
+            requestAnimationFrame( (()=>this.chart.renderGraph_()).bind(this))
             idx = parseInt(idx)
             let [lower, upper] = this.getVolumeVOI(this.viewports[0])
 
-            this.previewViewports.slice(0,3).map(async (v, n) => {
+            await Promise.all(
+                this.previewViewports.slice(0,3).map(async (v, n) => {
                 v.setVOI({lower, upper});
                 // Get closest preview image if only fraction of preview images were generated.
                 await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / this.current_study.length));
-            })
+            }))
         } catch (e) {
             console.error(e);
         }
@@ -546,22 +542,8 @@ class GraspViewer {
             this.volume.loadStatus.loaded = false;
         }
 
-        Swal.fire({
-            toast: true,
-            position: 'bottom-right',
-            iconColor: 'red',
-            customClass: {
-                popup: 'colored-toast'
-            },
-            timer: 3000,
-            showConfirmButton: false,
-            showClass: {
-                backdrop: 'swal2-noanimation', // disable backdrop animation
-                popup: '',                     // disable popup animation
-            },        
-            icon: 'error',
-            title: 'Error while loading volume, some slices may be missing.',
-        });
+        errorToast('Error while loading volume, some slices may be missing.');
+
         return false;
     }
     async switchStudy(study_uid, dicom_set, case_id, keepCamera=true) {       
@@ -675,8 +657,12 @@ class GraspViewer {
             imageIdIndex: viewport.currentImageIdIndex? viewport.currentImageIdIndex : null
             // center_index: cornerstone.utilities.transformWorldToIndex(viewport.getDefaultImageData(), viewport.getCamera().focalPoint),
         }
-        const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`, {image_data: image, data: info});
-        this.findings.push(result);
+        try {
+            const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`, {image_data: image, data: info});
+            this.findings.push(result);
+        } catch(e) { 
+            errorPrompt("Failed to create finding.")
+        }
     }
 
     async deleteFinding(id){
@@ -714,9 +700,13 @@ class GraspViewer {
 
     async transferFindings() {
         try {
-            const result_promise = doJob("send_findings", this.case_id,{}, true);
-            const result = await result_promise;
+            // TODO: This waits until the findings are actually transmitted to show a success. 
+            // Under load this might actually take a while. 
+            const result = await doJob("send_findings", this.case_id,{}, true);
+            successToast("Transmitted findings.");
         } catch (e) {
+            console.error(e);
+            errorToast("Findings submission failed.");
             return false;
         }
         return true;
@@ -746,7 +736,7 @@ class GraspViewer {
             }
         }
 
-        for (const [index, info] of this.viewer.studies_data.entries()) {
+        for (const [index, info] of this.studies_data.entries()) {
             if (info.dicom_set === finding.dicom_set && info.dicom_set != this.dicom_set){
                 for (const [index, info] of this.current_study.entries()) { 
                     if ( Math.abs(info.acquisition_seconds - finding.data.time) < 0.001 ) {

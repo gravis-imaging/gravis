@@ -50,6 +50,8 @@
           await viewer.switchStudy(this.studies_data[0].uid, this.studies_data[0].dicom_set, this.case_id);
           this.viewer = viewer;
           this.loading = false;
+          // Prompt the user if there are unsaved changes.
+          addEventListener('beforeunload', (event) => { if (viewer.state_manager.getChanged()) { event.returnValue = "ask"; return "ask"; } });
         },
         should_disable: function() {
           return !this.viewer || !this.viewer.current_study || this.loading || this.switching;
@@ -60,22 +62,25 @@
             this.viewer.mip_manager.stopPreview(this.$event.target.value);
           },
           async ['@mousedown']() {
-            const v=this.$event.target.value;
+            const v = this.$event.target.value;
             await this.viewer.mip_manager.startPreview(v); 
             this.viewer.mip_manager.setPreview(v);
           },
           async ['@input']() {
             const v = this.$event.target.value; 
+            if (! this.previewing ) this.viewer.startPreview(v);
             this.previewing = true;
-            await this.viewer.startPreview(v);
             this.viewer.selected_time = this.viewer.current_study[v].acquisition_seconds;
             this.viewer.setPreview(v);
             this.viewer.mip_manager.setPreview(v);
           },
           async ['@change']() { 
-            this.switching = true;
-            await this.viewer.switchToIndex(this.$event.target.value);
-            this.switching = false;
+            try {
+              this.switching = true;
+              await this.viewer.switchToIndex(this.$event.target.value);
+            } finally {
+              this.switching = false;
+            }
           },
           [':disabled']() { 
             return this.should_disable() 
@@ -85,8 +90,7 @@
         }
     }))});
 </script>
-<div class="grid"
-  x-data="gravis_viewer">
+<div class="grid" x-data="gravis_viewer">
   <!-- dicom set selector -->
   <div class="toolbar-area">
     <!-- dicom set selection -->
@@ -102,127 +106,129 @@
       </select>
     </div>    
 
-      <!-- Indicators -->
-      <div class="ms-2 me-3" style="width:1.8em; height: 28px; margin-top: auto; margin-bottom: auto;">
-        <div :class="(loading || switching || job_loading) || 'invisible'" class="spinner-grow spinner-grow-sm ms-2" role="status" style="position:absolute; z-index: 1; color: hsla(0,0%,100%,.2); margin-top: 0.3em;">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-        <div x-ref="saved" class="ms-2" role="status" style="display: none; position:absolute; color: hsla(128,70%,70%,.3);">
-          <i class="fa-solid fa-floppy-disk"></i>
-          <span class="visually-hidden">Saved</span>
-        </div>
-        <div x-ref="failed" class="ms-2" role="status" style="display: none; position:absolute; color: hsla(0,100%,50%,1);">
-            <i class="fa-solid fa-xmark"></i>
-            <span class="visually-hidden">Failed</span>
-        </div>
+    <!-- Indicators -->
+    <div class="ms-2 me-3" style="width:1.8em; height: 28px; margin-top: auto; margin-bottom: auto;">
+      <div :class="(loading || switching || job_loading) || 'invisible'" class="spinner-grow spinner-grow-sm ms-2" role="status" style="position:absolute; z-index: 1; color: hsla(0,0%,100%,.2); margin-top: 0.3em;">
+        <span class="visually-hidden">Loading...</span>
       </div>
+      <div x-ref="saved" class="ms-2" role="status" style="display: none; position:absolute; color: hsla(128,70%,70%,.3);">
+        <i class="fa-solid fa-floppy-disk"></i>
+        <span class="visually-hidden">Saved</span>
+      </div>
+      <div x-ref="failed" class="ms-2" role="status" style="display: none; position:absolute; color: hsla(0,100%,50%,1);">
+          <i class="fa-solid fa-xmark"></i>
+          <span class="visually-hidden">Failed</span>
+      </div>
+    </div>
 
-  <!-- volume picker -->
-  <!-- x-model="value" x-ref="input" x-on:focus="() => { $refs.input.focus() }"  -->
-  <input id='volume-picker' tabindex='1' class="timeslider" :class="should_disable() && 'timeslider-loading'" title="Displayed time point" type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
-      x-bind="volume_picker" disabled="disabled">
-      </input>
-      <label for='volume-picker' x-text="viewer && viewer.selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>
- 
+    <!-- volume picker -->
+    <!-- x-model="value" x-ref="input" x-on:focus="() => { $refs.input.focus() }"  -->
+    <input id='volume-picker' tabindex='1' class="timeslider" :class="should_disable() && 'timeslider-loading'" title="Displayed time point" type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
+        x-bind="volume_picker" disabled="disabled">
+    </input>
+    <label for='volume-picker' x-text="viewer && viewer.selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>
+  
     <!-- Image manipulation buttons -->
     
-      <button title="Reset viewers" class="btn-primary btn-large btn-viewer" style="margin-left: 3.5rem;"
-      :disabled="should_disable" disabled="disabled" 
-      @click="viewer.viewports.map(v=> {v.resetCamera(); v.render()}); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-arrows-to-circle"></i>
-      </button>
+    <button title="Reset viewers" class="btn-primary btn-large btn-viewer" style="margin-left: 3.5rem;"
+    :disabled="should_disable" disabled="disabled" 
+    @click="viewer.viewports.map(v=>v.resetCamera()); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-arrows-to-circle"></i>
+    </button>
 
-      <!-- Annotations -->
-      <div class=""  style="margin-left: 1.4rem;">
-        <div class="dropdown">
-          <button
-            class="btn-primary btn-large btn-viewer"
-            :disabled="should_disable" disabled="disabled" 
-            href="#"
-            id="dropdownMenuLink"
-            data-mdb-toggle="dropdown"
-            aria-expanded="false",
-            title="Select annotation"
-          >
-          <i class="fas fa-map-marker-alt"></i>
-        </button>
-          <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-            <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
-              <li><a class="dropdown-item" @click="await viewer.annotation_manager.goToAnnotation(uid);" href="#" x-text="(viewer.annotation_manager.annotations[uid] || {}).label"></a></li>
-            </template>               
-          </ul>
-        </div>    
-      </div>
-    
-      <button title="Duplicate selected annotation" class="btn-primary btn-large btn-viewer ms-2" 
+    <!-- Annotations -->
+    <div class=""  style="margin-left: 1.4rem;">
+      <div class="dropdown">
+        <button
+          class="btn-primary btn-large btn-viewer"
           :disabled="should_disable" disabled="disabled" 
-          @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
+          href="#"
+          id="dropdownMenuLink"
+          data-mdb-toggle="dropdown"
+          aria-expanded="false",
+          title="Select annotation"
+        >
+        <i class="fas fa-map-marker-alt"></i>
       </button>
-      <button title="Flip selected annotation" class="btn-primary btn-large btn-viewer ms-2"
-          :disabled="should_disable" disabled="disabled"
-          @click="viewer.annotation_manager.flipSelectedAnnotations();">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-symmetry-vertical" viewBox="0 0 16 16">
-          <path d="M7 2.5a.5.5 0 0 0-.939-.24l-6 11A.5.5 0 0 0 .5 14h6a.5.5 0 0 0 .5-.5v-11zm2.376-.484a.5.5 0 0 1 .563.245l6 11A.5.5 0 0 1 15.5 14h-6a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .376-.484zM10 4.46V13h4.658L10 4.46z"/>
-        </svg>
-      </button>
-      <div class="ms-2">
-        <div class="dropdown">
-          <button
-            class="btn-primary btn-large btn-viewer"
-            :disabled="should_disable" disabled="disabled" 
-            href="#"
-            id="dropdownMenuLink"
-            data-mdb-toggle="dropdown"
-            aria-expanded="false",
-            title="Delete annotation"
-          >
+        <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+          <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
+            <li><a class="dropdown-item" @click="await viewer.annotation_manager.goToAnnotation(uid);" href="#" x-text="(viewer.annotation_manager.annotations[uid] || {}).label"></a></li>
+          </template>               
+        </ul>
+      </div>    
+    </div>
+  
+    <button title="Duplicate selected annotation" class="btn-primary btn-large btn-viewer ms-2" 
+        :disabled="should_disable" disabled="disabled" 
+        @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
+    </button>
+    <button title="Flip selected annotation" class="btn-primary btn-large btn-viewer ms-2"
+        :disabled="should_disable" disabled="disabled"
+        @click="viewer.annotation_manager.flipSelectedAnnotations();">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-symmetry-vertical" viewBox="0 0 16 16">
+        <path d="M7 2.5a.5.5 0 0 0-.939-.24l-6 11A.5.5 0 0 0 .5 14h6a.5.5 0 0 0 .5-.5v-11zm2.376-.484a.5.5 0 0 1 .563.245l6 11A.5.5 0 0 1 15.5 14h-6a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .376-.484zM10 4.46V13h4.658L10 4.46z"/>
+      </svg>
+    </button>
+    <div class="ms-2">
+      <div class="dropdown">
+        <button
+          class="btn-primary btn-large btn-viewer"
+          :disabled="should_disable" disabled="disabled" 
+          href="#"
+          id="dropdownMenuLink"
+          data-mdb-toggle="dropdown"
+          aria-expanded="false",
+          title="Delete annotation"
+        >
           <i class="fa-solid fa-trash"></i>
         </button>
-          <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-            <li>
+        <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+          <li>
             <a title="Delete selected annotation" href="#" class="dropdown-item" 
               :disabled="should_disable"
               @click="viewer.annotation_manager.deleteSelectedAnnotations();">
               Delete Selected
             </a>
-            </li>
-            <li>
+          </li>
+          <li>
             <a title="Delete all annotations" :disabled="should_disable" href="#" class="dropdown-item" 
                 @click="viewer.annotation_manager.deleteAllAnnotations();">
                 Delete All
             </a>    
-            </li>
+          </li>
+        </ul>
+      </div>    
+    </div>      
+    <button title="Save session" class="btn-primary btn-large btn-viewer" style="margin-left: 1.4rem;"
+    :disabled="should_disable" disabled="disabled" 
+    @click="await viewer.state_manager.save(); $($refs.saved).fadeIn(50); $($refs.saved).fadeOut(800);"><i class="fa-solid fa-floppy-disk"></i>
+    </button>
+
+    <div class="flex ms-2" style="display: flex;">
+      <div class="">
+        <div class="dropdown">
+          <button
+            class="btn-primary btn-large btn-viewer"
+            :disabled="should_disable" disabled="disabled"
+            href="#"
+            id="dropdownMenuLink"
+            data-mdb-toggle="dropdown"
+            aria-expanded="false",
+            title="Select session"
+          >
+          <i class="fas fa-history"></i>
+          </button>
+          <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+            <template x-show="!!viewer" x-for="session of (viewer? viewer.state_manager.session_list : [])" :key="session.id">
+              <li><a href="#" class="dropdown-item" 
+                     :class="viewer.state_manager.session_id == session.id ? { 'active': true, 'disabled': true} : {}" 
+                     @click="viewer.state_manager.switchSession(session.id)" 
+                     x-text="new Date(session.updated_at*1000).toLocaleString()"></a></li>
+            </template>
+            <li><hr class="dropdown-divider" /></li>
+            <li><a class="dropdown-item" @click="viewer.state_manager.newSession()" href="#">New session</a></li>
           </ul>
         </div>    
-      </div>      
-      <button title="Save session" class="btn-primary btn-large btn-viewer" style="margin-left: 1.4rem;"
-      :disabled="should_disable" disabled="disabled" 
-      @click="await viewer.state_manager.save(); $($refs.saved).fadeIn(50); $($refs.saved).fadeOut(800);"><i class="fa-solid fa-floppy-disk"></i>
-      </button>
-
-      <div class="flex ms-2" style="display: flex;">
-        <div class="">
-          <div class="dropdown">
-            <button
-              class="btn-primary btn-large btn-viewer"
-              :disabled="should_disable" disabled="disabled"
-              href="#"
-              id="dropdownMenuLink"
-              data-mdb-toggle="dropdown"
-              aria-expanded="false",
-              title="Select session"
-            >
-            <i class="fas fa-history"></i>
-          </button>
-            <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-              <template x-show="!!viewer" x-for="session of (viewer? viewer.state_manager.session_list : [])" :key="session.id">
-                <li><a class="dropdown-item" :class="viewer.state_manager.session_id == session.id ? { 'active': true, 'disabled': true} : {}" @click="viewer.state_manager.switchSession(session.id)" href="#" x-text="new Date(session.updated_at*1000).toLocaleString()"></a></li>
-              </template>
-              <li><hr class="dropdown-divider" /></li>
-              <li><a class="dropdown-item" @click="viewer.state_manager.newSession()" href="#">New session</a></li>
-            </ul>
-          </div>    
-        </div>
-      
+      </div>
     </div> 
   </div>
 
@@ -285,14 +291,13 @@
 
   <!-- Chart -->
   <div style="grid-area: f; background-color: black; " class="mb-2 py-3">
-    <div id="chart" style="background-color: black; color: white;">
-    </div>
+    <div id="chart" style="background-color: black; color: white;"></div>
   </div>
   <div style="grid-area: f;">
     <template x-if="viewer">
       <div style="text-align:right; position:relative;">
         <select class="curve-settings-select" x-model="viewer.chart_options['adjust']" @change="viewer.annotation_manager.updateChart()">
-          <option value="normal" autocomplete="off" selected>normal</option>
+          <option value="normal" autocomplete="off" selected>standard</option>
           <option value="zeroed">zeroed</option>
           <option value="normalized">normalized</option>
         </select>
@@ -307,14 +312,14 @@
   <div style="grid-area: f; position:relative;" class="no-pointer-events">
     <button
       title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" style="position: absolute; bottom: 0.5rem; right: 0.5rem;"
-      @click="console.log(viewer.storeChartFinding());"><i class="fa-solid fa-camera"></i>
+      @click="await viewer.storeChartFinding()"><i class="fa-solid fa-camera"></i>
      </button>
   </div>
    
   <!-- Findings -->
-  <div id="findings" class="findings">
+  <div x-ref="findings" id="findings" class="findings" :class="open && 'open'" x-data="{open: false, toggle() { this.open = ! this.open }}">
     <button title="" id="findings_expander" style="position: absolute; background-color: transparent;" class="btn-dark btn-large btn-viewer" 
-    @click="document.getElementById('findings').classList.toggle('open');">
+    @click="toggle">
     </button>
     <div class="findings-inner"> 
       <template x-for="finding in viewer? viewer.findings : []" :key="finding.id">

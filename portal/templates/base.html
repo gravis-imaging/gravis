@@ -44,10 +44,12 @@
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" crossorigin></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js" crossorigin></script>
     <script type="module">
-        import { confirmPrompt, errorPrompt, successPrompt, doFetch } from "/static/js/utils.js"
+        import { confirmPrompt, errorPrompt, errorToast, successPrompt, successToast, doFetch } from "/static/js/utils.js"
         window.confirmPrompt = confirmPrompt;
         window.errorPrompt = errorPrompt;
         window.successPrompt = successPrompt;
+        window.errorToast = errorToast;
+        window.successToast = successToast;
         window.doFetch = doFetch;
     </script>
 </body>
