@@ -22,22 +22,48 @@
 {% block content %}
 {{ studies|json_script:"studies_data" }}
 <script type="text/javascript">
-  const studies_data_parsed = JSON.parse(document.getElementById('studies_data').textContent);    
+  function parse_json_element(el) {
+    return JSON.parse(document.getElementById(el).textContent)
+  };
+  document.addEventListener('alpine:init', () => {
+    Alpine.data('gravis_viewer', () => ({
+        viewer: null,
+        previewing: false,
+        previewingMIP: false, 
+        switching: false, 
+        loading: false, 
+        job_loading: null, 
+        studies_data: parse_json_element('studies_data'),
+        case_id: "{{current_case.id}}",
+
+        init: async function() {
+          this.loading = true; 
+          await this.$nextTick();
+          viewer = await new GraspViewer(this.$refs.viewer_main, this.$refs.viewer_preview, this.studies_data); 
+          window.viewer = viewer; 
+          await viewer.switchStudy(this.studies_data[0].uid, this.studies_data[0].dicom_set, this.case_id);
+          this.viewer = viewer;
+          this.loading = false;
+        },
+        should_disable: function() {
+          return !this.viewer || !this.viewer.current_study || this.loading || this.switching;
+        },
+    }))});
 </script>
 <div class="grid"
-  x-data="{ viewer: null, previewing: false, previewingMIP: false, switching: false, loading: false, job_loading: null, case_id: {{current_case.id}} }" >
+  x-data="gravis_viewer">
   <!-- dicom set selector -->
   <div class="toolbar-area">
     <!-- dicom set selection -->
     <div class="me-2" style="width: 100px;">
       <select id="studies" name="studies" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-outline-light btn-lg btn-rounded text-light btn-viewer-toolbar" data-width="100px"
-      @change="loading=true; await $nextTick(); await viewer.switchStudy($event.target.value.split(':::'), case_id);  loading=false;" title="Displayed series">
+      @change="loading=true; await $nextTick(); await viewer.switchStudy(...$event.target.value.split('__'), case_id);  loading=false;" title="Displayed series">
         <!-- <option value="" selected disabled hidden>Select study...</option> -->
         <optgroup label="Displayed Series">
-        {% for i in studies %}
-        <option value="{{i.0}}:::{{i.1}}">{{ i.2 }}</option>
-        {% endfor %}
-        </optgroup>      
+          {% for i in studies %}
+            <option value="{{i.uid}}__{{i.dicom_set}}">{{ i.type }}</option>
+          {% endfor %}
+        </optgroup>
       </select>
     </div>    
 
@@ -58,12 +84,12 @@
 
   <!-- volume picker -->
   <!-- x-model="value" x-ref="input" x-on:focus="() => { $refs.input.focus() }"  -->
-  <input id='volume-picker' tabindex='1' class="timeslider" :class="!(loading || switching || job_loading) || 'timeslider-loading'" title="Displayed time point" type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
+  <input id='volume-picker' tabindex='1' class="timeslider" :class="should_disable() && 'timeslider-loading'" title="Displayed time point" type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
       @mouseup="previewing = false; viewer.mip_manager.stopPreview($event.target.value);" 
       @mousedown="const v=$event.target.value; await viewer.mip_manager.startPreview(v); viewer.mip_manager.setPreview(v);"    
       @input="const v=$event.target.value; previewing = true; await viewer.startPreview(v); viewer.selected_time=viewer.current_study[v].acquisition_seconds; viewer.setPreview(v); viewer.mip_manager.setPreview(v);" 
       @change="switching = true; await viewer.switchToIndex($event.target.value); switching = false;"
-      :disabled="!viewer || !viewer.current_study || loading || switching" disabled="disabled" 
+      :disabled="should_disable" disabled="disabled" 
       @keyup.left=""
       @keyup.right=""
       >
@@ -72,8 +98,8 @@
  
     <!-- Image manipulation buttons -->
     
-      <button title="Reset viewers" class="all-pointer-events btn-primary btn-large btn-viewer" style="margin-left: 3.5rem;"
-      :disabled="loading || switching" disabled="disabled" 
+      <button title="Reset viewers" class="btn-primary btn-large btn-viewer" style="margin-left: 3.5rem;"
+      :disabled="should_disable" disabled="disabled" 
       @click="viewer.viewports.map(v=> {v.resetCamera(); v.render()}); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-arrows-to-circle"></i>
       </button>
 
@@ -82,7 +108,7 @@
         <div class="dropdown">
           <button
             class="btn-primary btn-large btn-viewer"
-            :disabled="loading || switching" disabled="disabled" 
+            :disabled="should_disable" disabled="disabled" 
             href="#"
             id="dropdownMenuLink"
             data-mdb-toggle="dropdown"
@@ -99,12 +125,12 @@
         </div>    
       </div>
     
-      <button title="Duplicate selected annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2" 
-          :disabled="!viewer || loading || switching" disabled="disabled" 
+      <button title="Duplicate selected annotation" class="btn-primary btn-large btn-viewer ms-2" 
+          :disabled="should_disable" disabled="disabled" 
           @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
       </button>
-      <button title="Flip selected annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2"
-          :disabled="!viewer || loading || switching" disabled="disabled"
+      <button title="Flip selected annotation" class="btn-primary btn-large btn-viewer ms-2"
+          :disabled="should_disable" disabled="disabled"
           @click="viewer.annotation_manager.flipSelectedAnnotations();">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-symmetry-vertical" viewBox="0 0 16 16">
           <path d="M7 2.5a.5.5 0 0 0-.939-.24l-6 11A.5.5 0 0 0 .5 14h6a.5.5 0 0 0 .5-.5v-11zm2.376-.484a.5.5 0 0 1 .563.245l6 11A.5.5 0 0 1 15.5 14h-6a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .376-.484zM10 4.46V13h4.658L10 4.46z"/>
@@ -114,7 +140,7 @@
         <div class="dropdown">
           <button
             class="btn-primary btn-large btn-viewer"
-            :disabled="loading || switching" disabled="disabled" 
+            :disabled="should_disable" disabled="disabled" 
             href="#"
             id="dropdownMenuLink"
             data-mdb-toggle="dropdown"
@@ -126,13 +152,13 @@
           <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
             <li>
             <a title="Delete selected annotation" href="#" class="dropdown-item" 
-              :disabled="loading || switching"
+              :disabled="should_disable"
               @click="viewer.annotation_manager.deleteSelectedAnnotations();">
               Delete Selected
             </a>
             </li>
             <li>
-            <a title="Delete all annotations" :disabled="loading || switching" href="#" class="dropdown-item" 
+            <a title="Delete all annotations" :disabled="should_disable" href="#" class="dropdown-item" 
                 @click="viewer.annotation_manager.deleteAllAnnotations();">
                 Delete All
             </a>    
@@ -140,8 +166,8 @@
           </ul>
         </div>    
       </div>      
-      <button title="Save session" class="all-pointer-events btn-primary btn-large btn-viewer" style="margin-left: 1.4rem;"
-      :disabled="loading || switching " disabled="disabled" 
+      <button title="Save session" class="btn-primary btn-large btn-viewer" style="margin-left: 1.4rem;"
+      :disabled="should_disable" disabled="disabled" 
       @click="await viewer.state_manager.save(); $($refs.saved).fadeIn(50); $($refs.saved).fadeOut(800);"><i class="fa-solid fa-floppy-disk"></i>
       </button>
 
@@ -150,8 +176,7 @@
           <div class="dropdown">
             <button
               class="btn-primary btn-large btn-viewer"
-              disabled="disabled"
-              :disabled="!viewer || loading || switching"
+              :disabled="should_disable" disabled="disabled"
               href="#"
               id="dropdownMenuLink"
               data-mdb-toggle="dropdown"
@@ -178,10 +203,9 @@
       <div style="display: flex;justify-content: center;align-items: center; height:100%"><div class="spinner-border" style="color: darkgray;" role="status"><span class="visually-hidden"></span></div>
       </div>
     </div>
-    <div x-init="loading = true; await $nextTick();
-      viewer = await new GraspViewer($refs.viewer_main, $refs.viewer_preview ); window.viewer = viewer; await viewer.switchStudy([studies_data_parsed[0][0], studies_data_parsed[0][1]], case_id); loading=false;" class="grid-fill grid-container h-100">
+    <div class="grid-fill grid-container h-100">
       <div x-ref="viewer_preview" class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 1 : 0 }"></div>
-      <div x-ref="viewer_main" class="grid-fill h-100" :style="{ 'z-index': (previewing || switching) ? 0 : 1 }"></div>
+      <div x-ref="viewer_main" class="grid-fill h-100" :class="should_disable() && 'no-pointer-events'" :style="{ 'z-index': (previewing || switching) ? 0 : 1 }"></div>
     </div>
 
     <!-- AX/COR/SAG viewer -->
@@ -191,20 +215,20 @@
           <div class="viewport-overlay" :id="'viewport-overlay-'+i" :style="`grid-row: 1; grid-column: ${i}`">
             <!-- Note layout of buttons opening/closing to avoid undesired spaces between buttons -->
             <button title="Add ROI annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
-                :disabled="!viewer || loading || switching" disabled="disabled" 
+                :disabled="should_disable" disabled="disabled" 
                 @click="viewer.annotation_manager.addAnnotationToViewport('EllipticalROI',i-1);"><i class="fa-regular fa-circle"></i>
             </button><button
              title="Add probe annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
-                :disabled="!viewer || loading || switching" disabled="disabled" 
+                :disabled="should_disable" disabled="disabled" 
                 @click="viewer.annotation_manager.addAnnotationToViewport('Probe',i-1);"><i class="fa-solid fa-plus"></i>
             </button><button
              title="Reset viewer" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
-              :disabled="!viewer || loading || switching" disabled="disabled" 
+              :disabled="should_disable" disabled="disabled" 
                 @click="viewer.viewports[i-1].setZoom(1); viewer.viewports[i-1].setPan([0,0]); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-magnifying-glass-minus"></i>
             </button><button
              title="Store finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
-              :disabled="!viewer || loading || switching" disabled="disabled" 
-                @click="loading = true; await viewer.storeFinding(viewer.viewports[i-1]); loading = false;"><i class="fa-solid fa-camera"></i>
+              :disabled="should_disable" disabled="disabled" 
+                @click="job_loading = true; await viewer.storeFinding(viewer.viewports[i-1]); job_loading = false;"><i class="fa-solid fa-camera"></i>
             </button>
             <template x-if="viewer && viewer.getNativeViewports().indexOf(viewer.viewports[i-1].id) > -1">
               <div class="viewer-label-native" style="margin-left: 0.5rem;">
@@ -269,24 +293,24 @@
       <div class="mb-2 img-thumbnail" style="background-color: #000; box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%);  ">
         <div style="float:right;">       
           <button title="Go to finding" class="btn-dark btn-large btn-viewer me-2 my-2"
-          :disabled="!viewer || loading || switching" disabled="disabled"
+          :disabled="should_disable" disabled="disabled"
           @click="loading = true; await viewer.goToFinding(finding); loading = false;"><i class="fa-solid fa-map-marker-alt"></i>
           </button>
           <button title="Rename" class="btn-dark btn-large btn-viewer me-2 my-2"
-          :disabled="!viewer || loading || switching" disabled="disabled"
+          :disabled="should_disable" disabled="disabled"
           @click="await viewer.renameFinding(finding);"><i class="fa-solid fa-pencil"></i>
           </button>
           <button title="Delete" class="btn-dark btn-large btn-viewer me-2 my-2"
-          :disabled="!viewer || loading || switching" disabled="disabled"
-          @click="await viewer.deleteFinding(finding.id);"><i class="fa-solid fa-trash"></i></button>
+          :disabled="should_disable" disabled="disabled"
+          @click="job_loading = true; await viewer.deleteFinding(finding.id); job_loading = false;"><i class="fa-solid fa-trash"></i></button>
         </div>
         <img class="mb-2 img-fluid" style="cursor: pointer;" :src="finding.url" width="100%" @click="viewer.showFinding(finding)"/>
         <div x-text="finding.name" class="text-expand"></div>
       </template>
       <template x-if="viewer && viewer.findings && (Object.keys(viewer.findings).length > 0)">
         <div class="mb-2">
-        <button title="Store findings in PACS" class="all-pointer-events btn-large btn-primary btn-viewer py-2 px-3 mt-3 mb-3" style="display: block; margin-left: auto; margin-right: auto; box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%);"
-        :disabled="!viewer || loading || switching" disabled="disabled"
+        <button title="Store findings in PACS" class="btn-large btn-primary btn-viewer py-2 px-3 mt-3 mb-3" style="display: block; margin-left: auto; margin-right: auto; box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%);"
+        :disabled="should_disable" disabled="disabled"
         @click="job_loading = true; success = await viewer.transferFindings(); job_loading = false; ref= success? $refs.saved : $refs.failed; $(ref).fadeIn(50); $(ref).fadeOut(1000);">
         <i class="fas fa-paper-plane"></i>&nbsp;&nbsp;Send
         </button>  

@@ -6,18 +6,19 @@ class MIPManager {
     mip_details;
     previewing = false; 
     is_switching = false;
+    ori_dicom_set;
     constructor( viewer, viewport ) {
         this.viewer = viewer;
         this.viewport = viewer.renderingEngine.getViewport(viewport.viewportId);
         this.previewing = false;
+        this.ori_dicom_set = this.viewer.studies_data.find(x=>x.type=="ORI").dicom_set;
     }
 
     async init(graspVolumeInfo, selected_index) {
         // Get MIP metadata info, currently only need slice_locations
         const current_info = graspVolumeInfo[selected_index];
-        const ori_dicom_set = studies_data_parsed.find((x)=>x[2]=="ORI")[1];
         try {
-            this.mip_details = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${ori_dicom_set}/mip_metadata?acquisition_number=${current_info.acquisition_number}`,null, "GET")).details;
+            this.mip_details = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/mip_metadata?acquisition_number=${current_info.acquisition_number}`,null, "GET")).details;
             // Set Initial MIP Image         
             await this.switch(selected_index, false);
             await this.setPreview(selected_index);
@@ -32,7 +33,6 @@ class MIPManager {
             const current_info = this.viewer.current_study[index];
             const viewport = this.viewport;
             const cam = viewport.getCamera();
-            const ori_dicom_set = studies_data_parsed.find((x)=>x[2]=="ORI")[1]
             const slice_location = this.mip_details[viewport.targetImageIdIndex]["slice_location"];
 
             let mip_urls = {}
@@ -40,7 +40,7 @@ class MIPManager {
             // In the regular, not preview mode, need to get all angles (slice_locations) for the given time point
             const query = ( preview? `slice_location=${slice_location}`: `acquisition_number=${current_info.acquisition_number}`)
 
-            mip_urls = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${ori_dicom_set}/processed_results/MIP?`+ query,null, "GET")).urls;
+            mip_urls = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/processed_results/MIP?`+ query,null, "GET")).urls;
 
             if ( mip_urls.length > 0 ) {
                 await viewport.setStack(mip_urls, viewport.targetImageIdIndex);
@@ -57,14 +57,13 @@ class MIPManager {
         console.log("cache")
         const viewport = this.viewport;
         
-        const ori_dicom_set = studies_data_parsed.find((x)=>x[2]=="ORI")[1]
         let slice_location = 0.0;
         try {
             slice_location = this.mip_details[viewport.targetImageIdIndex]["slice_location"]; 
         } catch (e) {
             console.log("mip_details is not initialized yet. setting slice_location to 0.0.")
         }
-        let imageIdsToPrefetch = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${ori_dicom_set}/processed_results/MIP?slice_location=${slice_location}`,null, "GET")).urls;
+        let imageIdsToPrefetch = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/processed_results/MIP?slice_location=${slice_location}`,null, "GET")).urls;
         
         const requestFn = (imageId, options) => cornerstone.imageLoader.loadAndCacheImage(imageId, options);
         const priority = 0;

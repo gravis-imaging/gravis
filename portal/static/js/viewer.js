@@ -90,6 +90,7 @@ class GraspViewer {
 
     viewports = [];
     previewViewports = [];
+    studies_data = [];
 
     chart;
     toolsAlreadyActive = false;
@@ -113,7 +114,8 @@ class GraspViewer {
           })();   
         }
 
-        async initialize( main, preview ) {
+        async initialize( main, preview, studies_data ) {
+            this.studies_data = studies_data;
             // Force cornerstone to try to use GPU rendering even if it thinks the GPU is weak.
             cornerstone.setUseCPURendering(false);
             await cornerstone.helpers.initDemo(); 
@@ -554,7 +556,7 @@ class GraspViewer {
             timer: 3000,
             showConfirmButton: false,
             showClass: {
-                                                          backdrop: 'swal2-noanimation', // disable backdrop animation
+                backdrop: 'swal2-noanimation', // disable backdrop animation
                 popup: '',                     // disable popup animation
             },        
             icon: 'error',
@@ -562,10 +564,7 @@ class GraspViewer {
         });
         return false;
     }
-    async switchStudy(info, case_id, keepCamera=true) {       
-
-        const [study_uid, dicom_set] = info;
-
+    async switchStudy(study_uid, dicom_set, case_id, keepCamera=true) {       
         this.study_uid = study_uid;
         this.dicom_set = dicom_set;
         this.case_id = case_id
@@ -747,8 +746,8 @@ class GraspViewer {
             }
         }
 
-        for (const [index, info] of studies_data_parsed.entries()) {
-            if (info[1] === finding.dicom_set && info[1] != this.dicom_set){
+        for (const [index, info] of this.viewer.studies_data.entries()) {
+            if (info.dicom_set === finding.dicom_set && info.dicom_set != this.dicom_set){
                 for (const [index, info] of this.current_study.entries()) { 
                     if ( Math.abs(info.acquisition_seconds - finding.data.time) < 0.001 ) {
                         this.selected_time = info.acquisition_seconds;
@@ -756,7 +755,7 @@ class GraspViewer {
                 }
                 this.selected_time = new_selected_time;
                 document.getElementById("volume-picker").value = new_selected_index;
-                await this.switchStudy(info.slice(0,2),this.case_id);
+                await this.switchStudy(info.uid, info.dicom_set,this.case_id);
                 return;
             }
         }

@@ -125,11 +125,12 @@ def viewer(request, case_id):
     case.last_read_by = request.user
     case.status = Case.CaseStatus.VIEWING
     case.save()
+
     instances = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set__type__in=("ORI", "SUB")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")
     
     context = {
-        "studies": [(k.study_uid,k.dicom_set.id, k.dicom_set.type) for k in instances],
-        "current_case": get_case_information(case),
+        "studies": [dict(uid=k.study_uid,dicom_set=k.dicom_set.id, type=k.dicom_set.type) for k in instances],
+        "current_case": case.to_dict(),
         "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user),
         "original_dicom_set_id": instances[0].dicom_set.id,
     }
@@ -157,38 +158,12 @@ def case_status(request, case_id, new_status):
 
     return HttpResponse() 
 
-
-def get_case_information(case_object):
-    return { 
-        "id": case_object.id,
-        "case_id": str(case_object.id), # Not sure why necessary to convert to string here!?
-        "patient_name": case_object.patient_name,
-        "mrn": case_object.mrn,
-        "acc": case_object.acc,
-        "num_spokes": case_object.num_spokes,
-        "case_type": case_object.case_type,
-        "exam_time": case_object.exam_time.strftime("%Y-%m-%d %H:%M"),
-        "receive_time": case_object.receive_time.strftime("%Y-%m-%d %H:%M"),
-        "status": Case.CaseStatus(case_object.status).name.title(),
-        "twix_id": case_object.twix_id,
-        "case_location": case_object.case_location,
-        "settings": case_object.settings,
-        "last_read_by_id": case_object.last_read_by.username if case_object.last_read_by_id != None else "None",
-        "viewed_by_id": case_object.viewed_by.username if case_object.viewed_by_id != None else "None",
-        "tags": [tag.name for tag in case_object.tags.all()]
-    }
-
-
 @login_required
 def browser_get_cases_all(request):
     '''
     Returns a JSON object containing information on all cases stored in the database.
     '''
-    case_data = []
-    all_cases = Case.objects.all()
-    for case in all_cases:
-        case_data.append(get_case_information(case))
-
+    case_data = [case.to_dict() for case in Case.objects.all()]
     return JsonResponse({"data": case_data}, safe=False)
 
 
@@ -217,7 +192,7 @@ def browser_get_case(request, case_id):
     case ID does not exist
     '''
     case = get_object_or_404(Case, id=case_id)
-    json_data = get_case_information(case)
+    json_data = case.to_dict()
     return JsonResponse(json_data, safe=False)
 
 

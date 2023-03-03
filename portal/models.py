@@ -76,11 +76,22 @@ class Case(models.Model):
         null=True,
         related_name="viewed_by",
     )    
-    tags = models.ManyToManyField(Tag)
+    tags = models.ManyToManyField(Tag,blank=True)
 
     class Meta:
         db_table = "gravis_case"
 
+    def to_dict(self):
+        return { 
+            **{x: getattr(self,x) for x in ["id", "patient_name", "mrn", "acc","num_spokes","case_type","twix_id","case_location","settings"]},
+            "case_id": str(self.id), # Not sure why necessary to convert to string here!?
+            "exam_time": self.exam_time.strftime("%Y-%m-%d %H:%M"),
+            "receive_time": self.receive_time.strftime("%Y-%m-%d %H:%M"),
+            "status": Case.CaseStatus(self.status).name.title(),
+            "last_read_by_id": self.last_read_by.username if self.last_read_by_id != None else "None",
+            "viewed_by_id": self.viewed_by.username if self.viewed_by_id != None else "None",
+            "tags": [tag.name for tag in self.tags.all()]
+        }
 
 class SuccessfulProcessingJobManager(models.Manager):
     """
