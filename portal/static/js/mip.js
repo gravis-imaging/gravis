@@ -9,7 +9,7 @@ class MIPManager {
     ori_dicom_set;
     constructor( viewer, viewport ) {
         this.viewer = viewer;
-        this.viewport = viewer.renderingEngine.getViewport(viewport.viewportId);
+        this.viewport = viewport;
         this.previewing = false;
         this.ori_dicom_set = this.viewer.studies_data.find(x=>x.type=="ORI").dicom_set;
     }
@@ -26,7 +26,7 @@ class MIPManager {
             console.error(e); 
         }
     }
-    async switch(index, preview) {
+    async switch(index, preview, targetImageIdIndex=null) {
         console.log("switch")
         this.is_switching = true;
         try {
@@ -43,7 +43,7 @@ class MIPManager {
             mip_urls = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/processed_results/MIP?`+ query,null, "GET")).urls;
 
             if ( mip_urls.length > 0 ) {
-                await viewport.setStack(mip_urls, viewport.targetImageIdIndex);
+                await viewport.setStack(mip_urls, targetImageIdIndex || viewport.targetImageIdIndex);
                 cornerstone.tools.utilities.stackPrefetch.enable(viewport.element);
                 if (!cam.focalPoint.every( k => k==0 )) viewport.setCamera(cam);
                 viewport.render();

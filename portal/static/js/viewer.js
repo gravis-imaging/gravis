@@ -195,12 +195,12 @@ class GraspViewer {
             this.viewportIds = [...viewportIds , auxViewport.viewportId];
             this.previewViewportIds = previewViewportIds;
             this.viewports = viewportIds.map((c)=>this.renderingEngine.getViewport(c));
-            this.auxViewport = this.renderingEngine.getViewport("AUX_VIEWPORT");
+            this.auxViewport = this.renderingEngine.getViewport("VIEW_AUX");
             this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c));
 
             this.annotation_manager = new AnnotationManager(this);
             this.state_manager = new StateManager(this);
-            this.mip_manager = new MIPManager(this, auxViewport);
+            this.mip_manager = new MIPManager(this, this.auxViewport);
 
             cornerstone.tools.synchronizers.createVOISynchronizer("SYNC_CAMERAS");
             this.createTools();
@@ -753,7 +753,13 @@ class GraspViewer {
         if (new_selected_time != this.selected_time) {
             this.selected_time = new_selected_time;
             document.getElementById("volume-picker").value = new_selected_index;
-            await this.switchToIndex(new_selected_index); 
+            await Promise.all([
+                this.mip_manager.switch(new_selected_index, false, finding.data.imageIdIndex),
+                this.switchToIndex(new_selected_index)])
+        } else {
+            if (finding.data.viewportId == "VIEW_AUX") {
+                await this.auxViewport.setImageIdIndex(finding.data.imageIdIndex);
+            }
         }
     }
 
