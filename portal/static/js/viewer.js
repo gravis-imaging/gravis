@@ -189,11 +189,12 @@ class GraspViewer {
                 }
             }));
 
-            this.renderingEngine.setViewports([...previewViewports, ...viewViewports, auxViewport])
-            this.viewportIds = [...viewportIds , auxViewport.viewportId]
-            this.previewViewportIds = previewViewportIds
-            this.viewports = viewportIds.map((c)=>this.renderingEngine.getViewport(c))
-            this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c))
+            this.renderingEngine.setViewports([...previewViewports, ...viewViewports, auxViewport]);
+            this.viewportIds = [...viewportIds , auxViewport.viewportId];
+            this.previewViewportIds = previewViewportIds;
+            this.viewports = viewportIds.map((c)=>this.renderingEngine.getViewport(c));
+            this.auxViewport = this.renderingEngine.getViewport("AUX_VIEWPORT");
+            this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c));
 
             this.annotation_manager = new AnnotationManager(this);
             this.state_manager = new StateManager(this);
@@ -208,13 +209,20 @@ class GraspViewer {
             // Prompt the user if there are unsaved changes.
             // TODO: this is a bit overzealous, just mousing over an annotation can trigger a "modified" event.
             addEventListener('beforeunload', (event) => { if (this.state_manager.getChanged()) { event.returnValue = "ask"; return "ask"; } });
+            
+            // cornerstone.eventTarget.addEventListener(cornerstone.Enums.Events.IMAGE_LOAD_ERROR, (evt) => {
+            //     console.error("Image load error", evt)
+            // })
+            // cornerstone.eventTarget.addEventListener(cornerstone.Enums.Events.IMAGE_LOAD_FAILED, (evt) => {
+            //     console.error("Image load failed", evt)
+            // })
 
-            cornerstone.eventTarget.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_MODIFIED",debounce(100, (evt) => {
-                this.annotation_manager.updateChart()
+            cornerstone.eventTarget.addEventListener(cornerstone.tools.Enums.Events.ANNOTATION_MODIFIED,debounce(100, (evt) => {
+                this.annotation_manager.updateChart();
             }));
             
             // Highlight selected annotation on the chart
-            cornerstone.eventTarget.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_SELECTION_CHANGE", (evt) => {
+            cornerstone.eventTarget.addEventListener(cornerstone.tools.Enums.Events.ANNOTATION_SELECTION_CHANGE, (evt) => {
                 const detail = evt.detail;
                 if (detail.selection.length == 1) {
                     const uid = detail.selection[0];
@@ -228,7 +236,7 @@ class GraspViewer {
 
             // Synchronize the preview viewports
             this.viewports.slice(0,3).map((v, n)=> {
-                v.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(250, async (evt) => {
+                v.element.addEventListener(cornerstone.Enums.Events.CAMERA_MODIFIED, debounce(250, async (evt) => {
                     if (! v.getDefaultActor() ) return;
                     try {
                         await this.updatePreview(n)
@@ -514,17 +522,46 @@ class GraspViewer {
     async switchSeries(series_uid) {
         this.chart.renderGraph_();
         await this.setVolumeBySeries(series_uid);
-        await new Promise( resolve => {
-            this.volume.load( e => { console.log("Volume finished loading",e); resolve() });
-        });
+        const volume_result = await this.loadVolumeWithRetry();
     }    
 
     async switchToIndex(index) {
+        // window.history.replaceState(null, null, `#selected_index=${index}`);
         const current_info = this.current_study[index];
         await viewer.switchSeries(current_info.series_uid); 
         this.selected_time = current_info.acquisition_seconds; 
     }
 
+    async loadVolumeWithRetry() {
+        for ( let i=0;i<2;i++) {
+            const load_result = await new Promise( resolve => {
+                this.volume.load( e => resolve(e) );
+            });
+            if ( load_result.framesLoaded == load_result.numFrames ) {
+                return true;
+            }
+            console.error("Detected error during volume loading.");
+            this.volume.loadStatus.loaded = false;
+        }
+
+        Swal.fire({
+            toast: true,
+            position: 'bottom-right',
+            iconColor: 'red',
+            customClass: {
+                popup: 'colored-toast'
+            },
+            timer: 3000,
+            showConfirmButton: false,
+            showClass: {
+                                                          backdrop: 'swal2-noanimation', // disable backdrop animation
+                popup: '',                     // disable popup animation
+            },        
+            icon: 'error',
+            title: 'Error while loading volume, some slices may be missing.',
+        });
+        return false;
+    }
     async switchStudy(info, case_id, keepCamera=true) {       
 
         const [study_uid, dicom_set] = info;
@@ -567,9 +604,8 @@ class GraspViewer {
          
         this.mip_manager.init(graspVolumeInfo, selected_index);
 
-        await new Promise( resolve => {
-            this.volume.load( e => { console.log("Volume finished loading",e); resolve() });
-        });
+        const volume_result = await this.loadVolumeWithRetry();
+
         try {
             await this.updatePreview();
         } catch (e) {
