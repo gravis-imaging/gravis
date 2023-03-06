@@ -129,9 +129,9 @@ class GeneratePreviewsJob(WorkJobView):
         print(volume.shape)
 
         def get_index(axis,volume_slice, time=slice(None)):
-            return [(time,volume_slice,slice(None),slice(None)), # axial 
-                (time,slice(None,None,-1),volume_slice,slice(None,None,-1)), # coronal
-                (time,slice(None,None,-1),slice(None),volume_slice) # sagittal
+            return [(time,volume_slice,        slice(None),  slice(None)), # axial 
+                    (time,slice(None,None,-1), volume_slice, slice(None)), # coronal
+                    (time,slice(None,None,-1), slice(None),  volume_slice) # sagittal
             ][axis]
 
         # axial, coronal, sagittal = [volume[get_index(axis,volume.shape[axis+1]//2)] for axis in (0,1,2)]

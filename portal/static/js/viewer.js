@@ -130,8 +130,7 @@ class GraspViewer {
             
             const view_info = [["AX",  ORIENTATION.axial],
                                ["SAG", ORIENTATION.sagittal],
-                               ["COR", {"viewPlaneNormal": [0,1,0],
-                                        "viewUp": [0,0,1]}]]
+                               ["COR", ORIENTATION.coronal]]
             const [ viewViewports, viewportIds ] = this.createViewports("VIEW", view_info, main)
             
             // Expand a viewport to fill the entire left part of the grid.
