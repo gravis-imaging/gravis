@@ -163,6 +163,10 @@
         :disabled="should_disable" disabled="disabled" 
         @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
     </button>
+    <button title="Rename selected annotation" class="btn-primary btn-large btn-viewer ms-2" 
+        :disabled="should_disable" disabled="disabled" 
+        @click="viewer.annotation_manager.renameAnnotation();"><i class="fa-solid fa-pencil"></i>
+    </button>
     <button title="Flip selected annotation" class="btn-primary btn-large btn-viewer ms-2"
         :disabled="should_disable" disabled="disabled"
         @click="viewer.annotation_manager.flipSelectedAnnotations();">

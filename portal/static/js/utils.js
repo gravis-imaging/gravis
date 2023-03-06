@@ -409,12 +409,14 @@ async function successPrompt(text, title="Success") {
     })
 }
 
-async function inputPrompt(label, title, placeholder) {
+async function inputPrompt(label, title, placeholder, value) {
     return await CommonSwal.fire({
         input: "text",
         inputTitle: title,
         inputLabel: label,
-        inputPlaceholder: placeholder,
+        inputPlaceholder: placeholder || "",
+        inputValue: value,
+        showCancelButton: true,
     })
 }
 

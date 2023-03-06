@@ -1,4 +1,4 @@
-import { doFetch, HSLToRGB, Vector, scrollViewportToPoint, confirmPrompt } from "./utils.js"
+import { doFetch, HSLToRGB, Vector, scrollViewportToPoint, confirmPrompt, errorToast, inputPrompt } from "./utils.js"
 
 class AnnotationManager {
     viewer;
@@ -135,6 +135,18 @@ class AnnotationManager {
         }
     }
 
+    async renameAnnotation() {
+        const selAnnotations = this.getSelectedFilteredAnnotations();
+        if (selAnnotations.length != 1 || (!selAnnotations[0])) {
+            errorToast("Select one annotation to rename.");
+            return;
+        }
+        const a = selAnnotations[0];
+        const { value: result } = await inputPrompt("Annotation name", "Annotation name", "name", a.data.label);
+        if ( result )  {
+            a.data.label = result;
+        }
+    }
     getSelectedFilteredAnnotations() {
         let annotation_uids = cornerstone.tools.annotation.selection.getAnnotationsSelected() || []
         let annotations = annotation_uids.map(cornerstone.tools.annotation.state.getAnnotation)
