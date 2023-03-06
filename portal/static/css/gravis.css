@@ -302,6 +302,11 @@ button:focus:not(:focus-visible) {
     background: none;
 }
 
+input::selection {
+    color: #FFF;
+    background-color: #1266f1;
+}
+
 .navbar_patient_info:hover {
     color: #FFF!important;
     background-color: #1266f1!important;
