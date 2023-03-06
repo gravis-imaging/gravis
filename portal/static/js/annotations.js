@@ -146,6 +146,7 @@ class AnnotationManager {
         if ( result )  {
             a.data.label = result;
         }
+        cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,this.viewer.viewportIds);
     }
     getSelectedFilteredAnnotations() {
         let annotation_uids = cornerstone.tools.annotation.selection.getAnnotationsSelected() || []
