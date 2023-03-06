@@ -27,19 +27,21 @@
 
 {% block content %}
 {{ studies|json_script:"studies_data" }}
+{{ current_case|json_script:"case_data"  }}
 <script type="text/javascript">
   function parse_json_element(el) {
     return JSON.parse(document.getElementById(el).textContent)
   };
-  document.addEventListener('alpine:init', () => {
-    Alpine.data('gravis_viewer', () => ({
+  document.addEventListener("alpine:init", () => {
+    Alpine.data("gravis_viewer", () => ({
         viewer: null,
         previewing: false,
         previewingMIP: false, 
         switching: false, 
         loading: false, 
         job_loading: null, 
-        studies_data: parse_json_element('studies_data'),
+        studies_data: parse_json_element("studies_data"),
+        case_data: parse_json_element("case_data"),
         case_id: "{{current_case.id}}",
 
         init: async function() {
@@ -83,25 +85,24 @@
             }
           },
           [':disabled']() { 
-            return this.should_disable() 
+            return this.should_disable();
           },
           ['@keyup.left']:"",
           ['@keyup.right']:"",
         }
     }))});
 </script>
-<div class="grid" x-data="gravis_viewer">
+<div class="grid pb-2" x-data="gravis_viewer">
   <!-- dicom set selector -->
   <div class="toolbar-area">
     <!-- dicom set selection -->
     <div class="me-2" style="width: 100px;">
       <select id="studies" name="studies" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-outline-light btn-lg btn-rounded text-light btn-viewer-toolbar" data-width="100px"
       @change="loading=true; await $nextTick(); await viewer.switchStudy(...$event.target.value.split('__'), case_id);  loading=false;" title="Displayed series">
-        <!-- <option value="" selected disabled hidden>Select study...</option> -->
         <optgroup label="Displayed Series">
-          {% for i in studies %}
-            <option value="{{i.uid}}__{{i.dicom_set}}">{{ i.type }}</option>
-          {% endfor %}
+          <template x-for='study in studies_data'>
+            <option :value="`${study.uid}__${study.dicom_set}`" x-text="study.type"></option>
+          </template>
         </optgroup>
       </select>
     </div>    
@@ -123,14 +124,15 @@
 
     <!-- volume picker -->
     <!-- x-model="value" x-ref="input" x-on:focus="() => { $refs.input.focus() }"  -->
-    <input id='volume-picker' tabindex='1' class="timeslider" :class="should_disable() && 'timeslider-loading'" title="Displayed time point" type='range' value=0 step="1" autocomplete="off" style="flex-grow:1;"
+    <input id='volume-picker' tabindex='1' class="timeslider flex-sm-grow-1" :class="should_disable() && 'timeslider-loading'" title="Displayed time point"
+         type='range' value=0 step="1" autocomplete="off"
         x-bind="volume_picker" disabled="disabled">
     </input>
     <label for='volume-picker' x-text="viewer && viewer.selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>
   
     <!-- Image manipulation buttons -->
     
-    <button title="Reset viewers" class="btn-primary btn-large btn-viewer" style="margin-left: 3.5rem;"
+    <button title="Reset viewers" class="btn-primary btn-large btn-viewer ms-5"
     :disabled="should_disable" disabled="disabled" 
     @click="viewer.viewports.map(v=>v.resetCamera()); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-arrows-to-circle"></i>
     </button>
@@ -276,28 +278,28 @@
   </div>
 
   <!-- MIP viewer -->
-  <div id="aux-container-outer" class="grid-container mb-2" style="grid-area: d; background-color: black;"> 
+  <div id="aux-container-outer" class="grid-containers" style="grid-area: d; background-color: black;"> 
     <div id="aux-container" class="grid-fill"></div>
     <div x-cloak x-show="viewer && viewer.mip_details === null" class="grid-fill"  style="z-index: 1;"> 
       <div style="display: flex;justify-content: center;align-items: center; height:100%; cursor: pointer;">Loading error</div></div>
     <div x-cloak x-show="true" class="viewport-overlay grid-fill p-2 no-pointer-events" style="z-index: 1;">
       <button
       title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer"
-         :disabled="loading || switching" disabled="disabled"
+         :disabled="should_disable" disabled="disabled"
          @click="job_loading = true; viewer.storeFinding(viewer.auxViewport); job_loading = false;"><i class="fa-solid fa-camera"></i>
        </button>
     </div>
   </div>
 
   <!-- Chart -->
-  <div style="grid-area: f; background-color: black; " class="mb-2 py-3">
+  <div style="grid-area: f; background-color: black; ">
     <div id="chart" style="background-color: black; color: white;"></div>
   </div>
   <div style="grid-area: f;">
     <template x-if="viewer">
       <div style="text-align:right; position:relative;">
         <select class="curve-settings-select" x-model="viewer.chart_options['adjust']" @change="viewer.annotation_manager.updateChart()">
-          <option value="normal" autocomplete="off" selected>standard</option>
+          <option value="standard" autocomplete="off" selected>standard</option>
           <option value="zeroed">zeroed</option>
           <option value="normalized">normalized</option>
         </select>
@@ -309,12 +311,19 @@
       </div>    
     </template>
   </div>
-  <div style="grid-area: f; position:relative;" class="no-pointer-events">
-    <button
-      title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" style="position: absolute; bottom: 0.5rem; right: 0.5rem;"
-      @click="await viewer.storeChartFinding()"><i class="fa-solid fa-camera"></i>
+  <div style="grid-area: f; position:relative; display:grid;" class="no-pointer-events p-2">
+    <div style="align-self:end;justify-self:end;">
+      <button title="Export to CSV" class="all-pointer-events btn-primary btn-large btn-viewer"
+        :disabled="should_disable" disabled="disabled"
+        @click="await viewer.annotation_manager.exportChart(case_data)"><i class="fa-solid fa-download"></i>
+     </button>
+      <button title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer"
+        :disabled="should_disable" disabled="disabled"
+        @click="await viewer.storeChartFinding()"><i class="fa-solid fa-camera"></i>
      </button>
   </div>
+
+    </div>
    
   <!-- Findings -->
   <div x-ref="findings" id="findings" class="findings" :class="open && 'open'" x-data="{open: false, toggle() { this.open = ! this.open }}">

@@ -189,7 +189,13 @@ class StateManager {
             const old_data = old_version.data;
             if (JSON.stringify(old_data.handles.points) !== JSON.stringify(a.data.handles.points)) return this.setChanged("points");
             if (old_data.label != a.data.label) return this.setChanged("label");
-            if (JSON.stringify(old_data.handles.textBox.worldPosition) !== JSON.stringify(a.data.handles.textBox.worldPosition)) return this.setChanged("textbox");
+            
+            for (var i=0;i<3;i++) {
+                if (Math.abs(old_data.handles.textBox.worldPosition[i] - a.data.handles.textBox.worldPosition[i]) > 0.000001) {
+                    console.log(JSON.stringify(old_data.handles.textBox.worldPosition),JSON.stringify(a.data.handles.textBox.worldPosition));
+                    return this.setChanged("textbox");
+                }
+            }
         }
         return false;
     }

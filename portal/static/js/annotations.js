@@ -13,7 +13,37 @@ class AnnotationManager {
             type => cornerstone.tools.annotation.state.getAnnotations((viewport || this.viewer.viewports[0]).element,type) || []
         );
     }
+      
+    download(file) {
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(file);
+        
+        link.href = url;
+        link.download = file.name;
+        document.body.appendChild(link);
+        link.click();
+        
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    }
+    exportChart(case_data) {
+        const name = ["gravis",
+                        case_data.acc,
+                        this.viewer.chart_options['adjust'],
+                        this.viewer.chart_options['mode'],
+                        new Date().toLocaleString('sv').replace(' ','T').replaceAll(':','')
+                    ].join("_")
 
+        const table = [this.viewer.chart.getLabels().map(x=>`"${x}"`), ...this.viewer.chart.file_];
+        const csv = table.map(x=>x.join(",")).join("\r\n");
+        
+        const file = new File([csv], `${name}.csv`, {
+            type: 'text/csv',
+        });
+        successToast("Export initiated.");
+        this.download(file);
+
+    }
     async updateChart() {
         if (!this.viewer.volume || !this.viewer.volume.imageData ) {
             return;

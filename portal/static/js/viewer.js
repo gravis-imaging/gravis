@@ -101,7 +101,7 @@ class GraspViewer {
     volume; 
     current_study;
     selected_time = 0;
-    chart_options = {};
+    chart_options = {mode: "mean", adjust:"standard"};
 
     mip_details = [];
 
