@@ -122,7 +122,7 @@ class AnnotationManager {
         for (let a of this.getSelectedFilteredAnnotations() ) {
             if (!a) { continue }
 
-            let new_a = this.createAnnotationTemplate();
+            let new_a = this.createAnnotationTemplate(a.metadata.toolName);
             new_a.metadata = { ...a.metadata, idx: new_a.metadata.idx };
             new_a.data.handles.points = a.data.handles.points.slice().map(p=>p.slice());
             const viewport = this.viewer.viewports.find(x => x.id == new_a.metadata.viewportId);
