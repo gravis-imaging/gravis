@@ -313,7 +313,7 @@ class GraspViewer {
         const toolGroupMain = ToolGroupManager.createToolGroup(`STACK_TOOL_GROUP_MAIN`);
         const toolGroupAux = ToolGroupManager.createToolGroup(`STACK_TOOL_GROUP_AUX`);
 
-        const allGroupTools = [ StackScrollMouseWheelTool.toolName, WindowLevelTool.toolName, PanTool.toolName, ZoomTool.toolName ]
+        const allGroupTools = [ WindowLevelTool.toolName, PanTool.toolName, ZoomTool.toolName ]
         for (var viewport of this.viewportIds.slice(0,3)) {
             toolGroupMain.addViewport(viewport, "gravisRenderEngine");
         }
@@ -321,8 +321,11 @@ class GraspViewer {
         toolGroupAux.addViewport(this.viewportIds[3], "gravisRenderEngine");
         allGroupTools.map( tool => [toolGroupMain, toolGroupAux].map(group => group.addTool(tool)))
         
-        toolGroupAux.addTool(StackScrollTool.toolName);
-
+        toolGroupMain.addTool(StackScrollMouseWheelTool.toolName)
+        
+        toolGroupAux.addTool(StackScrollTool.toolName, {loopScroll: true});
+        toolGroupAux.addTool(StackScrollMouseWheelTool.toolName, {loopScroll: true});
+        
         toolGroupMain.addTool(ProbeTool.toolName, {
             customTextLines: (data) => [ data.label ]
         });
