@@ -1,6 +1,6 @@
 import logging
 import json
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotAllowed, JsonResponse
+from django.http import HttpResponse, HttpResponseBadRequest,HttpResponseForbidden, HttpResponseNotAllowed, JsonResponse
 from django.conf import settings
 from django.views.decorators.http import require_http_methods, require_POST, require_GET
 from django.contrib.auth.decorators import login_required
@@ -117,6 +117,11 @@ def viewer(request, case_id):
     case = get_object_or_404(Case, id=case_id)
     # TODO: Check if current user is allowed to view case
     
+    if case.status not in ( Case.CaseStatus.READY, Case.CaseStatus.VIEWING,  Case.CaseStatus.COMPLETE):
+        return HttpResponseForbidden()
+
+    if ( case.status == Case.CaseStatus.VIEWING and case.viewed_by != request.user ):
+        return HttpResponseForbidden()
     case.viewed_by = request.user
     case.last_read_by = request.user
     case.status = Case.CaseStatus.VIEWING

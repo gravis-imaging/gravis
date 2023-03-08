@@ -137,7 +137,7 @@ class Case(models.Model):
 
     @classmethod
     def get_user_viewing(cls,user):
-        return [x.to_dict(user.profile.privacy_mode) for x in cls.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=user)]
+        return [x.to_dict(user.profile.privacy_mode) for x in Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=user)]
     class Meta:
         db_table = "gravis_case"
 

@@ -13,12 +13,16 @@ from django.shortcuts import get_object_or_404, render
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.views.decorators.http import require_POST, require_GET
 
 from PIL import Image
 import highdicom as hd
 
 from portal.models import *
 
+def user_opened_case(request, case):
+    case = Case.objects.get(id=case)
+    return case.status == Case.CaseStatus.VIEWING and case.viewed_by==request.user
 
 cross = (lambda x,y:np.cross(x,y))
 
@@ -287,6 +291,8 @@ def store_finding(request, case, source_set, finding_id=None):
         for set_ in dicom_set.case.dicom_sets.all():
             results += [f.to_dict() for f in set_.findings.all() if f.file_location]
         return JsonResponse(dict(findings=results))
+    elif not user_opened_case(request,case):
+        return HttpResponseForbidden()
     elif request.method == "DELETE":
         finding = Finding.objects.get(id=finding_id)
         shutil.rmtree((Path(dicom_set.case.case_location) / finding.file_location).parent)
@@ -340,6 +346,8 @@ def store_finding(request, case, source_set, finding_id=None):
 @login_required
 def handle_session(request, case, session_id=None):
     if request.method == "POST":
+        if not user_opened_case(request, case):
+            return HttpResponseForbidden()
         return update_session(request, case, session_id)
     elif request.method == "GET":
         return get_session(request, case, session_id)
@@ -349,6 +357,8 @@ def handle_session(request, case, session_id=None):
 
 @login_required
 def new_session(request,case):
+    if not user_opened_case(request, case):
+        return HttpResponseForbidden()
     session = SessionInfo(case=Case.objects.get(id=case), cameras=[], voi={}, annotations=[], user=request.user)
     session.save()
     return JsonResponse(session.to_dict())

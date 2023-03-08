@@ -70,11 +70,17 @@ class StateManager {
         if (!this.viewer.case_id) return;
         console.info("Saving state.")
         const state = this._calcState()
-        if (state) {
+        if (!state) return;
+        try {
             await doFetch(`/api/case/${this.viewer.case_id}/session/${this.session_id}`, state)
             // localStorage.setItem(this.viewer.case_id, JSON.stringify(state));
             this.current_state = JSON.parse(JSON.stringify(state)); // deep copy for safekeeping
             this.changed = false;
+            return true;
+        } catch (e) {
+            console.error(e);
+            await errorPrompt("Failed to save session.");
+            return false;
         }
     }
 
@@ -124,7 +130,13 @@ class StateManager {
     }
 
     async newSession() {
-        const state = await doFetch(`/api/case/${this.viewer.case_id}/session/new`,{},"POST")
+        try {
+            const state = await doFetch(`/api/case/${this.viewer.case_id}/session/new`,{},"POST")
+        } catch (e) {
+            console.error(e);
+            await errorPrompt("Failed to create session.");
+            return;
+        }
         this.session_list = (await doFetch(`/api/case/${this.viewer.case_id}/sessions`,{},"GET")).sessions
         this._applyState(state)
         this.viewer.renderingEngine.renderViewports(this.viewer.viewportIds);
