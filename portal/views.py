@@ -66,9 +66,7 @@ def logout_request(request):
 
 @login_required
 def index(request):
-    context = {
-        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user)
-    }
+    context = {}
     return render(request, "index.html", context)
 
 
@@ -82,8 +80,8 @@ def user(request):
         form = ProfileUpdateForm(request.POST, request.FILES)
         if form.is_valid():
             try:           
-                current_user.userprofile.privacy_mode = bool(form.cleaned_data.get("privacy_mode"))
-                current_user.userprofile.save() 
+                current_user.profile.privacy_mode = bool(form.cleaned_data.get("privacy_mode"))
+                current_user.profile.save() 
                 show_confirm = True
             except Exception as e:
                 print("Error while saving profile data")
@@ -93,10 +91,9 @@ def user(request):
             return HttpResponseBadRequest('Invalid form data')   
         
     user_form = UserForm(instance=request.user)
-    profile_form = ProfileForm(instance=request.user.userprofile)
+    profile_form = ProfileForm(instance=request.user.profile)
 
     return render(request, "user.html", {
-        'viewer_cases': Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user),
         'user_form': user_form, 
         'profile_form': profile_form,
         'show_confirm': show_confirm,
@@ -110,7 +107,6 @@ def config(request):
     # sort tags by number of occurrences in cases
     tags.sort(key=lambda a: a[1])
     context = {
-        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user),
         "tags": tags,
     }
     return render(request, "config.html", context)
@@ -130,8 +126,7 @@ def viewer(request, case_id):
     
     context = {
         "studies": [dict(uid=k.study_uid,dicom_set=k.dicom_set.id, type=k.dicom_set.type) for k in instances],
-        "current_case": case.to_dict(),
-        "viewer_cases": Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=request.user),
+        "current_case": case.to_dict(request.user.profile.privacy_mode),
         "original_dicom_set_id": instances[0].dicom_set.id,
     }
     return render(request, "viewer.html", context)
@@ -163,7 +158,7 @@ def browser_get_cases_all(request):
     '''
     Returns a JSON object containing information on all cases stored in the database.
     '''
-    case_data = [case.to_dict() for case in Case.objects.all()]
+    case_data = [case.to_dict(request.user.profile.privacy_mode) for case in Case.objects.all()]
     return JsonResponse({"data": case_data}, safe=False)
 
 
@@ -192,7 +187,7 @@ def browser_get_case(request, case_id):
     case ID does not exist
     '''
     case = get_object_or_404(Case, id=case_id)
-    json_data = case.to_dict()
+    json_data = case.to_dict(request.user.profile.privacy_mode)
     return JsonResponse(json_data, safe=False)
 
 

@@ -7,7 +7,8 @@ from django.db.models import JSONField
 from pydicom import Dataset, valuerep
 from datetime import datetime
 from django.conf import settings
-
+import string
+import random
 
 class Tag(models.Model):
     name = models.CharField(max_length=200, blank=False, null=False)
@@ -17,6 +18,27 @@ class Tag(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ShadowCase(models.Model):
+    def default_pt():
+        return "PATIENT^"+''.join(random.choices(string.ascii_uppercase,k=3))
+    
+    def default_num(prefix):
+        def f():
+            return prefix+''.join(random.choices(string.digits,k=10))
+        return f
+    
+    patient_name = models.CharField(default=default_pt,max_length=50)
+    mrn = models.CharField(default=default_num("M"),max_length=20)
+    acc = models.CharField(default=default_num("A"),max_length=20)
+
+    class Meta:
+        db_table = "gravis_shadow_case"
+
+    def __str__(self):
+        return f"{self.id} ("+"; ".join([f"{x}: {getattr(self,x)}" for x in "patient_name mrn acc".split()])+")"
+
 
 
 class Case(models.Model):
@@ -77,13 +99,30 @@ class Case(models.Model):
         related_name="viewed_by",
     )    
     tags = models.ManyToManyField(Tag,blank=True)
+    shadow = models.ForeignKey(ShadowCase, null=True, on_delete=models.SET_NULL,related_name="cases")
 
-    class Meta:
-        db_table = "gravis_case"
+    def add_shadow(self):
+        if self.shadow:
+            return
+        # Look for any existing shadow cases for a similar case
+        if old_case := Case.objects.filter(mrn=self.mrn, acc=self.acc, shadow__isnull=False).first():
+            self.shadow = old_case.shadow
+        elif old_case := Case.objects.filter(mrn=self.mrn, shadow__isnull=False).first():
+            self.shadow = ShadowCase(patient_name=old_case.shadow.patient_name,mrn=old_case.shadow.mrn)
+        else:
+            self.shadow = ShadowCase()
+        self.shadow.save()
+        self.save()
 
-    def to_dict(self):
+    def to_dict(self, privacy_mode=True):
+        if privacy_mode:
+            private = lambda x: getattr(self.shadow,x) if self.shadow else "UNKNOWN"
+        else:
+            private = lambda x: getattr(self,x)
+
         return { 
-            **{x: getattr(self,x) for x in ["id", "patient_name", "mrn", "acc","num_spokes","case_type","twix_id","case_location","settings"]},
+            **{x: getattr(self,x) for x in ["id","num_spokes","case_type","twix_id","case_location","settings"]},
+            **{x: private(x) for x in ["patient_name", "mrn", "acc"]},
             "case_id": str(self.id), # Not sure why necessary to convert to string here!?
             "exam_time": self.exam_time.strftime("%Y-%m-%d %H:%M"),
             "receive_time": self.receive_time.strftime("%Y-%m-%d %H:%M"),
@@ -92,6 +131,16 @@ class Case(models.Model):
             "viewed_by_id": self.viewed_by.username if self.viewed_by_id != None else "None",
             "tags": [tag.name for tag in self.tags.all()]
         }
+
+    def __str__(self):
+        return f"{self.id} ("+"; ".join([f"{x}: {getattr(self,x)}" for x in "patient_name mrn acc".split()])+")"
+
+    @classmethod
+    def get_user_viewing(cls,user):
+        return [x.to_dict(user.profile.privacy_mode) for x in cls.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=user)]
+    class Meta:
+        db_table = "gravis_case"
+
 
 class SuccessfulProcessingJobManager(models.Manager):
     """
@@ -299,7 +348,7 @@ class DICOMInstance(models.Model):
 
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)  
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     privacy_mode = models.BooleanField(default=False)
 
     def __str__(self):

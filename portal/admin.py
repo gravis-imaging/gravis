@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 
-from portal.models import Case, ProcessingJob, DICOMSet, DICOMInstance, Finding, UserProfile
+from portal.models import Case, ProcessingJob, DICOMSet, DICOMInstance, Finding, UserProfile, ShadowCase
 
 
 class ProfileInline(admin.StackedInline):
@@ -23,9 +23,10 @@ class CustomUserAdmin(UserAdmin):
 
 class DicomSetInline(admin.TabularInline):
     model = DICOMSet
+
 class CaseAdmin(admin.ModelAdmin):
     inlines = [
-        DicomSetInline,
+        DicomSetInline
     ]
 
 
@@ -36,3 +37,4 @@ admin.site.register(ProcessingJob)
 admin.site.register(DICOMSet)
 admin.site.register(DICOMInstance)
 admin.site.register(Finding)
+admin.site.register(ShadowCase)

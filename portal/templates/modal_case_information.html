@@ -44,10 +44,12 @@
                             <td>Twix ID:</td>
                             <td><span id="case_details_twix_id">&nbsp;</span></td>
                         </tr>
+                        {% if user.is_staff %}
                         <tr>
                             <td>Case Location:</td>
                             <td><span class="patient_info" id="case_details_case_location">&nbsp;</span></td>
                         </tr>
+                        {% endif %}
                         <tr>
                             <td>Viewed by:</td>
                             <td><span id="case_details_viewed_by_id">&nbsp;</span></td>
@@ -92,7 +94,10 @@ async function showCaseInformation(case_id) {
 function displayReceivedCaseInformation(caseData) {
     function display_field(id, value) {
         // Pass data to UI elements and provide default value in case entry is missing in provided JSON object
-        document.getElementById("case_details_"+id).innerText = (value || caseData[id]) || "Missing";
+        const el = document.getElementById("case_details_"+id)
+        if (el) {
+            el.innerText = (value || caseData[id]) || "Missing";
+        }
     }
     for ( const id of ["case_id","patient_name","mrn","acc","num_spokes","case_type","exam_time","receive_time","status","twix_id","case_location","viewed_by_id","last_read_by_id"]) {
         display_field(id)

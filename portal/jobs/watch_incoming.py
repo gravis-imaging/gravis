@@ -55,6 +55,7 @@ def load_json(incoming_case, new_folder, error_folder) -> Tuple[bool, Case]:
             status=case_status,
         )  # Case(data_location="./data/cases)[UID]")
         new_case.save()
+        new_case.add_shadow()
         study_keys = ["patient_name", "mrn", "acc", "case_type", "exam_time", "twix_id", "num_spokes"]
         # TODO check that values for these fields are valid. If not set status to ERROR/.
         for key in study_keys:
@@ -89,11 +90,16 @@ def process_error_folder(
 
 
 def process_folder(job_id: int, incoming_case: Path):
-
     try:
         job: ProcessingJob = ProcessingJob.objects.get(id=job_id)
     except Exception as e:
         logger.exception(f"ProcessingJob with id {job_id} does not exist.")
+        return False
+    
+    def fail(e):
+        job.status = "Fail"
+        job.error_description = e
+        job.save()
         return False
 
     # Move from incoming to cases
@@ -120,28 +126,20 @@ def process_folder(job_id: int, incoming_case: Path):
         logger.exception(
             f"Unable to create lock file {GravisNames.LOCK} in {incoming_case}"
         )
-        job.status = "Fail"
-        job.error_description = e
-        job.save()
-        return False
+        return fail(e)
 
     try:
         error_folder.mkdir(parents=True, exist_ok=False)
     except Exception as e:
         logger.exception(f"Cannot create error folder for {incoming_case}")
-        job.status = "Fail"
-        job.error_description = e
-        job.save()
-        return False
+        return fail(e)
+
 
     status, new_case = load_json(incoming_case, new_folder, error_folder)
     if not status:
         process_error_folder(new_case, incoming_case, error_folder, lock)
-        job.status = "Fail"
-        job.error_description = f"Error loading study.json from {incoming_case}."
-        job.save()
-        return False
-
+        return fail(f"Error loading study.json from {incoming_case}.")
+    
     # Create directories for further processing.
     try:
         input_dest_folder.mkdir(parents=True, exist_ok=False)
@@ -152,21 +150,13 @@ def process_folder(job_id: int, incoming_case: Path):
             f"Cannot create one of the processing folders for {incoming_case}"
         )
         process_error_folder(new_case, incoming_case, error_folder, lock)
-        job.status = "Fail"
-        job.error_description = e
-        job.save()
-        return False
+        return fail(e)
 
     # Move files
     if not dicomset_utils.move_files(incoming_case, input_dest_folder):
         # new_case.delete()
         process_error_folder(new_case, incoming_case, error_folder, lock)
-        job.status = "Fail"
-        job.error_description = (
-            f"Error moving files from {incoming_case} to {input_dest_folder}"
-        )
-        job.save()
-        return False
+        return fail(f"Error moving files from {incoming_case} to {input_dest_folder}")
 
     register_dicom_set_success, error = dicomset_utils.register(
         str(input_dest_folder), new_case, "Incoming", job_id, "ORI"
@@ -175,10 +165,7 @@ def process_folder(job_id: int, incoming_case: Path):
         process_error_folder(new_case, incoming_case, error_folder, lock)
         # Delete associated case from db
         # new_case.delete()
-        job.status = "Fail"
-        job.error_description = error
-        job.save()
-        return False
+        return fail(error)
 
     try:
         lock.free()
@@ -189,11 +176,7 @@ def process_folder(job_id: int, incoming_case: Path):
         # new_case.status = Case.CaseStatus.ERROR
         # new_case.case_location = str(error_folder)
         # new_case.save()
-        job.status = "Fail"
-        job.error_description = e
-        job.save()
-        return False
-
+        return fail(e)
     try:
         # Delete .complete and empty folder from incoming
         # os.unlink(complete_file_path)
@@ -206,10 +189,8 @@ def process_folder(job_id: int, incoming_case: Path):
         # new_case.status = Case.CaseStatus.ERROR
         # new_case.case_location = str(error_folder)
         # new_case.save()
-        job.status = "Fail"
-        job.error_description = e
-        job.save()
-        return False
+        return fail(e)
+
 
     new_case.status = Case.CaseStatus.QUEUED
     new_case.save()
