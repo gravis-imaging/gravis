@@ -112,8 +112,6 @@ def timeseries_data(request, case, source_set):
         for h in handles_transformed:
             if orientation in ("SAG", "COR"):
                 h[2] = -h[2]
-            if orientation == "COR":
-                h[0] = -h[0]
             for n,v in enumerate(h):
                 if v < 0:
                     h[n] = h[n]-1
