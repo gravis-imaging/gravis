@@ -70,7 +70,12 @@ class GeneratePreviewsJob(WorkJobView):
 
     @classmethod
     def do_job(cls, job: ProcessingJob):
-        instances = job.dicom_set.instances.all()
+        if job.dicom_set is None:
+            dicom_set = DICOMSet.objects.get(type=job.parameters["source_type"], processing_job__id = job.parameters["source_job"])
+        else:
+            dicom_set = job.dicom_set
+
+        instances = dicom_set.instances.all()
         im_orientation_patient = np.asarray(json.loads(instances[0].json_metadata)["00200037"]["Value"]).reshape((2,3))
         im_orientation_mat = np.vstack((im_orientation_patient,[cross(*im_orientation_patient)]))
         z_axis = im_orientation_mat[2]

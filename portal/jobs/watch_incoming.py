@@ -17,6 +17,9 @@ from portal.models import Case, ProcessingJob
 from common.constants import GravisNames, GravisFolderNames
 from .cine_generation import GeneratePreviewsJob
 from .work_job import do_job
+
+from . import pipelines
+from .utils import report_failure, report_success
 import common.helper as helper
 
 # logging.basicConfig(filename='watch_incoming.log', filemode='a', format='%(name)s - %(levelname)s - %(message)s')
@@ -267,123 +270,21 @@ def scan_incoming_folder():
             f"Problem processing incoming folder {str(incoming)}. Error: {e}."
         )
 
-
-def create_sub_previews(job, connection, result, *args, **kwargs):
-
-    logger.info(
-        f"SUCCESS DOCKER job = {job}; result = {result}; connection = {connection}; args = {args}"
-    )
-
-    processing_job = ProcessingJob.objects.get(rq_id=job.id)   
-    case = processing_job.case
-    dicom_set_sub = case.dicom_sets.get(type="SUB")
-
-    try:
-        job = ProcessingJob(
-            status="CREATED", 
-            category="CINE", 
-            dicom_set=dicom_set_sub,
-            case = case,
-            parameters={})
-        job.save()
-        result = django_rq.enqueue(
-            do_job,
-            args=(GeneratePreviewsJob,job.id),
-            # job_timeout=60*60*4,
-            on_success=report_success,
-            on_failure=report_failure,
-            ) 
-        job.rq_id = result.id
-        job.save()
-    except Exception as e:
-        case.status = Case.CaseStatus.ERROR
-        case.save()
-        logger.exception(
-            f"Exception creating a new cine generation processing job for {dicom_set_sub.set_location} "
-        )
-   
-    # TODO: Store in db
-
-
-def report_success(job, connection, result, *args, **kwargs):
-    logger.info(
-        f"SUCCESS job = {job}; result = {result}; connection = {connection}; args = {args}"
-    )
-    # TODO: Store in db
-
-
-def report_failure(job, connection, type, value, traceback):
-    logger.info(
-        f"FAILURE job = {job}; traceback = {traceback}; type = {type}; value = {value}"
-    )
-    # TODO: Store in db
-
-
 def trigger_queued_cases():
     # print("trigger_queued_cases()")
     cases = Case.objects.filter(status=Case.CaseStatus.QUEUED)
+
     for case in cases:
         case.status = Case.CaseStatus.PROCESSING
         case.save()
-        dicom_set = case.dicom_sets.get(origin="Incoming")
-       
-        try:            
-            new_job = ProcessingJob(
-                docker_image="gravis-processing",
-                dicom_set=dicom_set,
-                category="DICOMSet",
-                case=case,
-                status="Pending",
-            )
-            new_job.save()
-        except Exception as e:
-            case.status = Case.CaseStatus.ERROR
-            case.save()
-            logger.exception(
-                f"Exception creating a new processing job for {dicom_set.set_location} "
-            )
-            continue
 
-        try:
-            main_processing_job = django_rq.enqueue(
-                docker_utils.do_docker_job,
-                new_job.id,
-                on_success=create_sub_previews,
-                on_failure=report_failure,
-            )
-            new_job.rq_id = main_processing_job.id
-            new_job.save()
-        except Exception as e:
-            docker_utils.process_job_error(new_job.id, e)
-            logger.exception(
-                f"Exception enqueueing a new processing job for {dicom_set.set_location} "
-            )
-            continue
-
-        try:            
-            job = ProcessingJob(
-                status="CREATED", 
-                category="CINE", 
-                dicom_set=dicom_set,
-                case = case,
-                parameters={})
-            job.save()
-            result = django_rq.enqueue(
-                do_job,
-                args=(GeneratePreviewsJob,job.id),
-                # job_timeout=60*60*4,
-                on_success=report_success,
-                on_failure=report_failure,
-                depends_on=main_processing_job
-            )
-            job.rq_id = result.id
-            job.save()
-        except Exception as e:
+        if case.case_type not in pipelines.registered:
+            logger.error(f"Unknown case_type {Case.case_type}")
             case.status = Case.CaseStatus.ERROR
-            case.save()
-            logger.exception(
-                f"Exception creating a new cine generation processing job for {dicom_set.set_location} "
-            )            
+            continue
+            # TODO: send case to error folder
+        
+        pipelines.registered[case.case_type](case)
 
 
 def delete_cases():

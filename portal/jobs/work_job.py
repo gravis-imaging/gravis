@@ -87,3 +87,30 @@ class WorkJobView(View):
 
         job.save()
 
+    @classmethod
+    def enqueue_work(cls, case, dicom_set=None, depends_on=None, parameters={}):
+        try:
+            job = ProcessingJob(
+                status="CREATED", 
+                category = cls.type, 
+                dicom_set = dicom_set,
+                case = case,
+                parameters=parameters)
+            job.save()
+            rq_result = django_rq.enqueue(
+                do_job,
+                args = (cls,job.id),
+                depends_on = depends_on
+                # job_timeout=60*60*4,
+                # on_success=report_success,
+                # on_failure=report_failure,
+                ) 
+            job.rq_id = rq_result.id
+            job.save()
+            return job, rq_result
+        except Exception as e:
+            case.status = Case.CaseStatus.ERROR
+            case.save()
+            raise Exception(
+                f"Exception creating a new {cls.type} processing job for case {case}"
+            )

@@ -71,12 +71,12 @@ class Case(models.Model):
     patient_name = models.CharField(max_length=100, blank=True, null=True)
     mrn = models.CharField(max_length=100, blank=True, null=True)
     acc = models.CharField(max_length=100, blank=True, null=True)
-    case_type = models.CharField(
+    case_type = models.CharField( # TODO: should be EnumField?
         max_length=100, choices=CaseType.choices, blank=True, null=True
     )
     exam_time = models.DateTimeField(blank=True, null=True)
     receive_time = models.DateTimeField(default=timezone.now, blank=False)
-    status = models.CharField(
+    status = models.CharField( # TODO: should be EnumField?
         max_length=100, choices=CaseStatus.choices, default=CaseStatus.RECEIVED
     )
     num_spokes = models.CharField(max_length=1000, default="", blank=False, null=False)
