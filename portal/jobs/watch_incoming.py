@@ -281,10 +281,15 @@ def trigger_queued_cases():
         if case.case_type not in pipelines.registered:
             logger.error(f"Unknown case_type {Case.case_type}")
             case.status = Case.CaseStatus.ERROR
+            case.save()
             continue
             # TODO: send case to error folder
-        
-        pipelines.registered[case.case_type](case)
+        try:
+            pipelines.registered[case.case_type](case)
+        except:
+            case.status = Case.CaseStatus.ERROR
+            case.save()
+            logger.exception(f"Initializing processing for case {case} failed.")
 
 
 def delete_cases():

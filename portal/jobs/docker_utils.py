@@ -12,24 +12,17 @@ from portal.models import Case, ProcessingJob
 from common.constants import DockerReturnCodes
 
 
-def do_docker_job(job_id):
+def do_docker_job(job):
     # TODO move docker stuff in a separate file.
     # Run the container and handle errors of running the container
     processing_success = True
-
-    try:
-        job: ProcessingJob = ProcessingJob.objects.get(id=job_id)
-    except Exception as e:
-        logger.exception(f"ProcessingJob with id {job_id} does not exist.")
-        return False
-
     input_folder = job.case.case_location + "/input/"
 
     try:
         docker_client = docker.from_env()
-
         job.status = "Processing"
         job.save()
+        job_id = job.id
         docker_tag = job.docker_image
 
         # Volume for subtracted slices

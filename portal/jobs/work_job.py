@@ -6,7 +6,7 @@ from django.views import View
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from portal.models import Case, DICOMInstance, DICOMSet, ProcessingJob
-
+from loguru import logger
 
 def do_job(View,id):
     View._do_job(id)
@@ -74,11 +74,15 @@ class WorkJobView(View):
     def _do_job(cls,id):
         job = ProcessingJob.objects.get(id=id)
         try:
+            if job.dicom_set is None:
+                job.dicom_set = DICOMSet.objects.get(type=job.parameters["source_type"], processing_job__id = job.parameters["source_job"])
             json_result, dicom_sets = cls.do_job(job)
             job.json_result = json_result
             job.status = "SUCCESS"
         except Exception as e:
+            logger.exception(f"Job failure {job}")
             job.status = "FAILED"
+            job.error_description = str(e)
             job.save()
             raise e from None
         for d in dicom_sets:
@@ -88,10 +92,11 @@ class WorkJobView(View):
         job.save()
 
     @classmethod
-    def enqueue_work(cls, case, dicom_set=None, depends_on=None, parameters={}):
+    def enqueue_work(cls, case, dicom_set=None, *, docker_image=None, depends_on=None, parameters={}):
         try:
             job = ProcessingJob(
-                status="CREATED", 
+                status="CREATED",
+                docker_image = docker_image,
                 category = cls.type, 
                 dicom_set = dicom_set,
                 case = case,

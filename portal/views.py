@@ -10,6 +10,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.views.static import serve
 from django.contrib.auth.models import User
+from django.db import transaction
 # from django.contrib.staticfiles import views as static_views
 
 from .models import Case, DICOMInstance, Tag, UserProfile
@@ -114,18 +115,20 @@ def config(request):
 
 @login_required
 def viewer(request, case_id):
-    case = get_object_or_404(Case, id=case_id)
-    # TODO: Check if current user is allowed to view case
-    
-    if case.status not in ( Case.CaseStatus.READY, Case.CaseStatus.VIEWING,  Case.CaseStatus.COMPLETE):
-        return HttpResponseForbidden()
+    with transaction.atomic():
+        case = get_object_or_404(Case, id=case_id)
+        # TODO: Check if current user is allowed to view case
+        
+        if case.status not in ( Case.CaseStatus.READY, Case.CaseStatus.VIEWING,  Case.CaseStatus.COMPLETE):
+            return HttpResponseForbidden()
 
-    if ( case.status == Case.CaseStatus.VIEWING and case.viewed_by != request.user ):
-        return HttpResponseForbidden()
-    case.viewed_by = request.user
-    case.last_read_by = request.user
-    case.status = Case.CaseStatus.VIEWING
-    case.save()
+        if ( case.status == Case.CaseStatus.VIEWING and case.viewed_by != request.user ):
+            return HttpResponseForbidden()
+        
+        case.viewed_by = request.user
+        case.last_read_by = request.user
+        case.status = Case.CaseStatus.VIEWING
+        case.save()
 
     instances = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set__type__in=("ORI", "SUB")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")
     
