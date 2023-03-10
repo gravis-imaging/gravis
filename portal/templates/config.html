@@ -120,7 +120,7 @@ async function updateCaseTags(all_tags) {
   }
 
   try {
-    await doFetch('/update_tags/',{tags: selected_tags})
+    await doFetch('/api/update_tags/',{tags: selected_tags})
     all_tags = all_tags.filter(a_t => !selected_tags.some(s_t => s_t === a_t[0]))
     return all_tags;
   } catch (e) {

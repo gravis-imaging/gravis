@@ -1,10 +1,10 @@
 from django.urls import path
 # from .jobs import cine_generation
-from . import views, grasp_endpoints, jobs
+from . import views, endpoints, jobs
+
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
-
 
 urlpatterns = [
     path("", views.index, name="index"),
@@ -12,36 +12,9 @@ urlpatterns = [
     path("logout/", views.logout_request, name="logout"),
     path("user/", views.user, name="user"),
     path("config/", views.config, name="config"),
-
-    path("browser/get_cases_all", views.browser_get_cases_all),
-    path("browser/get_tags_all", views.browser_get_tags_all),
-    path("browser/get_case_tags_and_all_tags/<str:case_id>", views.browser_get_case_tags_and_all_tags),
-    path("browser/get_case/<str:case_id>", views.browser_get_case),
-    path("browser/delete_case/<str:case_id>", views.browser_delete_case),
-
-    # path("docker_job/", views.docker_job),
-    # path("work_test/", views.work_queue_test),
-    # path("work_status/<int:id>/", views.work_status),
-
     path("media/<path:path>", views.serve_media),
     path("viewer/<str:case_id>", views.viewer, name="viewer"),
-    path("status/<str:case_id>/<str:new_status>/", views.case_status, name="viewer"),
-    path("update_case_tags/", views.update_case_tags),
-    path("update_tags/", views.update_tags),
-
-    path("api/case/<str:case>/dicom_set/<str:source_set>/timeseries",grasp_endpoints.timeseries_data),
-    path("api/case/<str:case>/dicom_set/<str:source_set>/preview/<str:view>/<str:location>", grasp_endpoints.preview_urls),
-    path("api/case/<str:case>/dicom_set/<str:source_set>/processed_results/<path:case_type>", grasp_endpoints.processed_results_urls),
-    path("api/case/<str:case>/dicom_set/<str:source_set>/mip_metadata", grasp_endpoints.mip_metadata),
-    path("api/case/<str:case>/dicom_set/<str:source_set>/processed_json/<str:category>", grasp_endpoints.processed_results_json),
-    path("api/case/<str:case>/dicom_set/<str:dicom_set>/metadata", grasp_endpoints.case_metadata),
-    path("api/case/<str:case>/dicom_set/<str:dicom_set>/study/<str:study>/metadata", grasp_endpoints.case_metadata),
-    path("api/case/<str:case>/dicom_set/<str:source_set>/finding", grasp_endpoints.store_finding),
-    path("api/case/<str:case>/dicom_set/<str:source_set>/finding/<int:finding_id>", grasp_endpoints.store_finding),
-    path("api/case/<str:case>/sessions", grasp_endpoints.all_sessions),
-    path("api/case/<str:case>/session", grasp_endpoints.handle_session),
-    path("api/case/<str:case>/session/new", grasp_endpoints.new_session),
-    path("api/case/<str:case>/session/<int:session_id>", grasp_endpoints.handle_session),
+    *endpoints.urls,
     *jobs.urls,
     *staticfiles_urlpatterns()
 ]

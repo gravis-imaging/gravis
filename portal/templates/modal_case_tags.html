@@ -34,7 +34,7 @@ $(document).ready(function() {
 // the information
 async function showTagsDialog(case_id) {
     try { 
-        const data = await doFetch('/browser/get_case_tags_and_all_tags/'+case_id, {},"GET")
+        const data = await doFetch(`/api/${case_id}/tags`, {},"GET")
         displayTagsInformation(case_id, data.case_tags, data.tags);
     } catch (e){
         await errorPrompt("Unable to find tag information.")
@@ -65,8 +65,8 @@ function displayTagsInformation(case_id, case_tags, all_tags) {
     }    
 
     // Display the modal window
-    const myModalElement = document.getElementById('tags_selection_modal');
-    const modal = new mdb.Modal(myModalElement);
+    const el = document.getElementById('tags_selection_modal');
+    const modal = new mdb.Modal(el);
     modal.show();
 }
 
@@ -78,7 +78,7 @@ async function updateCaseTags() {
         tags.push(selected[i].text);
     }
     try {
-        await doFetch('/update_case_tags/',({tags: tags, case_id: case_id}))
+        await doFetch(`/api/case/${case_id}/update_case_tags/`,({tags: tags}))
         $('#casetable').DataTable().ajax.reload();
         $('#tags_selection_modal').modal('hide');
     } catch (e) {

@@ -50,7 +50,7 @@
     $(document).ready(function () {               
         var case_data_table = $('#casetable').DataTable({           
             dom: "<'row browsertoolbar align-items-end'<'col-sm-12 col-md-6 browserbuttons'B><'col-sm-12 col-md-6'f>>" + "<'row'<'col-sm-12'tr>>" + "<'row'<'col-sm-12 col-md-5'><'col-sm-12 col-md-7'p>>",
-            ajax: "/browser/get_cases_all",
+            ajax: "/api/cases",
             deferRender: true,
             columns: [
                 { data: 'case_id', visible: false },
@@ -149,7 +149,7 @@
                         }
                         const result = await confirmPrompt("Do you really want to delete the case?", "Are you sure?", async () => {
                             try {
-                                await doFetch(`/browser/delete_case/${case_id}`);
+                                await doFetch(`/api/case/${case_id}/delete`);
                                 await successPrompt("The case has been deleted.");
                                 case_data_table.ajax.reload();
                             } catch (e) {
