@@ -9,6 +9,8 @@ from typing import Tuple
 from uuid import uuid4
 
 from django.conf import settings
+from django.db import transaction
+
 import django_rq
 
 import portal.jobs.dicomset_utils as dicomset_utils
@@ -57,8 +59,9 @@ def load_json(incoming_case, new_folder, error_folder) -> Tuple[bool, Case]:
             incoming_payload=payload,
             status=case_status,
         )  # Case(data_location="./data/cases)[UID]")
-        new_case.save()
-        new_case.add_shadow()
+        with transaction.atomic():
+            new_case.save()
+            new_case.add_shadow()
         study_keys = ["patient_name", "mrn", "acc", "case_type", "exam_time", "twix_id", "num_spokes"]
         # TODO check that values for these fields are valid. If not set status to ERROR/.
         for key in study_keys:

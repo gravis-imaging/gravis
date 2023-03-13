@@ -34,7 +34,7 @@ $(document).ready(function() {
 // the information
 async function showTagsDialog(case_id) {
     try { 
-        const data = await doFetch(`/api/${case_id}/tags`, {},"GET")
+        const data = await doFetch(`/api/case/${case_id}/tags`, {},"GET")
         displayTagsInformation(case_id, data.case_tags, data.tags);
     } catch (e){
         await errorPrompt("Unable to find tag information.")
@@ -78,7 +78,7 @@ async function updateCaseTags() {
         tags.push(selected[i].text);
     }
     try {
-        await doFetch(`/api/case/${case_id}/update_case_tags/`,({tags: tags}))
+        await doFetch(`/api/case/${case_id}/tags/update`,({tags: tags}))
         $('#casetable').DataTable().ajax.reload();
         $('#tags_selection_modal').modal('hide');
     } catch (e) {

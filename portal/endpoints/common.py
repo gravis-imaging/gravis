@@ -1,5 +1,13 @@
 from portal.models import Case
 import numpy as np
+from django.core.exceptions import BadRequest
+import json
+
+def json_load_body(request):
+    try:
+        return json.loads(request.body.decode('utf-8'))
+    except:
+        raise BadRequest()
 
 cross = (lambda x,y:np.cross(x,y)) # fix type inference bug
 

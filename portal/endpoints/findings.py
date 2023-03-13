@@ -8,16 +8,17 @@ import pydicom
 from pathlib import Path
 from urllib.request import urlopen
 
-from django.http import HttpResponseForbidden, JsonResponse
+from django.http import HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotAllowed, JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.db import transaction
 
 from PIL import Image
 import highdicom as hd
 
 from portal.models import DICOMSet, Finding
 
-from .common import user_opened_case
+from .common import json_load_body, user_opened_case
 
 def sc_from_ref(reference_dataset, pixel_array):
     sc = hd.sc.SCImage.from_ref_dataset(
@@ -42,7 +43,7 @@ def sc_from_ref(reference_dataset, pixel_array):
 
 
 @login_required
-def store_finding(request, case, source_set, finding_id=None):
+def handle_finding(request, case, source_set, finding_id=None):
     dicom_set = DICOMSet.objects.get(id=int(source_set))
     if request.method == 'GET':
         results = []
@@ -52,21 +53,26 @@ def store_finding(request, case, source_set, finding_id=None):
     elif not user_opened_case(request,case):
         return HttpResponseForbidden()
     elif request.method == "DELETE":
-        finding = Finding.objects.get(id=finding_id)
-        shutil.rmtree((Path(dicom_set.case.case_location) / finding.file_location).parent)
-        finding.delete()
+        with transaction.atomic():
+            finding = Finding.objects.get(id=finding_id)
+            shutil.rmtree((Path(dicom_set.case.case_location) / finding.file_location).parent)
+            finding.delete()
         return JsonResponse({})
     elif request.method == "PATCH":
-        finding = Finding.objects.get(id=finding_id)
-        data = json.loads(request.body)
-        if name := data.get("name",None):
-            finding.name = name
-        if data := data.get("data",None):
-            finding.data = data
-        finding.save()
+        data = json_load_body(request)
+        with transaction.atomic():
+            finding = Finding.objects.get(id=finding_id)
+            if name := data.get("name",None):
+                finding.name = name
+            if data := data.get("data",None):
+                finding.data = data
+            finding.save()
         return JsonResponse({})
     elif request.method == "POST":
-        request_data = json.loads(request.body.decode("utf-8"))
+        request_data = json_load_body(request)
+        if "image_data" not in request_data:
+            return HttpResponseBadRequest()
+        
         with urlopen(request_data["image_data"]) as response:
             image_data = response.read()
         directory = Path(dicom_set.case.case_location) / "findings" / str(uuid.uuid4())
@@ -99,3 +105,5 @@ def store_finding(request, case, source_set, finding_id=None):
                 )
         finding.save()
         return JsonResponse(finding.to_dict())
+    else:
+        return HttpResponseNotAllowed(["POST","GET","PATCH", "DELETE"])

@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST, require_GET
 from django.shortcuts import get_object_or_404
 from portal.models import *
 from .common import get_im_orientation_mat
+from django.db import transaction
 
 @login_required
 @require_GET
@@ -20,9 +21,9 @@ def all_cases(request):
     case_data = [case.to_dict(request.user.profile.privacy_mode) for case in Case.objects.all()]
     return JsonResponse({"data": case_data}, safe=False)
 
-
 @login_required
 @require_POST
+@transaction.atomic
 def delete_case(request, case):
     case = get_object_or_404(Case, id=case)
     case.status = Case.CaseStatus.DELETE
@@ -44,6 +45,7 @@ def get_case(request, case):
 
 @login_required
 @require_POST
+@transaction.atomic
 def set_case_status(request, case, new_status):
     case = get_object_or_404(Case, id=case)
 
@@ -68,6 +70,7 @@ def set_case_status(request, case, new_status):
 
 
 @login_required
+@require_GET
 def case_metadata(request, case, dicom_set, study=None):
     fields = ["series_uid","series_number", "slice_location", "acquisition_number", "acquisition_seconds"]
 
@@ -84,6 +87,7 @@ def case_metadata(request, case, dicom_set, study=None):
     return JsonResponse(result, safe=False)
 
 @login_required
+@require_GET
 def processed_results_json(request, case, category, source_set):
     # fields = ["series_number", "slice_location", "acquisition_number"]
     case = Case.objects.get(id=int(case))
@@ -93,6 +97,7 @@ def processed_results_json(request, case, category, source_set):
 
 
 @login_required
+@require_GET
 def preview_urls(request, case, source_set, view, location):
     case = Case.objects.get(id=int(case))
     dicom_set = DICOMSet.processed_success.filter(case=case,type=f"CINE/{view}").filter(processing_job__dicom_set=source_set)
@@ -118,6 +123,7 @@ def preview_urls(request, case, source_set, view, location):
 
 
 @login_required
+@require_GET
 def processed_results_urls(request, case, case_type, source_set):
     fields = ["series_number", "slice_location", "acquisition_number", "acquisition_seconds"]
     case = Case.objects.get(id=int(case))
@@ -137,6 +143,7 @@ def processed_results_urls(request, case, case_type, source_set):
 
 
 @login_required
+@require_GET
 def mip_metadata(request, case, source_set):
     fields = ["series_number", "slice_location", "acquisition_number", "acquisition_seconds"]
     case = Case.objects.get(id=int(case))

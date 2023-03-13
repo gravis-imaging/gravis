@@ -7,9 +7,11 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST, require_GET
 
 from portal.models import *
-from .common import user_opened_case
+from .common import json_load_body, user_opened_case
+from django.db import transaction
 
 @login_required
+@transaction.atomic
 def handle_session(request, case, session_id=None):
     if request.method == "POST":
         if not user_opened_case(request, case):
@@ -22,6 +24,7 @@ def handle_session(request, case, session_id=None):
 
 
 @login_required
+@transaction.atomic
 def new_session(request,case):
     if not user_opened_case(request, case):
         return HttpResponseForbidden()
@@ -38,7 +41,7 @@ def all_sessions(request,case):
 
 
 def update_session(request,case,session_id=None):
-    new_state = json.loads(request.body)
+    new_state = json_load_body(request)
     if not session_id:
         try:
             session = SessionInfo.objects.get(case=Case.objects.get(id=case), user=request.user)
