@@ -92,7 +92,7 @@
         }
     }))});
 </script>
-<div class="grid pb-2" x-data="gravis_viewer">
+<div class="grid" x-data="gravis_viewer">
   <!-- dicom set selector -->
   <div class="toolbar-area">
     <!-- dicom set selection -->
@@ -213,13 +213,13 @@
       <div class="">
         <div class="dropdown">
           <button
+            title="Select session"
             class="btn-primary btn-large btn-viewer"
             :disabled="should_disable" disabled="disabled"
             href="#"
             id="dropdownMenuLink"
             data-mdb-toggle="dropdown"
             aria-expanded="false",
-            title="Select session"
           >
           <i class="fas fa-history"></i>
           </button>

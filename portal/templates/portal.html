@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 
 {% block body %}
-<header class="mb-5">
-    <nav class="navbar navbar-expand-lg  fixed-top navbar-dark bg-dark mb-4 shadow-2-strong">
+<header>
+    <nav class="navbar navbar-expand-lg sticky-top navbar-dark bg-dark shadow-2-strong">
         <div class="container-fluid">
             <div class="navbar-brand" style="margin-left: 10px;" >
                 <div class="d-flex align-items-center">
@@ -95,7 +95,7 @@
 
 <main class="flex-shrink-1">
     <div class="container-fluid pt-3">
-        <div class="maincontent px-2 mt-3">
+        <div class="maincontent">
             {% block content %}                
             {% endblock %}
         </div>
