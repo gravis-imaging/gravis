@@ -77,6 +77,8 @@
                             return '<span class="badge bg-info text-dark">'+data+'</span>';
                             break;
                         case 'Viewing':
+                            if (row["last_read_by_id"] == "{{user.username}}")
+                                return '<span class="badge text-dark" style="background-color: #00ff89;">'+data+'</span>';
                             return '<span class="badge bg-warning text-dark">'+data+'</span>';
                             break;
                         case 'Complete':

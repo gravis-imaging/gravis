@@ -88,6 +88,10 @@ h2 {
     grid-area: 1 / 1 / 2 / 2;
 }
 
+.grid button:disabled, .grid button[disabled]  {
+    background-color:#555 !important;
+}
+
 .grid {
     display:grid; 
     overflow-x: hidden; 
