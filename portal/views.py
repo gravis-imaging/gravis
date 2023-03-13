@@ -103,7 +103,7 @@ def user(request):
 
 @login_required
 def config(request):
-    tags = [(tag.name, tag.case_set.all().count(), [{'id': case.id, 'patient_name': case.patient_name, 'mrn': case.mrn, 'acc': case.acc} 
+    tags = [(tag.name, tag.case_set.all().count(), [case.to_dict() 
             for case in tag.case_set.all()]) for tag in Tag.objects.all()]
     # sort tags by number of occurrences in cases
     tags.sort(key=lambda a: a[1])

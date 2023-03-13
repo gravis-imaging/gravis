@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST, require_GET
 from django.shortcuts import get_object_or_404
 from portal.models import *
-from .common import get_im_orientation_mat
+from .common import get_im_orientation_mat, user_opened_case
 from django.db import transaction
 
 @login_required
@@ -19,17 +19,21 @@ def all_cases(request):
     Returns a JSON object containing information on all cases stored in the database.
     '''
     case_data = [case.to_dict(request.user.profile.privacy_mode) for case in Case.objects.all()]
-    return JsonResponse({"data": case_data}, safe=False)
+    return JsonResponse({"data": case_data})
 
 @login_required
 @require_POST
 @transaction.atomic
 def delete_case(request, case):
     case = get_object_or_404(Case, id=case)
+
+    # If someone else is viewing this case, don't mark for deletion.
+    if not user_opened_case(case) and case.status == Case.CaseStatus.VIEWING:
+        return HttpResponseForbidden()
+
     case.status = Case.CaseStatus.DELETE
     case.save()
     return HttpResponse() 
-
 
 @login_required
 @require_GET
@@ -39,9 +43,8 @@ def get_case(request, case):
     case ID does not exist
     '''
     case = get_object_or_404(Case, id=case)
-    json_data = case.to_dict(request.user.profile.privacy_mode)
-    return JsonResponse(json_data, safe=False)
-
+    case_dict = case.to_dict(request.user.profile.privacy_mode)
+    return JsonResponse(case_dict)
 
 @login_required
 @require_POST
@@ -49,18 +52,16 @@ def get_case(request, case):
 def set_case_status(request, case, new_status):
     case = get_object_or_404(Case, id=case)
 
-    if case.status != Case.CaseStatus.VIEWING:
-        return HttpResponseForbidden()
-    
-    if case.viewed_by != request.user and not request.user.is_staff:
+    # Don't set the case status unless this user opened it or is staff
+    if not (user_opened_case(case) or request.user.is_staff):
         return HttpResponseForbidden()
 
-    case.viewed_by = None;
+    case.viewed_by = None
 
-    if new_status=="ready":
+    if new_status == "ready":
         case.status = Case.CaseStatus.READY
         case.save()
-    elif new_status=="complete":
+    elif new_status == "complete":
         case.status = Case.CaseStatus.COMPLETE
         case.save()
     else:
@@ -106,8 +107,6 @@ def preview_urls(request, case, source_set, view, location):
 
     instances = dicom_set.latest('processing_job__created_at').instances.order_by("slice_location").all()
     im_orientation_mat = get_im_orientation_mat(json.loads(instances[0].json_metadata))
-    # im_orientation_patient = np.asarray(json.loads(instances[0].json_metadata)["00200037"]["Value"]).reshape((2,3))
-    # im_orientation_mat = np.rint(np.vstack((im_orientation_patient,[cross(*im_orientation_patient)])))
 
     # print(location)
     transformed_location = (np.linalg.inv(im_orientation_mat) @ location)

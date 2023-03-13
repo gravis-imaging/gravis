@@ -6,14 +6,14 @@ from pathlib import Path
 from django.http import JsonResponse
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 
 from .common import get_im_orientation_mat, json_load_body
 from portal.models import *
 
 @login_required
-@require_GET
+@require_http_methods(["GET","POST"])
 def timeseries_data(request, case, source_set):
     data = json_load_body(request)
     # averages = np.zeros((120,1+len(data['annotations'])))
