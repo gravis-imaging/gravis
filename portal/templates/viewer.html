@@ -43,7 +43,7 @@
         studies_data: parse_json_element("studies_data"),
         case_data: parse_json_element("case_data"),
         case_id: "{{current_case.id}}",
-
+        read_only: {{read_only}},
         init: async function() {
           this.loading = true; 
           await this.$nextTick();
@@ -160,15 +160,15 @@
     </div>
   
     <button title="Duplicate selected annotation" class="btn-primary btn-large btn-viewer ms-2" 
-        :disabled="should_disable" disabled="disabled" 
+        :disabled="should_disable() || read_only" disabled="disabled" 
         @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
     </button>
     <button title="Rename selected annotation" class="btn-primary btn-large btn-viewer ms-2" 
-        :disabled="should_disable" disabled="disabled" 
+        :disabled="should_disable() || read_only" disabled="disabled" 
         @click="viewer.annotation_manager.renameAnnotation();"><i class="fa-solid fa-pencil"></i>
     </button>
     <button title="Flip selected annotation" class="btn-primary btn-large btn-viewer ms-2"
-        :disabled="should_disable" disabled="disabled"
+        :disabled="should_disable() || read_only" disabled="disabled"
         @click="viewer.annotation_manager.flipSelectedAnnotations();">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-symmetry-vertical" viewBox="0 0 16 16">
         <path d="M7 2.5a.5.5 0 0 0-.939-.24l-6 11A.5.5 0 0 0 .5 14h6a.5.5 0 0 0 .5-.5v-11zm2.376-.484a.5.5 0 0 1 .563.245l6 11A.5.5 0 0 1 15.5 14h-6a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .376-.484zM10 4.46V13h4.658L10 4.46z"/>
@@ -178,7 +178,7 @@
       <div class="dropdown">
         <button
           class="btn-primary btn-large btn-viewer"
-          :disabled="should_disable" disabled="disabled" 
+          :disabled="should_disable() || read_only" disabled="disabled" 
           href="#"
           id="dropdownMenuLink"
           data-mdb-toggle="dropdown"
@@ -205,8 +205,8 @@
       </div>    
     </div>      
     <button title="Save session" class="btn-primary btn-large btn-viewer" style="margin-left: 1.4rem;"
-    :disabled="should_disable" disabled="disabled" 
-    @click="await viewer.state_manager.save(); $($refs.saved).fadeIn(50); $($refs.saved).fadeOut(800);"><i class="fa-solid fa-floppy-disk"></i>
+    :disabled="should_disable() || read_only" disabled="disabled" 
+    @click="let r = await viewer.state_manager.save(); if (r) {$($refs.saved).fadeIn(50); $($refs.saved).fadeOut(800);}"><i class="fa-solid fa-floppy-disk"></i>
     </button>
 
     <div class="flex ms-2" style="display: flex;">
@@ -231,7 +231,9 @@
                      x-text="new Date(session.updated_at*1000).toLocaleString()"></a></li>
             </template>
             <li><hr class="dropdown-divider" /></li>
+            <template x-if="!read_only">
             <li><a class="dropdown-item" @click="viewer.state_manager.newSession()" href="#">New session</a></li>
+            </template>
           </ul>
         </div>    
       </div>
@@ -255,19 +257,19 @@
           <div class="viewport-overlay" :id="'viewport-overlay-'+i" :style="`grid-row: 1; grid-column: ${i}`">
             <!-- Note layout of buttons opening/closing to avoid undesired spaces between buttons -->
             <button title="Add ROI annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
-                :disabled="should_disable" disabled="disabled" 
+                :disabled="should_disable() || read_only" disabled="disabled" 
                 @click="viewer.annotation_manager.addAnnotationToViewport('EllipticalROI',i-1);"><i class="fa-regular fa-circle"></i>
             </button><button
              title="Add probe annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
-                :disabled="should_disable" disabled="disabled" 
+                :disabled="should_disable() || read_only" disabled="disabled" 
                 @click="viewer.annotation_manager.addAnnotationToViewport('Probe',i-1);"><i class="fa-solid fa-plus"></i>
             </button><button
              title="Reset viewer" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
               :disabled="should_disable" disabled="disabled" 
                 @click="viewer.viewports[i-1].setZoom(1); viewer.viewports[i-1].setPan([0,0]); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-magnifying-glass-minus"></i>
             </button><button
-             title="Store finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
-              :disabled="should_disable" disabled="disabled" 
+             title="Store finding || read_only" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
+              :disabled="should_disable() || read_only" disabled="disabled" 
                 @click="job_loading = true; await viewer.storeFinding(viewer.viewports[i-1]); job_loading = false;"><i class="fa-solid fa-camera"></i>
             </button>
             <template x-if="viewer && viewer.getNativeViewports().indexOf(viewer.viewports[i-1].id) > -1">
@@ -289,7 +291,7 @@
     <div x-cloak x-show="true" class="viewport-overlay grid-fill p-2 no-pointer-events" style="z-index: 1;">
       <button
       title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer"
-         :disabled="should_disable" disabled="disabled"
+         :disabled="should_disable() || read_only" disabled="disabled"
          @click="job_loading = true; viewer.storeFinding(viewer.auxViewport); job_loading = false;"><i class="fa-solid fa-camera"></i>
        </button>
     </div>
@@ -322,7 +324,7 @@
         @click="await viewer.annotation_manager.exportChart(case_data)"><i class="fa-solid fa-download"></i>
      </button>
       <button title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer"
-        :disabled="should_disable" disabled="disabled"
+        :disabled="should_disable() || read_only" disabled="disabled"
         @click="await viewer.storeChartFinding()"><i class="fa-solid fa-camera"></i>
      </button>
   </div>
@@ -343,11 +345,11 @@
           @click="loading = true; await viewer.goToFinding(finding); loading = false;"><i class="fa-solid fa-map-marker-alt"></i>
           </button>
           <button title="Rename" class="btn-dark btn-large btn-viewer me-2 my-2"
-          :disabled="should_disable" disabled="disabled"
+          :disabled="should_disable() || read_only" disabled="disabled"
           @click="await viewer.renameFinding(finding);"><i class="fa-solid fa-pencil"></i>
           </button>
           <button title="Delete" class="btn-dark btn-large btn-viewer me-2 my-2"
-          :disabled="should_disable" disabled="disabled"
+          :disabled="should_disable() || read_only" disabled="disabled"
           @click="job_loading = true; await viewer.deleteFinding(finding.id); job_loading = false;"><i class="fa-solid fa-trash"></i></button>
         </div>
         <img class="mb-2 img-fluid" style="cursor: pointer;" :src="finding.url" width="100%" @click="viewer.showFinding(finding)"/>
@@ -356,7 +358,7 @@
       <template x-if="viewer && viewer.findings && (Object.keys(viewer.findings).length > 0)">
         <div class="mb-2">
         <button title="Store findings in PACS" class="btn-large btn-primary btn-viewer py-2 px-3 mt-3 mb-3" style="display: block; margin-left: auto; margin-right: auto; box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%);"
-        :disabled="should_disable" disabled="disabled"
+        :disabled="should_disable() || read_only" disabled="disabled"
         @click="job_loading = true; success = await viewer.transferFindings(); job_loading = false; ref= success? $refs.saved : $refs.failed; $(ref).fadeIn(50); $(ref).fadeOut(1000);">
         <i class="fas fa-paper-plane"></i>&nbsp;&nbsp;Send
         </button>  

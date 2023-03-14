@@ -115,6 +115,7 @@ def config(request):
 
 @login_required
 def viewer(request, case_id):
+    read_only = False
     with transaction.atomic():
         case = get_object_or_404(Case, id=case_id)
         # TODO: Check if current user is allowed to view case
@@ -122,13 +123,14 @@ def viewer(request, case_id):
         if case.status not in ( Case.CaseStatus.READY, Case.CaseStatus.VIEWING,  Case.CaseStatus.COMPLETE):
             return HttpResponseForbidden()
 
+        # If the case is currently being viewed, but not by this user
         if ( case.status == Case.CaseStatus.VIEWING and case.viewed_by != request.user ):
-            return HttpResponseForbidden()
-        
-        case.viewed_by = request.user
-        case.last_read_by = request.user
-        case.status = Case.CaseStatus.VIEWING
-        case.save()
+            read_only = True
+        else:
+            case.viewed_by = request.user
+            case.last_read_by = request.user
+            case.status = Case.CaseStatus.VIEWING
+            case.save()
 
     instances = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set__type__in=("ORI", "SUB")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")
     
@@ -136,6 +138,7 @@ def viewer(request, case_id):
         "studies": [dict(uid=k.study_uid,dicom_set=k.dicom_set.id, type=k.dicom_set.type) for k in instances],
         "current_case": case.to_dict(request.user.profile.privacy_mode),
         "original_dicom_set_id": instances[0].dicom_set.id,
+        "read_only": "true" if read_only else "false"
     }
     return render(request, "viewer.html", context)
 
