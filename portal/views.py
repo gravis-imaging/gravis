@@ -11,6 +11,8 @@ from django.contrib import messages
 from django.views.static import serve
 from django.contrib.auth.models import User
 from django.db import transaction
+from django import forms
+
 # from django.contrib.staticfiles import views as static_views
 
 from .models import Case, DICOMInstance, Tag, UserProfile
@@ -103,8 +105,8 @@ def user(request):
 
 @login_required
 def config(request):
-    tags = [(tag.name, tag.case_set.all().count(), [case.to_dict() 
-            for case in tag.case_set.all()]) for tag in Tag.objects.all()]
+    tags = [(tag.name, tag.case_set.all().count(), [case.to_dict() for case in tag.case_set.all()]) 
+                for tag in Tag.objects.all()]
     # sort tags by number of occurrences in cases
     tags.sort(key=lambda a: a[1])
     context = {
@@ -120,6 +122,7 @@ def viewer(request, case_id):
         case = get_object_or_404(Case, id=case_id)
         # TODO: Check if current user is allowed to view case
         
+        # If the case is not ready for viewing
         if case.status not in ( Case.CaseStatus.READY, Case.CaseStatus.VIEWING,  Case.CaseStatus.COMPLETE):
             return HttpResponseForbidden()
 
@@ -142,3 +145,16 @@ def viewer(request, case_id):
     }
     return render(request, "viewer.html", context)
 
+
+class SubmitForm(forms.Form):
+     patient_name = forms.CharField(label='Patient Name', max_length=100)
+     mrn = forms.CharField(label='MRN', max_length=100)
+     acc = forms.CharField(label='Accession', max_length=100)
+     study_description = forms.CharField(label='Study Description', max_length=100,disabled=True)
+     num_spokes = forms.IntegerField(label='Num spokes')
+     type = forms.ChoiceField(choices=["GRASP MRA", "GRASP Onco"])
+
+def file_browser(request):
+    form = SubmitForm()
+    context = {"form":form}
+    return render(request, "filebrowser.html", context)

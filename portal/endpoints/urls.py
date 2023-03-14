@@ -1,4 +1,5 @@
 from django.urls import path as url_path
+
 from . import *
 
 def path(url, *args):
@@ -29,4 +30,10 @@ urls = [
     url_path("api/cases", case_data.all_cases),
     url_path("api/tags", tags.all_tags),
     url_path("api/tags/update", tags.update_tags),
+
+    url_path("api/filebrowser/case_directory/<str:name>/<path:path>", filebrowser.case_directory),
+    url_path("api/filebrowser/list/", filebrowser.list_directory),
+    url_path("api/filebrowser/list", filebrowser.list_directory),
+    url_path("api/filebrowser/list/<str:name>", filebrowser.list_directory),
+    url_path("api/filebrowser/list/<str:name>/<path:path>", filebrowser.list_directory),
 ]

@@ -48,7 +48,7 @@ def update_session(request,case,session_id=None):
         except SessionInfo.DoesNotExist:
             session = SessionInfo(case=Case.objects.get(id=case), user=request.user)
     else:
-        session = get_object_or_404(SessionInfo,case=Case.objects.get(id=case), user=request.user, id=session_id)
+        session = get_object_or_404(SessionInfo, case=Case.objects.get(id=case), user=request.user, id=session_id)
 
     session.cameras = new_state.get("cameras",[])
     session.annotations = new_state.get("annotations",[])
@@ -60,7 +60,7 @@ def update_session(request,case,session_id=None):
 
 def get_session(request, case, session_id=None):
     if session_id:
-        session = get_object_or_404(SessionInfo,  id=session_id,case=case, user=request.user)
+        session = get_object_or_404(SessionInfo, id=session_id, case=case, user=request.user)
     else:
         try:
             session = SessionInfo.objects.filter(case=case, user=request.user).latest("updated_at")

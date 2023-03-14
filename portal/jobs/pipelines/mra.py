@@ -7,3 +7,4 @@ def run(case):
     mra_job, rq_mra_job = DockerJob.enqueue_work(case, incoming_dicom_set, docker_image="gravis-processing-mra")
     _, preview_job = GeneratePreviewsJob.enqueue_work(case, incoming_dicom_set)
     _, sub_preview_job = GeneratePreviewsJob.enqueue_work(case, depends_on=rq_mra_job,parameters=dict(source_type="SUB",source_job=mra_job.id))
+    # TODO: only mark case as ready when all the jobs are complete
