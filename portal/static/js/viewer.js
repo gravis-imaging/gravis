@@ -106,6 +106,8 @@ class GraspViewer {
     mip_details = [];
 
     findings;
+    
+    rotate_mode = false;
 
     constructor( ...inp ) {
         return (async () => {
@@ -234,6 +236,7 @@ class GraspViewer {
             this.viewports.slice(0,3).map((v, n)=> {
                 v.element.addEventListener(cornerstone.Enums.Events.CAMERA_MODIFIED, debounce(250, async (evt) => {
                     if (! v.getDefaultActor() ) return;
+                    if ( this.rotate_mode ) return;
                     try {
                         await this.updatePreview(n)
                         this.previewViewports[n].setZoom(v.getZoom());
@@ -288,6 +291,12 @@ class GraspViewer {
         return [ viewportInput, viewportInput.map((c)=>c.viewportId) ]
     }
 
+    resetCameras() {
+        for (const v of this.viewports) {
+            v.resetCamera();
+        }
+        this.renderingEngine.renderViewports(this.viewportIds);
+    }
     createTools() {
         const cornerstoneTools = window.cornerstone.tools;
 
@@ -342,7 +351,7 @@ class GraspViewer {
             getReferenceLineColor: (id) => { return ({"VIEW_AX": "rgb(255, 255, 100)",
                                                       "VIEW_SAG": "rgb(18, 102, 241)",
                                                       "VIEW_COR": "rgb(255, 100, 100)",})[id]},
-            getReferenceLineRotatable: (id) => false,
+            getReferenceLineRotatable: (id) => this.rotate_mode,
             getReferenceLineSlabThicknessControlsOn: (id) => false,
             // filterActorUIDsToSetSlabThickness: [viewportId(4)]
           });
@@ -636,6 +645,36 @@ class GraspViewer {
         return native_viewports;
     }
 
+    toggleRotateMode() {
+        const ORIENTATION = cornerstone.CONSTANTS.MPR_CAMERA_VALUES;
+        this.rotate_mode = ! this.rotate_mode;
+        if (this.rotate_mode) {
+            this.rotate_cache_cameras = this.viewports.map(v=>v.getCamera())
+        } else {
+            var n = 0;
+            for (var v of this.viewports) {
+                const cached = this.rotate_cache_cameras[n]
+                v.setCamera(cached);
+                v.resetCamera();
+                // if (v.id == "VIEW_AX") {
+                //     v.setCamera({...v.getCamera(), ...cached})//...ORIENTATION.axial, position:cached.position, focalPoint:cached.focalPoint})
+                // }
+                // if (v.id == "VIEW_SAG") {
+                //     v.setCamera({...v.getCamera(), ...cached})//...ORIENTATION.sagittal,  position:cached.position, focalPoint:cached.focalPoint})
+                // }
+                // if (v.id == "VIEW_COR") {
+                //     v.setCamera({...v.getCamera(), ...cached})//...ORIENTATION.coronal,  position:cached.position, focalPoint:cached.focalPoint})
+                // }
+
+                // v.resetCamera();
+                n++;
+            }
+        }
+        // for (const v of this.viewports) {
+        // }
+
+        cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,this.viewportIds);
+    }
     async loadFindings() {
         const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`,{},"GET");
         return result.findings;

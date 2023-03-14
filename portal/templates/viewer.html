@@ -109,7 +109,7 @@
 
     <!-- Indicators -->
     <div class="ms-2 me-3" style="width:1.8em; height: 28px; margin-top: auto; margin-bottom: auto;">
-      <div :class="(loading || switching || job_loading) || 'invisible'" class="spinner-grow spinner-grow-sm ms-2" role="status" style="position:absolute; z-index: 1; color: hsla(0,0%,100%,.2); margin-top: 0.3em;">
+      <div :class="(loading || switching || job_loading) || 'invisible'" class="spinner-grow spinner-grow-sm ms-2 z-index-1" role="status" style="position:absolute; color: hsla(0,0%,100%,.2); margin-top: 0.3em;">
         <span class="visually-hidden">Loading...</span>
       </div>
       <div x-ref="saved" class="ms-2" role="status" style="display: none; position:absolute; color: hsla(128,70%,70%,.3);">
@@ -134,8 +134,13 @@
     
     <button title="Reset viewers" class="btn-primary btn-large btn-viewer ms-5"
     :disabled="should_disable" disabled="disabled" 
-    @click="viewer.viewports.map(v=>v.resetCamera()); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-arrows-to-circle"></i>
+    @click="viewer.resetCameras()"><i class="fa-solid fa-arrows-to-circle"></i>
     </button>
+
+    {% comment %} <button title="Free rotate" class="btn-large btn-viewer ms-5" :class="(viewer && viewer.rotate_mode)? 'btn-danger': 'btn-primary'"
+    :disabled="should_disable" disabled="disabled" 
+    @click="viewer.toggleRotateMode()"><i class="fa-solid fa-arrows-rotate"></i>
+    </button> {% endcomment %}
 
     <!-- Annotations -->
     <div class=""  style="margin-left: 1.4rem;">
@@ -232,7 +237,7 @@
             </template>
             <li><hr class="dropdown-divider" /></li>
             <template x-if="!read_only">
-            <li><a class="dropdown-item" @click="viewer.state_manager.newSession()" href="#">New session</a></li>
+              <li><a class="dropdown-item" @click="viewer.state_manager.newSession()" href="#">New session</a></li>
             </template>
           </ul>
         </div>    
@@ -251,7 +256,7 @@
     </div>
 
     <!-- AX/COR/SAG viewer -->
-    <div class="no-pointer-events grid-fill" style="z-index:1;">
+    <div class="no-pointer-events grid-fill z-index-1">
       <div class="viewer-grid">
         <template x-for="i in 3">
           <div class="viewport-overlay" :id="'viewport-overlay-'+i" :style="`grid-row: 1; grid-column: ${i}`">
@@ -286,9 +291,9 @@
   <!-- MIP viewer -->
   <div id="aux-container-outer" class="grid-container" style="grid-area: d; background-color: black;"> 
     <div id="aux-container" class="grid-fill"></div>
-    <div x-cloak x-show="viewer && viewer.mip_details === null" class="grid-fill"  style="z-index: 1;"> 
+    <div x-cloak x-show="viewer && viewer.mip_details === null" class="grid-fill z-index-1"> 
       <div style="display: flex;justify-content: center;align-items: center; height:100%; cursor: pointer;">Loading error</div></div>
-    <div x-cloak x-show="true" class="viewport-overlay grid-fill p-2 no-pointer-events" style="z-index: 1;">
+    <div x-cloak x-show="true" class="viewport-overlay grid-fill p-2 no-pointer-events z-index-1">
       <button
       title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer"
          :disabled="should_disable() || read_only" disabled="disabled"
