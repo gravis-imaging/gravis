@@ -28,10 +28,14 @@ class ShadowCase(models.Model):
         def f():
             return prefix+''.join(random.choices(string.digits,k=10))
         return f
-    
+
+    def default_num_m(prefix): 
+        return ShadowCase.default_num("M")
+    def default_num_a(prefix):
+        return ShadowCase.default_num("A")
     patient_name = models.CharField(default=default_pt,max_length=50)
-    mrn = models.CharField(default=default_num("M"),max_length=20)
-    acc = models.CharField(default=default_num("A"),max_length=20)
+    mrn = models.CharField(default=default_num_m,max_length=20)
+    acc = models.CharField(default=default_num_a,max_length=20)
 
     class Meta:
         db_table = "gravis_shadow_case"
