@@ -1,7 +1,7 @@
 import { AnnotationManager } from "./annotations.js"
 import { StateManager } from "./state.js"
 import { MIPManager } from "./mip.js"
-import { doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch, chartToImage, successToast } from "./utils.js"
+import { doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch, chartToImage, successToast, fixUpCrosshairs } from "./utils.js"
 
 
 const SOP_INSTANCE_UID = '00080018';
@@ -295,6 +295,7 @@ class GraspViewer {
         for (const v of this.viewports) {
             v.resetCamera();
         }
+        fixUpCrosshairs();
         this.renderingEngine.renderViewports(this.viewportIds);
     }
     createTools() {
@@ -648,31 +649,29 @@ class GraspViewer {
     toggleRotateMode() {
         const ORIENTATION = cornerstone.CONSTANTS.MPR_CAMERA_VALUES;
         this.rotate_mode = ! this.rotate_mode;
-        if (this.rotate_mode) {
-            this.rotate_cache_cameras = this.viewports.map(v=>v.getCamera())
-        } else {
-            var n = 0;
-            for (var v of this.viewports) {
-                const cached = this.rotate_cache_cameras[n]
-                v.setCamera(cached);
-                v.resetCamera();
-                // if (v.id == "VIEW_AX") {
-                //     v.setCamera({...v.getCamera(), ...cached})//...ORIENTATION.axial, position:cached.position, focalPoint:cached.focalPoint})
-                // }
-                // if (v.id == "VIEW_SAG") {
-                //     v.setCamera({...v.getCamera(), ...cached})//...ORIENTATION.sagittal,  position:cached.position, focalPoint:cached.focalPoint})
-                // }
-                // if (v.id == "VIEW_COR") {
-                //     v.setCamera({...v.getCamera(), ...cached})//...ORIENTATION.coronal,  position:cached.position, focalPoint:cached.focalPoint})
-                // }
+        
+        const mainTools = cornerstone.tools.ToolGroupManager.getToolGroup("STACK_TOOL_GROUP_MAIN");
+        const toolCenter = mainTools.getToolInstance(cornerstone.tools.CrosshairsTool.toolName).toolCenter;
 
-                // v.resetCamera();
-                n++;
+        if (!this.rotate_mode) {
+            for (var v of this.viewports) {
+                const new_camera = JSON.parse(JSON.stringify(v.getCamera()));
+                new_camera.focalPoint = toolCenter;
+                let orientation = { "VIEW_AX": ORIENTATION.axial, "VIEW_SAG":  ORIENTATION.sagittal, "VIEW_COR": ORIENTATION.coronal}[v.id];
+                // First position the the camera relative to the crosshairs center, then fix the pan. 
+                // This is probably not the most direct way to do it, but it seems to work reliably.
+                const pan = v.getPan();
+                const dist = Vector.len(Vector.sub(new_camera.focalPoint, new_camera.position));
+                const position = Vector.add(new_camera.focalPoint,Vector.mul(orientation.viewPlaneNormal,dist));
+                v.setCamera({...new_camera, ...orientation, position});
+                v.setPan(pan);
+                v.render();
             }
+            mainTools._toolInstances.Crosshairs.computeToolCenter(mainTools._toolInstances.Crosshairs._getViewportsInfo())
         }
         // for (const v of this.viewports) {
         // }
-
+        fixUpCrosshairs()
         cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,this.viewportIds);
     }
     async loadFindings() {

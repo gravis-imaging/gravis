@@ -177,7 +177,7 @@ def process_folder(job_id: int, incoming_case: Path):
         lock.free()
     except Exception as e:
         logger.exception(
-            f"Unable to remove lock file {lock_file_path}" in {incoming_case}
+            f"Unable to remove lock file {lock_file_path} in {incoming_case}"
         )  # handle_error
         # new_case.status = Case.CaseStatus.ERROR
         # new_case.case_location = str(error_folder)
@@ -204,7 +204,7 @@ def process_folder(job_id: int, incoming_case: Path):
     job.case = new_case
     job.dicom_set = new_case.dicom_sets.get(origin="Incoming")
     job.save()
-    print(new_case.status)
+    
     logger.info(f"Done Processing {incoming_case}")
     return True
 

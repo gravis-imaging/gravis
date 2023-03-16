@@ -196,16 +196,14 @@ async function viewportToImage(viewport) {
     const svgAsXML = (new XMLSerializer()).serializeToString(cloneElement)
 
     return await encodeSVG(svgAsXML, element.clientWidth*2, element.clientHeight*2)
-    // const svgData = `data:image/svg+xml,${encodeURIComponent(svgAsXML)}`
-    // const img = await loadImage(svgData);
-    // const canvas = document.createElement('canvas');
-    // canvas.width = element.clientWidth;
-    // canvas.height = element.clientHeight;
-    // canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-    // const dataURL = await canvas.toDataURL("image/png", 1.0);
-    // return dataURL;
 }
 
+function fixUpCrosshairs(toolGroup="STACK_TOOL_GROUP_MAIN") {
+    // Sometimes the crosshairs gets out of sync with the actual cameras. 
+    // Not sure if this is a bug in Cornerstone or our own code, but this recalculates the 
+    const mainTools = cornerstone.tools.ToolGroupManager.getToolGroup(toolGroup);
+    mainTools.getToolInstance(cornerstone.tools.CrosshairsTool.toolName).computeToolCenter(mainTools._toolInstances.Crosshairs._getViewportsInfo());
+}
 
 async function chartToImage(chart) {
     const graphWidth = parseFloat(chart.graphDiv.style.width);
@@ -447,4 +445,4 @@ async function successToast(title) {
         title: title,
     });
 }
-export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, Vector, chartToImage, confirmPrompt, inputPrompt, errorPrompt, errorToast, successPrompt,infoPrompt, successToast };
+export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, fixUpCrosshairs, Vector, chartToImage, confirmPrompt, inputPrompt, errorPrompt, errorToast, successPrompt,infoPrompt, successToast };

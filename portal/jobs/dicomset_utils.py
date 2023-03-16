@@ -20,7 +20,7 @@ def register(set_path: str, case, origin, job_id=None, type="") -> Tuple[bool, s
 
     try:
         ds = pydicom.dcmread(str(dcm), stop_before_pixels=True)
-        print(ds.ImageType)
+        print(ds.ImageType) # SECONDARY/DERIVED/TYPE (eg)
         size = len(ds.ImageType)
         if type == "" and size > 2:
             type = ds.ImageType[2]

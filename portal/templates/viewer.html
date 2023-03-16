@@ -85,7 +85,7 @@
             }
           },
           [':disabled']() { 
-            return this.should_disable();
+            return this.should_disable() || this.viewer.rotate_mode;
           },
           ['@keyup.left']:"",
           ['@keyup.right']:"",
@@ -137,10 +137,10 @@
     @click="viewer.resetCameras()"><i class="fa-solid fa-arrows-to-circle"></i>
     </button>
 
-    {% comment %} <button title="Free rotate" class="btn-large btn-viewer ms-5" :class="(viewer && viewer.rotate_mode)? 'btn-danger': 'btn-primary'"
+    <button title="Free rotate" class="btn-large btn-viewer ms-2" :class="(viewer && viewer.rotate_mode)? 'btn-danger': 'btn-primary'"
     :disabled="should_disable" disabled="disabled" 
     @click="viewer.toggleRotateMode()"><i class="fa-solid fa-arrows-rotate"></i>
-    </button> {% endcomment %}
+    </button> 
 
     <!-- Annotations -->
     <div class=""  style="margin-left: 1.4rem;">
@@ -262,11 +262,11 @@
           <div class="viewport-overlay" :id="'viewport-overlay-'+i" :style="`grid-row: 1; grid-column: ${i}`">
             <!-- Note layout of buttons opening/closing to avoid undesired spaces between buttons -->
             <button title="Add ROI annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
-                :disabled="should_disable() || read_only" disabled="disabled" 
+                :disabled="should_disable() || read_only || viewer.rotate_mode" disabled="disabled" 
                 @click="viewer.annotation_manager.addAnnotationToViewport('EllipticalROI',i-1);"><i class="fa-regular fa-circle"></i>
             </button><button
              title="Add probe annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
-                :disabled="should_disable() || read_only" disabled="disabled" 
+                :disabled="should_disable() || read_only || viewer.rotate_mode" disabled="disabled" 
                 @click="viewer.annotation_manager.addAnnotationToViewport('Probe',i-1);"><i class="fa-solid fa-plus"></i>
             </button><button
              title="Reset viewer" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
