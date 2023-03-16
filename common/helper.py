@@ -15,7 +15,10 @@ class FileLock:
     def __init__(self, path_for_lockfile: Path):
         self.lockCreated = True
         self.lockfile = path_for_lockfile
-        self.lockfile.touch(exist_ok=False)
+        try:
+            self.lockfile.touch(exist_ok=False)
+        except:
+            raise Exception(f"Unable to create lock file {path_for_lockfile}")
 
     # Destructor to ensure that the lock file gets deleted
     # if the calling function is left somewhere as result
@@ -24,10 +27,12 @@ class FileLock:
         self.free()
 
     def free(self) -> None:
-        if self.lockCreated:
-            self.lockfile.unlink()
-            self.lockCreated = False
-
+        try:
+            if self.lockCreated:
+                self.lockfile.unlink()
+                self.lockCreated = False
+        except:
+            raise Exception(f"Unable to remove lock file {self.lockfile}.")
 
 def generate_folder_name() -> str:
     new_uuid = str(uuid.uuid4())

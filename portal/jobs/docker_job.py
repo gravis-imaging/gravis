@@ -8,3 +8,4 @@ class DockerJob(WorkJobView):
     @classmethod
     def do_job(cls, job: ProcessingJob):
         do_docker_job(job)
+        return ({},[])
