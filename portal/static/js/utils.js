@@ -202,7 +202,8 @@ function fixUpCrosshairs(toolGroup="STACK_TOOL_GROUP_MAIN") {
     // Sometimes the crosshairs gets out of sync with the actual cameras. 
     // Not sure if this is a bug in Cornerstone or our own code, but this recalculates the 
     const mainTools = cornerstone.tools.ToolGroupManager.getToolGroup(toolGroup);
-    mainTools.getToolInstance(cornerstone.tools.CrosshairsTool.toolName).computeToolCenter(mainTools._toolInstances.Crosshairs._getViewportsInfo());
+    const crosshairsInstance = mainTools.getToolInstance(cornerstone.tools.CrosshairsTool.toolName);
+    crosshairsInstance.computeToolCenter(crosshairsInstance._getViewportsInfo());
 }
 
 async function chartToImage(chart) {
@@ -346,6 +347,7 @@ const scrollViewportToPoint = (viewport, centerPoint) => {
     //         }
     // }
     viewport.setCamera(cam);
+    fixUpCrosshairs();
 }
 
 const CommonSwal = Swal.mixin({

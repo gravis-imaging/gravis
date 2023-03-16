@@ -210,7 +210,7 @@
       </div>    
     </div>      
     <button title="Save session" class="btn-primary btn-large btn-viewer" style="margin-left: 1.4rem;"
-    :disabled="should_disable() || read_only" disabled="disabled" 
+    :disabled="should_disable() || read_only || viewer.rotate_mode" disabled="disabled" 
     @click="let r = await viewer.state_manager.save(); if (r) {$($refs.saved).fadeIn(50); $($refs.saved).fadeOut(800);}"><i class="fa-solid fa-floppy-disk"></i>
     </button>
 

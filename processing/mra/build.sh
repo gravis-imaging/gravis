@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-docker build -t gravis-processing .
+docker build -t gravis-processing-mra .

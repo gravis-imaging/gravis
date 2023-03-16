@@ -463,6 +463,7 @@ class GraspViewer {
             if (voi) {
                 this.viewports[0].setProperties({ voiRange: {lower:voi[0], upper:voi[1] }})
             }
+            fixUpCrosshairs();
         }
         // setVolumesForViewports(renderingEngine, [{ volumeId }], [viewportId]);
         // viewport.render();
@@ -647,30 +648,29 @@ class GraspViewer {
     }
 
     toggleRotateMode() {
-        const ORIENTATION = cornerstone.CONSTANTS.MPR_CAMERA_VALUES;
-        this.rotate_mode = ! this.rotate_mode;
-        
+        this.rotate_mode = !this.rotate_mode;
+        if (this.rotate_mode) { 
+            return;
+        }
+        const ORIENTATION = cornerstone.CONSTANTS.MPR_CAMERA_VALUES;        
+        const orientations = { "VIEW_AX": ORIENTATION.axial, "VIEW_SAG":  ORIENTATION.sagittal, "VIEW_COR": ORIENTATION.coronal}
+
         const mainTools = cornerstone.tools.ToolGroupManager.getToolGroup("STACK_TOOL_GROUP_MAIN");
         const toolCenter = mainTools.getToolInstance(cornerstone.tools.CrosshairsTool.toolName).toolCenter;
 
-        if (!this.rotate_mode) {
-            for (var v of this.viewports) {
-                const new_camera = JSON.parse(JSON.stringify(v.getCamera()));
-                new_camera.focalPoint = toolCenter;
-                let orientation = { "VIEW_AX": ORIENTATION.axial, "VIEW_SAG":  ORIENTATION.sagittal, "VIEW_COR": ORIENTATION.coronal}[v.id];
-                // First position the the camera relative to the crosshairs center, then fix the pan. 
-                // This is probably not the most direct way to do it, but it seems to work reliably.
-                const pan = v.getPan();
-                const dist = Vector.len(Vector.sub(new_camera.focalPoint, new_camera.position));
-                const position = Vector.add(new_camera.focalPoint,Vector.mul(orientation.viewPlaneNormal,dist));
-                v.setCamera({...new_camera, ...orientation, position});
-                v.setPan(pan);
-                v.render();
-            }
-            mainTools._toolInstances.Crosshairs.computeToolCenter(mainTools._toolInstances.Crosshairs._getViewportsInfo())
+        for (var v of this.viewports) {
+            const new_camera = JSON.parse(JSON.stringify(v.getCamera()));
+            new_camera.focalPoint = toolCenter;
+            let orientation = orientations[v.id];
+            // First position the the camera relative to the crosshairs center, then fix the pan. 
+            // This is probably not the most direct way to do it, but it seems to work reliably.
+            const pan = v.getPan();
+            const dist = Vector.len(Vector.sub(new_camera.focalPoint, new_camera.position));
+            const position = Vector.add(new_camera.focalPoint,Vector.mul(orientation.viewPlaneNormal,dist));
+            v.setCamera({...new_camera, ...orientation, position});
+            v.setPan(pan);
+            v.render();
         }
-        // for (const v of this.viewports) {
-        // }
         fixUpCrosshairs()
         cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,this.viewportIds);
     }
