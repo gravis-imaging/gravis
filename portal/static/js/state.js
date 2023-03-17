@@ -1,4 +1,4 @@
-import { confirmPrompt, doFetch, errorPrompt } from "./utils.js";
+import { confirmPrompt, doFetch, errorPrompt, fixUpCrosshairs } from "./utils.js";
 
 class StateManager {
     viewer;
@@ -40,6 +40,7 @@ class StateManager {
         state.cameras.map((c,n)=> {
             this.viewer.viewports[n].setCamera(c);
         })
+        fixUpCrosshairs();
         if ( state.voi && state.voi[this.viewer.dicom_set]) {
             const [ lower, upper ] = state.voi[this.viewer.dicom_set];
             this.viewer.viewports[0].setProperties( { voiRange: {lower,upper}})

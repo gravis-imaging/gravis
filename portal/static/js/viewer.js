@@ -457,7 +457,7 @@ class GraspViewer {
         if ( keepCamera ) {
             for (var c of cams) {
                 if (!c.cam.focalPoint.every( k => k==0)) { // focalPoint is [0,0,0] before any volumes are loaded
-                    c.viewport.setCamera( c.cam )
+                    c.viewport.setCamera( c.cam );
                 }
             }
             if (voi) {
