@@ -1,7 +1,6 @@
 from typing import Tuple
 from .work_job import WorkJobView
 from portal.models import Case, DICOMInstance, DICOMSet, ProcessingJob
-from .docker_utils import do_docker_job
 from loguru import logger
 from pathlib import Path
 from loguru import logger
@@ -13,17 +12,16 @@ from django.db import transaction
 from django.conf import settings
 
 import portal.jobs.dicomset_utils as dicomset_utils
-from portal.models import Case, ProcessingJob
 from common.constants import GravisNames, GravisFolderNames
 import common.helper as helper
 
 class LoadDicomsJob(WorkJobView):
     type = "LoadDICOMSet"
-
+    queue = "cheap"
+    
     @classmethod
     def do_job(cls, job):
         process_folder(job)
-        return ({},[])
 
 def process_folder(job: ProcessingJob):
     incoming_case = Path(job.parameters["incoming_case"])
@@ -49,10 +47,15 @@ def process_folder(job: ProcessingJob):
 
     try:
         error_folder.mkdir(parents=True, exist_ok=False)
-    except Exception as e:
+    except:
         raise Exception(f"Cannot create error folder for {incoming_case}")
 
-    status, new_case = load_json(incoming_case, new_folder, error_folder)
+    try:
+        status, new_case = load_json(incoming_case, new_folder, error_folder)
+    except:
+        process_error_folder(None, incoming_case, error_folder, lock)
+        raise Exception(f"Error loading study.json from {incoming_case}.")
+    
     if not status:
         process_error_folder(new_case, incoming_case, error_folder, lock)
         raise Exception(f"Error loading study.json from {incoming_case}.")
@@ -62,7 +65,7 @@ def process_folder(job: ProcessingJob):
         input_dest_folder.mkdir(parents=True, exist_ok=False)
         processed_dest_folder.mkdir(parents=True, exist_ok=False)
         findings_dest_folder.mkdir(parents=True, exist_ok=False)
-    except Exception as e:
+    except:
         process_error_folder(new_case, incoming_case, error_folder, lock)
         raise Exception(
             f"Cannot create one of the processing folders for {incoming_case}"
@@ -74,18 +77,17 @@ def process_folder(job: ProcessingJob):
         process_error_folder(new_case, incoming_case, error_folder, lock)
         raise Exception(f"Error moving files from {incoming_case} to {input_dest_folder}")
 
-    register_dicom_set_success, error = dicomset_utils.register(
-        str(input_dest_folder), new_case, "Incoming", job.id, "ORI"
-    )
-    if not register_dicom_set_success:
+    try:
+        dicomset_utils.register(
+            str(input_dest_folder), new_case, "Incoming", job.id, "ORI"
+        )
+    except Exception as e:
         process_error_folder(new_case, incoming_case, error_folder, lock)
-        raise Exception(error)
+        raise e
 
     lock.free()
 
     try:
-        # Delete .complete and empty folder from incoming
-        # os.unlink(complete_file_path)
         os.rmdir(incoming_case)
         os.rmdir(error_folder)
     except Exception as e:
@@ -124,8 +126,8 @@ def load_json(incoming_case, new_folder, error_folder) -> Tuple[bool, Case]:
             mrn=payload.get("mrn", ""),
             acc=payload.get("acc", ""),
             case_type=payload.get("case_type", ""),
-            exam_time=payload.get("exam_time", "1900-01-01 00:00 ET"),
-            receive_time=payload.get("receive_time", "1900-01-01 00:00 ET"),
+            exam_time=payload.get("exam_time", "1900-01-01 00:00-05:00"),
+            receive_time=payload.get("receive_time", "1900-01-01 00:00-05:00"),
             twix_id=payload.get("twix_id", ""),
             num_spokes=payload.get("num_spokes", ""),
             case_location=str(new_folder),
@@ -137,13 +139,13 @@ def load_json(incoming_case, new_folder, error_folder) -> Tuple[bool, Case]:
             new_case.save()
             new_case.add_shadow()
     except Exception as e:
-        raise Exception(f"Cannot create case for {error_folder}. Exception: {e}")
+        raise Exception(f"Cannot create case for {error_folder}.")
 
     study_keys = ["patient_name", "mrn", "acc", "case_type", "exam_time", "twix_id", "num_spokes"]
     # TODO check that values for these fields are valid. If not set status to ERROR/.
     for key in study_keys:
         if key not in payload:
-            logger.exception(f"Field {key} is missing from study.json file.")
+            logger.error(f"Field {key} is missing from study.json file.")
             return False, new_case
 
     return True, new_case

@@ -9,7 +9,7 @@ from portal.models import DICOMInstance, DICOMSet
 import pydicom
 
 
-def register(set_path: str, case, origin, job_id=None, type="") -> Tuple[bool, str]:
+def register(set_path: str, case, origin, job_id=None, type=""):
 
     # Register DICOM Set    
     size = len(list(Path(set_path).glob("**/*.dcm")))
@@ -24,11 +24,10 @@ def register(set_path: str, case, origin, job_id=None, type="") -> Tuple[bool, s
         size = len(ds.ImageType)
         if type == "" and size > 2:
             type = ds.ImageType[2]
-    except Exception as e:
-        logger.exception(
+    except:
+        raise Exception(
             f"Exception during dicom file reading. Cannot process incoming instance {str(dcm)}"
         )
-        return (False, e)
 
     try:
         print(str(set_path), origin, type, case, job_id)
@@ -40,9 +39,8 @@ def register(set_path: str, case, origin, job_id=None, type="") -> Tuple[bool, s
             processing_job_id=job_id,
         )
         dicom_set.save()
-    except Exception as e:
-        logger.exception(f"Cannot create a db table for incoming data set {set_path}")
-        return (False, e)
+    except:
+        raise Exception(f"Cannot create a db table for incoming data set {set_path}")
 
     # Register DICOM Instances
     for dcm in Path(set_path).glob("**/*.dcm"):
@@ -51,21 +49,18 @@ def register(set_path: str, case, origin, job_id=None, type="") -> Tuple[bool, s
         try:
             ds = pydicom.dcmread(str(dcm), stop_before_pixels=True)
         except Exception as e:
-            logger.exception(
+            raise Exception(
                 f"Exception during dicom file reading. Cannot process incoming instance {str(dcm)}"
             )
-            return (False, e)
         try:
             instance = DICOMInstance.from_dataset(ds)
             instance.instance_location = str(dcm.relative_to(Path(set_path)))
             instance.dicom_set = dicom_set
             instance.save()
         except Exception as e:
-            logger.exception(
+            raise Exception(
                 f"Exception during DICOMInstance model creation. Cannot process incoming instance {str(dcm)}"
             )
-            return (False, e)
-    return (True, "")
 
 
 def move_files(source_folder: Path, destination_folder: Path):

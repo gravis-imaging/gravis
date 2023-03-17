@@ -28,7 +28,7 @@ def delete_case(request, case):
     case = get_object_or_404(Case, id=case)
 
     # If someone else is viewing this case, don't mark for deletion.
-    if not user_opened_case(case) and case.status == Case.CaseStatus.VIEWING:
+    if not user_opened_case(request,case) and case.status == Case.CaseStatus.VIEWING:
         return HttpResponseForbidden()
 
     case.status = Case.CaseStatus.DELETE

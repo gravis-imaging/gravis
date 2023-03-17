@@ -14,8 +14,8 @@ def do_job(View,id):
 
 @method_decorator(login_required, name='dispatch')
 class WorkJobView(View):
-    type="GENERIC"
-
+    type = "GENERIC"
+    queue = "default"
     def get(self, request, *args, **kwargs):
         try:
             job = ProcessingJob.objects.get(id=request.GET["id"])
@@ -76,8 +76,15 @@ class WorkJobView(View):
         try:
             if job.dicom_set is None and "source_type" in job.parameters:
                 job.dicom_set = DICOMSet.objects.get(type=job.parameters["source_type"], processing_job__id = job.parameters["source_job"])
-            json_result, dicom_sets = cls.do_job(job)
-            job.json_result = json_result
+
+            job_result =  cls.do_job(job)
+            if job_result is not None:
+                job.json_result = job_result[0]
+                dicom_sets = job_result[1]
+            else:
+                job.json_result = {}
+                dicom_sets = []
+
             job.status = "SUCCESS"
         except Exception as e:
             logger.exception(f"Job failure {job}")
@@ -102,7 +109,7 @@ class WorkJobView(View):
                 case = case,
                 parameters=parameters)
             job.save()
-            rq_result = django_rq.enqueue(
+            rq_result = django_rq.get_queue(cls.queue).enqueue(
                 do_job,
                 args = (cls,job.id),
                 depends_on = depends_on

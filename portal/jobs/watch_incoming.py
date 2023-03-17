@@ -97,7 +97,11 @@ def delete_cases():
 def watch():
     logger.info("Incoming watcher booted.")
     while True:
-        sleep(settings.INCOMING_SCAN_INTERVAL)
+        try:
+            sleep(settings.INCOMING_SCAN_INTERVAL)
+        except KeyboardInterrupt:
+            logger.info("Received keyboard interrupt, exiting.")
+            break
         try:
             scan_incoming_folder()
         except:

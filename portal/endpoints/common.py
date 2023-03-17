@@ -12,7 +12,8 @@ def json_load_body(request):
 cross = (lambda x,y:np.cross(x,y)) # fix type inference bug
 
 def user_opened_case(request, case):
-    case = Case.objects.get(id=case)
+    if not type(case) is Case:
+        case = Case.objects.get(id=case)
     return case.status == Case.CaseStatus.VIEWING and case.viewed_by == request.user
 
 def get_im_orientation_mat(metadata):

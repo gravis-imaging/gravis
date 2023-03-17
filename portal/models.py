@@ -137,7 +137,7 @@ class Case(models.Model):
         }
 
     def __str__(self):
-        return f"{self.id} ("+"; ".join([f"{x}: {getattr(self,x)}" for x in "patient_name mrn acc".split()])+")"
+        return f"{self.id} ("+"; ".join([f"{x}: {getattr(self,x)}" for x in "patient_name mrn acc status".split()])+")"
 
     @classmethod
     def get_user_viewing(cls,user):
