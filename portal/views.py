@@ -154,6 +154,7 @@ class SubmitForm(forms.Form):
      num_spokes = forms.IntegerField(label='Num spokes')
      type = forms.ChoiceField(choices=["GRASP MRA", "GRASP Onco"])
 
+
 def file_browser(request):
     form = SubmitForm()
     context = {"form":form}

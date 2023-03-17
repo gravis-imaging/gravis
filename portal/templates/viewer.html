@@ -433,7 +433,7 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
     function handler(confirmed) {
         return (async () => {
         try {
-          targetURL = "api/case/{{current_case.id}}/status/" + (confirmed? 'ready' : 'complete');
+          targetURL = "/api/case/{{current_case.id}}/status/" + (confirmed? 'ready' : 'complete');
           await doFetch(targetURL);
           window.open("/", "_self");        
         } catch (e) {

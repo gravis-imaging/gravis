@@ -604,3 +604,15 @@ textarea.select2-search__field {
 .list-group .list-tag-item {
     color: #FFF !important; 
 }
+
+.dropdown-menu {
+    border: 1px solid #888;
+}
+
+.filebrowser_entry {
+    cursor: pointer;
+}
+
+.filebrowser_entry:hover {
+    text-decoration: underline;
+}

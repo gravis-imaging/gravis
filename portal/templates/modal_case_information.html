@@ -82,7 +82,7 @@
 // the information
 async function showCaseInformation(case_id) {
     try {
-        const result = await doFetch(`/api/case/${case_id}`)
+        const result = await doFetch(`/api/case/${case_id}/`, {} , "GET")
         displayReceivedCaseInformation(result);
     } catch(e) {
         console.error(e);
