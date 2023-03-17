@@ -187,6 +187,21 @@
                         case_data_table.ajax.reload();
                     }
                 },                
+                {
+                    extend: 'spacer',
+                    style: 'empty'
+                },
+                {
+                    extend: 'spacer',
+                    style: 'empty'
+                },                                
+                {
+                    text: '<i class="fa-solid fa-upload"></i>',
+                    titleAttr: 'Import Case',
+                    action: function (e, dt, node, config) {
+                        window.open("/file_browser/", "_self");  
+                    }
+                },                
             ],
             initComplete: () => {             
                 $("#tablewrapper").show();
