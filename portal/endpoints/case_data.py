@@ -50,20 +50,20 @@ def get_case(request, case):
 @require_POST
 @transaction.atomic
 def set_case_status(request, case, new_status):
-    case = get_object_or_404(Case, id=case)
+    case_item = get_object_or_404(Case, id=case)
 
     # Don't set the case status unless this user opened it or is staff
-    if not (user_opened_case(case) or request.user.is_staff):
+    if not (user_opened_case(request, case) or request.user.is_staff):
         return HttpResponseForbidden()
 
-    case.viewed_by = None
+    case_item.viewed_by = None
 
     if new_status == "ready":
-        case.status = Case.CaseStatus.READY
-        case.save()
+        case_item.status = Case.CaseStatus.READY
+        case_item.save()
     elif new_status == "complete":
-        case.status = Case.CaseStatus.COMPLETE
-        case.save()
+        case_item.status = Case.CaseStatus.COMPLETE
+        case_item.save()
     else:
         return HttpResponseBadRequest()
 
