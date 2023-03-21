@@ -1,6 +1,6 @@
 from .work_job import WorkJobView
 from portal.models import Case, DICOMInstance, DICOMSet, ProcessingJob
-from .docker_utils import do_docker_job
+
 import portal.jobs.dicomset_utils as dicomset_utils
 from loguru import logger
 from pathlib import Path

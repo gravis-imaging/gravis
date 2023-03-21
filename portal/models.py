@@ -25,13 +25,11 @@ class ShadowCase(models.Model):
         return "PATIENT^"+''.join(random.choices(string.ascii_uppercase,k=3))
     
     def default_num(prefix):
-        def f():
-            return prefix+''.join(random.choices(string.digits,k=10))
-        return f
+        return prefix+''.join(random.choices(string.digits,k=10))
 
-    def default_num_m(prefix): 
+    def default_num_m(): 
         return ShadowCase.default_num("M")
-    def default_num_a(prefix):
+    def default_num_a():
         return ShadowCase.default_num("A")
     patient_name = models.CharField(default=default_pt,max_length=50)
     mrn = models.CharField(default=default_num_m,max_length=20)

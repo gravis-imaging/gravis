@@ -18,16 +18,17 @@ def register(set_path: str, case, origin, job_id=None, type=""):
 
     dcm = list(Path(set_path).glob("**/*.dcm"))[0]
 
-    try:
-        ds = pydicom.dcmread(str(dcm), stop_before_pixels=True)
-        print(ds.ImageType) # SECONDARY/DERIVED/TYPE (eg)
-        size = len(ds.ImageType)
-        if type == "" and size > 2:
-            type = ds.ImageType[2]
-    except:
-        raise Exception(
-            f"Exception during dicom file reading. Cannot process incoming instance {str(dcm)}"
-        )
+    if type == "":
+        try:
+            ds = pydicom.dcmread(str(dcm), stop_before_pixels=True)
+            imageType = ds.get("ImageType",[])
+            print(imageType) # SECONDARY/DERIVED/TYPE (eg)
+            if len(imageType) > 2:
+                type = ds.ImageType[2]
+        except:
+            raise Exception(
+                f"Exception during dicom file reading. Cannot process incoming instance {str(dcm)}"
+            )
 
     try:
         print(str(set_path), origin, type, case, job_id)
