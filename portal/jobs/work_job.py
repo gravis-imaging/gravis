@@ -11,7 +11,17 @@ from loguru import logger
 def do_job(View,id):
     View._do_job(id)
 
+def report_failure(job, connection, type, value, traceback):
+    job = ProcessingJob.objects.get(id=job.args[1])
+    job.status = "FAILED"
+    job.error_description = str(value)
+    logger.error(f"Job failure {job}")
 
+    if job.case is not None and job.case.status == Case.CaseStatus.PROCESSING:
+        job.case.status = Case.CaseStatus.ERROR
+        job.case.save()
+    job.save()
+    
 @method_decorator(login_required, name='dispatch')
 class WorkJobView(View):
     type = "GENERIC"
@@ -73,56 +83,56 @@ class WorkJobView(View):
     @classmethod
     def _do_job(cls,id):
         job = ProcessingJob.objects.get(id=id)
-        try:
-            if job.dicom_set is None and "source_type" in job.parameters:
-                job.dicom_set = DICOMSet.objects.get(type=job.parameters["source_type"], processing_job__id = job.parameters["source_job"])
+        if job.dicom_set is None and "source_type" in job.parameters:
+            job.dicom_set = DICOMSet.objects.get(type=job.parameters["source_type"], processing_job__id = job.parameters["source_job"])
 
-            job_result =  cls.do_job(job)
-            if job_result is not None:
-                job.json_result = job_result[0]
-                dicom_sets = job_result[1]
-            else:
-                job.json_result = {}
-                dicom_sets = []
+        job_result =  cls.do_job(job)
+        if job_result is not None:
+            job.json_result = job_result[0]
+            dicom_sets = job_result[1]
+        else:
+            job.json_result = {}
+            dicom_sets = []
 
-            job.status = "SUCCESS"
-        except Exception as e:
-            logger.exception(f"Job failure {job}")
-            job.status = "FAILED"
-            job.error_description = str(e)
-            job.save()
-            raise e from None
+        job.status = "SUCCESS"
+
         for d in dicom_sets:
             d.processing_job = job
             d.save()
 
         job.save()
 
+
     @classmethod
     def enqueue_work(cls, case, dicom_set=None, *, docker_image=None, depends_on=None, parameters={}):
         try:
             job = ProcessingJob(
-                status="CREATED",
+                status = "CREATED",
                 docker_image = docker_image,
                 category = cls.type, 
                 dicom_set = dicom_set,
                 case = case,
-                parameters=parameters)
+                parameters = parameters)
             job.save()
             rq_result = django_rq.get_queue(cls.queue).enqueue(
                 do_job,
                 args = (cls,job.id),
-                depends_on = depends_on
-                # job_timeout=60*60*4,
+                depends_on = depends_on,
+                on_failure = report_failure,
+                job_timeout = 60*60*4,
                 # on_success=report_success,
-                # on_failure=report_failure,
                 ) 
             job.rq_id = rq_result.id
             job.save()
             return job, rq_result
         except Exception as e:
-            case.status = Case.CaseStatus.ERROR
-            case.save()
-            raise Exception(
-                f"Exception creating a new {cls.type} processing job for case {case}"
-            )
+            if case is not None:
+                case.status = Case.CaseStatus.ERROR
+                case.save()
+                raise Exception(
+                    f"Exception creating a new {cls.type} processing job for case {case}"
+                )
+            else:
+                raise Exception(
+                    f"Exception creating a new {cls.type} processing job with parameters{parameters}"
+                )

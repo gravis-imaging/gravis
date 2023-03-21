@@ -31,6 +31,7 @@ urls = [
     url_path("api/tags", tags.all_tags),
     url_path("api/tags/update", tags.update_tags),
 
+    url_path("api/filebrowser/submit/<str:name>/<path:path>", filebrowser.submit_directory),
     url_path("api/filebrowser/case_directory/<str:name>/<path:path>", filebrowser.case_directory),
     url_path("api/filebrowser/list/", filebrowser.list_directory),
     url_path("api/filebrowser/list", filebrowser.list_directory),

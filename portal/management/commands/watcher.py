@@ -1,3 +1,4 @@
+import sys
 from django.core.management.base import BaseCommand
 
 from portal.jobs import watch_incoming

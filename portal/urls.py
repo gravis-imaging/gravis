@@ -14,7 +14,7 @@ urlpatterns = [
     path("config/", views.config, name="config"),
     path("media/<path:path>", views.serve_media),
     path("viewer/<str:case_id>", views.viewer, name="viewer"),
-    path("file_browser/", views.file_browser, name="file_browser"),
+    path("filebrowser/", views.file_browser, name="file_browser"),
     *endpoints.urls,
     *jobs.urls,
     *staticfiles_urlpatterns()

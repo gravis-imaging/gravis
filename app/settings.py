@@ -213,3 +213,5 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+BROWSER_BASE_DIRS = []

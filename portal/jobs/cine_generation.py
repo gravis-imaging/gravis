@@ -71,7 +71,11 @@ class GeneratePreviewsJob(WorkJobView):
     @classmethod
     def do_job(cls, job: ProcessingJob):
         instances = job.dicom_set.instances.all()
-        im_orientation_patient = np.asarray(json.loads(instances[0].json_metadata)["00200037"]["Value"]).reshape((2,3))
+        first_instance_metadata = json.loads(instances[0].json_metadata)
+        if "00200037" not in first_instance_metadata:
+            raise Exception("ImageOrientationPatient tag missing from dataset. This may not be a volume at all.")
+        
+        im_orientation_patient = np.asarray(first_instance_metadata["00200037"]["Value"]).reshape((2,3))
         im_orientation_mat = np.vstack((im_orientation_patient,[cross(*im_orientation_patient)]))
         z_axis = im_orientation_mat[2]
         # views = cls.calc_views_for_set(im_orientation_patient)

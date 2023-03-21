@@ -42,16 +42,16 @@ def scan_incoming_folder():
         else:
             raise Exception(f"Incoming folder {incoming} does not exist.")
 
-        for incoming_case in list(folder_paths):
+        for incoming_folder in list(folder_paths):
             try:
                 # Delete .complete so the folder will not be included in another job
-                complete_file_path = Path(incoming_case) / f
+                complete_file_path = Path(incoming_folder) / f
                 os.unlink(complete_file_path)
             except Exception as e:
                 raise Exception(
-                    f"Failed to delete .complete from {incoming_case}."
+                    f"Failed to delete .complete from {incoming_folder}."
                 )
-            LoadDicomsJob.enqueue_work(None,parameters=dict(incoming_case=str(incoming_case)))
+            LoadDicomsJob.enqueue_work(None,parameters=dict(incoming_folder=str(incoming_folder)))
     except Exception as e:
         logger.exception(
             f"Problem processing incoming folder {str(incoming)}. Error: {e}."

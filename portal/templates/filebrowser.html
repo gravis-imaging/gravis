@@ -52,7 +52,7 @@
 <div class="row mt-4">
     <div x-data="browser" style="margin-left: 1em; margin-right: 1em;">
         <template x-if="mode == 'case_selected'">
-            <form action="" method="post">
+            <form :action="`/api/filebrowser/submit${encodeURIComponent(path)}`" method="post">
                 {% csrf_token %}
                 {% for field in form %}
                 {% if field.field.widget.input_type != "select" %}
@@ -63,10 +63,10 @@
                     </div>
                 {% else %}
                 <div class="select-wrapper">
-                    <select class="form-control">
+                    <select class="form-control" name="type">
                     <option value="" disabled>{{field.name | capfirst}}</option>
                     {% for choice in field.field.choices %}
-                        <option value="{{choice}}">{{choice}}</option>
+                        <option value="{{choice.1}}">{{choice.1}}</option>
                     {% endfor %}
                     </select>
                 </div>

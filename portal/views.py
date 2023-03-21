@@ -13,6 +13,8 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from django import forms
 
+from portal.endpoints.filebrowser import SubmitForm
+
 # from django.contrib.staticfiles import views as static_views
 
 from .models import Case, DICOMInstance, Tag, UserProfile
@@ -144,15 +146,6 @@ def viewer(request, case_id):
         "read_only": "true" if read_only else "false"
     }
     return render(request, "viewer.html", context)
-
-
-class SubmitForm(forms.Form):
-     patient_name = forms.CharField(label='Patient Name', max_length=100)
-     mrn = forms.CharField(label='MRN', max_length=100)
-     acc = forms.CharField(label='Accession', max_length=100)
-     study_description = forms.CharField(label='Study Description', max_length=100,disabled=True)
-     num_spokes = forms.IntegerField(label='Num spokes')
-     type = forms.ChoiceField(choices=["GRASP MRA", "GRASP Onco"])
 
 
 def file_browser(request):
