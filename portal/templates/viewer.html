@@ -134,12 +134,12 @@
     
     <button title="Reset viewers" class="btn-primary btn-large btn-viewer ms-5"
     :disabled="should_disable" disabled="disabled" 
-    @click="viewer.resetCameras()"><i class="fa-solid fa-arrows-to-circle"></i>
+    @click="viewer.resetCameras()"><i class="fa-solid fa-location-crosshairs"></i>
     </button>
 
-    <button title="Free rotate" class="btn-large btn-viewer ms-2" :class="(viewer && viewer.rotate_mode)? 'btn-danger': 'btn-primary'"
+    <button title="Toggle free MPR rotation" :class="(viewer && viewer.rotate_mode)? 'btn-danger': 'btn-primary'" class="btn-large btn-viewer ms-2" 
     :disabled="should_disable" disabled="disabled" 
-    @click="viewer.toggleRotateMode()"><i class="fa-solid fa-arrows-rotate"></i>
+    @click="viewer.toggleRotateMode()"><i :class="(viewer && viewer.rotate_mode)? 'fa-solid fa-lock-open': 'fa-solid fa-lock'"></i>
     </button> 
 
     <!-- Annotations -->
@@ -408,13 +408,13 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
     <div>
       <h5 class="mb-3"><strong>Viewers</strong></h5>
       <table>
-        <tr><td><strong>Scrolling</strong></td><td>&minus; mouse wheel</td></tr>
-        <tr><td><strong>Windowing</strong></td><td>&minus; CTRL + left button</td></tr>
-        <tr><td><strong>Panning</strong></td><td>&minus; ALT + left button</td></tr>
-        <tr><td><strong>Zooming</strong></td><td>&minus; ALT + right button</td></tr>
-        <tr><td><strong>Centering</strong></td><td>&minus; SHIFT + left button</td></tr>
-        <tr><td><strong>Fullscreen</strong></td><td>&minus; double click</td></tr>
-        <tr><td><strong>Move Elliptical ROI</strong></td><td>&minus; SHIFT + drag</td></tr>
+        <tr><td><strong>Scrolling</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;Mouse wheel</td></tr>
+        <tr><td><strong>Windowing</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;CTRL + left button</td></tr>
+        <tr><td><strong>Panning</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;ALT + left button</td></tr>
+        <tr><td><strong>Zooming</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;ALT + right button</td></tr>
+        <tr><td><strong>Centering</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;SHIFT + left button</td></tr>
+        <tr><td><strong>Move ROI</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;SHIFT + drag</td></tr>
+        <tr><td><strong>Fullscreen</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;Double click</td></tr>
       </table>
     </div>
   </div>
