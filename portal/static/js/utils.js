@@ -386,8 +386,8 @@ async function errorPrompt(text,title="Error") {
     return await CommonSwal.fire({
         icon: "error",
         title: title,
-        text: text,
-        iconColor: "#FFF"
+        iconColor: "#FFF",
+        html: `<p>${text}</p>`
     })
 }
 

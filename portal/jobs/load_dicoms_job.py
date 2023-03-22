@@ -55,7 +55,7 @@ def process_folder(job: ProcessingJob):
             lock = helper.FileLock(lock_file_path)
         
         if override_json is not None:
-            new_case = case_from_payload(override_json,new_folder)
+            new_case = case_from_payload(override_json, new_folder)
         else:
             try:
                 status, new_case = load_json(incoming_folder, new_folder, error_folder)
@@ -88,6 +88,11 @@ def process_folder(job: ProcessingJob):
                 shutil.copytree(incoming_folder, input_dest_folder)
             except: 
                 raise Exception(f"Error copying files from {incoming_folder} to {input_dest_folder}")
+        if override_json is not None:
+            study_json = input_dest_folder / "study.json"
+            study_json.touch()
+            with open(study_json,"wt") as f:
+                json.dump(override_json, f)
 
         dicomset_utils.register(
             str(input_dest_folder), new_case, "Incoming", job.id, "ORI"

@@ -10,35 +10,81 @@
     document.addEventListener("alpine:init", () => {
       Alpine.data("browser", () => ({
         listings: [],
-        path: "",
+        path: "/",
         navigating: false,
         mode: "navigator",
         init: async function() {
-            this.navigate()
+            this.navigate("/");
         },
         navigate: async function(location="") {
             if (this.navigating) return;
             this.navigating = true;
-            this.path = location;
-            const result = (await doFetch(`/api/filebrowser/list${encodeURIComponent(location)}`))
-            this.listings = result.listing;
-            this.up_path = result.up_path;
-            this.navigating = false;
+            try {
+                this.path = location;
+                const result = (await doFetch(`/api/filebrowser/list${encodeURIComponent(location)}`))
+                this.listings = result.listing;
+                this.up_path = result.up_path;
+                this.num_dicoms = result.num_dicoms;
+            } catch (e) {
+                await errorPrompt("Failed to list directory.");
+                console.error(e);
+            } finally {
+                this.navigating = false;
+            }
         },
         nav_up: async function() {
             this.navigate(this.up_path);
         },
         select_case: async function() {
-            const result = (await doFetch(`/api/filebrowser/case_directory${encodeURIComponent(this.path)}`));
-            const case_info = result.case_info;
-            this.mode = 'case_selected';
-            await this.$nextTick();
-            document.getElementById('id_patient_name').value = case_info.patient_name;
-            document.getElementById('id_mrn').value = case_info.patient_id;
-            document.getElementById('id_acc').value = case_info.accession;
-            document.getElementById('id_study_description').value = case_info.study_description;
-            await this.$nextTick();
-            document.querySelectorAll('.form-outline').forEach(x => new mdb.Input(x).init());
+            try {
+                const result = (await doFetch(`/api/filebrowser/case_directory${encodeURIComponent(this.path)}`));
+                const case_info = result.case_info;
+                this.mode = 'case_selected';
+                await this.$nextTick();
+                document.getElementById('id_patient_name').value = case_info.patient_name;
+                document.getElementById('id_mrn').value = case_info.patient_id;
+                document.getElementById('id_acc').value = case_info.acc;
+                document.getElementById('id_mrn').value = case_info.mrn || "";
+                document.getElementById('id_num_spokes').value = case_info.num_spokes || "";
+                document.getElementById('id_case_type').value = case_info.case_type || "Series Viewer";
+                document.getElementById('id_study_description').value = case_info.study_description;
+                await this.$nextTick();
+                document.querySelectorAll('.form-outline').forEach(x => new mdb.Input(x).init());
+            } catch (e) {
+                await errorPrompt("Error preparing case to submit.");
+                console.error(e);
+                this.mode = 'navigator';
+            }
+        },
+        submit: async function() {
+            try {
+                this.$event.preventDefault(); 
+                const form = this.$refs.case_form;
+                const result = await fetch(form.action,{method:'post', body: new FormData(form)});
+                if (!result.ok) {
+                    const text = await result.text();
+                    console.log(JSON.parse(text));
+                    try {
+                        const errors = JSON.parse(text).validation_errors;
+                        if (errors) {
+                            const err_str = Object.entries(errors).map( ([k,v])=>`${k}: ${v.join()}`).join("<br/>")
+                            await errorPrompt(err_str, "Validation error");
+                        } else {
+                            await errorPrompt(text);
+                        }
+                    } catch(e) {
+                        console.log(e)
+                        await errorPrompt(text);
+                    }
+                } else {
+                    await successPrompt("Case submitted!");
+                    this.mode = "navigator";
+                    this.nav_up();
+                }
+            } catch (e) {
+                await errorPrompt("Error submitting case.");
+                console.error(e);
+            }
         }
       }));
     });
@@ -50,9 +96,9 @@
     </div>
 </div>
 <div class="row mt-4">
-    <div x-data="browser" style="margin-left: 1em; margin-right: 1em;">
+    <div x-data="browser" style="padding-left: 3em; padding-right: 3em;">
         <template x-if="mode == 'case_selected'">
-            <form :action="`/api/filebrowser/submit${encodeURIComponent(path)}`" method="post">
+            <form :action="`/api/filebrowser/submit${encodeURIComponent(path)}`" method="post" x-ref="case_form" >
                 {% csrf_token %}
                 {% for field in form %}
                 {% if field.field.widget.input_type != "select" %}
@@ -63,7 +109,7 @@
                     </div>
                 {% else %}
                 <div class="select-wrapper">
-                    <select class="form-control" name="type">
+                    <select class="form-control" name="{{field.name}}" id="{{ field.id_for_label }}">
                     <option value="" disabled>{{field.name | capfirst}}</option>
                     {% for choice in field.field.choices %}
                         <option value="{{choice.1}}">{{choice.1}}</option>
@@ -73,23 +119,25 @@
             
                 {% endif %}
                 {% endfor %}
-                <input class="btn-primary btn-lg btn-viewer" type="submit" value="Submit">
-                <button class="btn-primary btn-lg btn-viewer" @click="mode = 'navigator'">Back</button>
+                <div class="py-2">
+                    <button class="btn-primary btn btn-viewer btn-viewer" @click="submit()">Submit </button>
+                    <button class="btn-primary btn btn-viewer btn-viewer" @click="mode = 'navigator'">Back</button>
+                </div>
             </form>
             
         </template>
         <template x-if="mode == 'navigator'">
             <div>
-            <h4 class="mb-3">Path:&nbsp;&nbsp;<span x-text="path" style="word-break: break-all"></span></h4>
-            <button class="btn-primary btn btn-viewer px-2 mb-3" @click="nav_up"><i class="fa-solid fa-arrow-up"></i>&nbsp;&nbsp;Up</button>
+            <h4 class="mb-3"><span x-text="path" style="word-break: break-all"></span></h4>
+            <button class="btn-primary btn btn-viewer px-2 mb-3" @click="nav_up"><i class="fa-solid fa-arrow-turn-up fa-flip-horizontal"></i>&nbsp;&nbsp;Up</button>
             <div style="background-color: #444; border-radius: 4px;" class="px-3 py-2 me-5">
                 <div style="overflow-y: auto; height: 50vh;">
                 <template x-for="l of listings">
-                    <div x-text="l.name" @click="if (l.is_dir) navigate('/'+l.location)" class="filebrowser_entry"></div>
+                    <div x-text="`${l.name}${l.is_dir? '/':''}`" @click="if (l.is_dir) navigate('/'+l.location)" :class="l.is_dir? 'filebrowser_entry':''"></div>
                 </template>
                 </div>
             </div>
-            <button class="btn-primary btn btn-viewer mt-4" @click="select_case"><i class="fa-solid fa-upload"></i>&nbsp;&nbsp;Import Folder</button>
+            <button class="btn-primary btn btn-viewer mt-4" @click="select_case" :disabled=""><i class="fa-solid fa-upload"></i>&nbsp;&nbsp;Import Folder</button>
         </template>
     </div>
 </div>

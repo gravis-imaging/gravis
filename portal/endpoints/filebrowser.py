@@ -34,7 +34,7 @@ class SubmitForm(forms.Form):
      acc = forms.CharField(label='Accession', max_length=100)
      study_description = forms.CharField(label='Study Description', max_length=100,disabled=True, required=False)
      num_spokes = forms.IntegerField(label='Num spokes')
-     type = forms.ChoiceField(choices=[("GRASP MRA","GRASP MRA"), ("GRASP Onco","GRASP Onco")])
+     case_type = forms.ChoiceField(choices=[("GRASP MRA","GRASP MRA"), ("GRASP Onco","GRASP Onco"),("Series Viewer","Series Viewer")])
 
 
 
@@ -61,9 +61,19 @@ def case_directory(request, name, path):
     except:
         return HttpResponseBadRequest()
     
-    first = next(full_path.glob("*.dcm"))
+    try:
+        first = next(full_path.glob("*.dcm"))
+    except:
+         return JsonResponse(dict(case_info=dict(patient_name="",acc="", patient_id="",study_description="")))
     ds = pydicom.dcmread(first,defer_size ='1 KB', stop_before_pixels=True)
-    return JsonResponse(dict(case_info=dict(patient_name=str(ds.PatientName),accession=str(ds.AccessionNumber), patient_id=str(ds.PatientID),study_description=str(ds.StudyDescription))))
+
+    if (study_json := full_path / "study.json").exists():
+        case_info = json.load(study_json.open("r"))
+        case_info["study_description"] = ds.StudyDescription
+    else:
+        case_info=dict(patient_name=str(ds.get("PatientName","")),acc=str(ds.get("AccessionNumber","")), patient_id=str(ds.get("PatientID","")),study_description=str(ds.get("StudyDescription","")))
+
+    return JsonResponse(dict(case_info = case_info))
     
 @login_required
 def submit_directory(request, name, path):
@@ -74,14 +84,14 @@ def submit_directory(request, name, path):
     form = SubmitForm(request.POST)
         # check whether it's valid:
     if not form.is_valid():
-        return HttpResponseBadRequest(json.dumps(form.errors))
+        return HttpResponseBadRequest(json.dumps(dict(validation_errors=form.errors)))
 
     study_json = dict(
         patient_name=form.cleaned_data["patient_name"],
         mrn=form.cleaned_data["mrn"],
         acc=form.cleaned_data["acc"],
         num_spokes=form.cleaned_data["num_spokes"],
-        case_type=form.cleaned_data["type"],
+        case_type=form.cleaned_data["case_type"],
         status="",
         reader="",
         received="1900-01-01 00:00-05:00",
@@ -128,6 +138,10 @@ def list_directory(request, name=None, path=None):
         else:
             name += dicoms[-1]["name"] + f" ({len(dicoms)})"
         response.append(dict(is_dir=False, location="", name=name))
+
+    if (p := full_path / "study.json").exists():
+        response.append(dict(is_dir=False, location =  str( top_dir_name / p.relative_to(top_dir)),name='study.json', num_dicoms = len(dicoms) ))
+
     up_path = "/"+str((top_dir_name / path).parent)
     if up_path == "/.":
         up_path = "/"
