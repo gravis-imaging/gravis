@@ -231,13 +231,18 @@ select,.select-wrapper::after {
 
 #casetable_length > label > select {
     background-color: transparent;
-    color: #fff;
+    color: #FFF;
 }
 
 #casetable_length > label > select option {
     background-color: #262626;
-    color: white;
+    color: #757575;
 }
+
+.dataTables_length {
+    color: #757575;
+}
+
 
 .browserbuttons button
 {
@@ -279,6 +284,10 @@ select,.select-wrapper::after {
 
 .browsertoolbar {
     margin-bottom: 4px;
+}
+
+.browserfooterbar {
+    margin-top: 4px;
 }
 
 #casetable.table>:not(caption) > * > * {
@@ -616,3 +625,4 @@ textarea.select2-search__field {
 .filebrowser_entry:hover {
     text-decoration: underline;
 }
+
