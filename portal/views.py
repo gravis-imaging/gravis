@@ -107,8 +107,8 @@ def user(request):
 
 @login_required
 def config(request):
-    tags = [(tag.name, tag.case_set.all().count(), [case.to_dict() for case in tag.case_set.all()]) 
-                for tag in Tag.objects.all()]
+    tags = [(tag.name, tag.case_set.all().count(), [case.to_dict(request.user.profile.privacy_mode) for case in tag.case_set.all()]) for tag in Tag.objects.all()]
+    
     # sort tags by number of occurrences in cases
     tags.sort(key=lambda a: a[1])
     context = {

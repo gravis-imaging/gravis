@@ -28,14 +28,11 @@
 <script type="text/javascript">
     
 function showTagCasesInformation(cases_list) {
-
     let tag_cases_table_el = document.getElementById('tag_cases_table');
+    
     try {        
-        let rowCount = tag_cases_table_el.rows.length;
-
-        for(let i = rowCount - 1; i >= 1; i--) {
-            let row = tag_cases_table_el.rows[i];
-            tag_cases_table_el.deleteRow(i);
+        while (tag_cases_table_el.rows.length > 1) {
+            tag_cases_table_el.deleteRow(1);
         }
     }
     catch(e) {
@@ -46,16 +43,16 @@ function showTagCasesInformation(cases_list) {
         var newRow = tag_cases_table_el.insertRow();
 
         var newCell = newRow.insertCell();
-        newCell.innerHTML="<tr><td>" + cases_list[i]["id"] + "</td></tr>";
+        newCell.innerHTML = cases_list[i]["id"];
 
         newCell = newRow.insertCell();
-        newCell.innerHTML="<tr><td>" + cases_list[i]["patient_name"] + "</td></tr>";
+        newCell.innerHTML = cases_list[i]["patient_name"];
 
         newCell = newRow.insertCell();
-        newCell.innerHTML="<tr><td>" + cases_list[i]["mrn"] + "</td></tr>";
+        newCell.innerHTML = cases_list[i]["mrn"];
 
         newCell = newRow.insertCell();
-        newCell.innerHTML="<tr><td>" + cases_list[i]["acc"] + "</td></tr>";
+        newCell.innerHTML= cases_list[i]["acc"];
     }
 
     const myModalEl = document.getElementById('tag_cases_details_modal');

@@ -1,90 +1,92 @@
 {% extends 'portal.html' %}
 
 {% block content %}
-<div class="row mb-3">
-  <div class="col">
-    <h2><i class="fas fa-angle-double-right text-primary"></i>&nbsp;&nbsp;Configuration</h2>
-  </div>
-</div>
-
-<div class="row">
-  <div class="col-12 col-md-2 pb-4">
-    <!-- Tab navs -->
-    <div class="nav flex-column nav-pills text-center" id="v-pills-tab" role="tablist" aria-orientation="vertical">
-      <a class="nav-link active" id="v-pills-home-tab" data-mdb-toggle="pill" href="#v-pills-home" role="tab"
-        aria-controls="v-pills-home" aria-selected="true"><i class="fas fa-cog"></i>&nbsp;&nbsp;General</a>
-      <a class="nav-link" id="v-pills-status-tab" data-mdb-toggle="pill" href="#v-pills-status" role="tab"
-        aria-controls="v-pills-status" aria-selected="false"><i class="fas fa-power-off"></i>&nbsp;&nbsp;System Status</a>
-      <a class="nav-link" id="v-pills-accounts-tab" data-mdb-toggle="pill" href="#v-pills-accounts" role="tab"
-        aria-controls="v-pills-accounts" aria-selected="false"><i class="fas fa-user-friends"></i>&nbsp;&nbsp;Accounts</a>
-      <a class="nav-link" id="v-pills-tags-management-tab" data-mdb-toggle="pill" href="#v-pills-tags-management" role="tab"
-        aria-controls="v-pills-tags-management" aria-selected="false"><i class="fas fa-tags"></i>&nbsp;&nbsp;Tags</a>
-      <a class="nav-link" id="v-pills-app-mra-tab" data-mdb-toggle="pill" href="#v-pills-app-mra" role="tab"
-        aria-controls="v-pills-app-mra" aria-selected="false"><i class="fas fa-box-open"></i>&nbsp;&nbsp;GRASP MRA</a>
-      <a class="nav-link" id="v-pills-app-onco-tab" data-mdb-toggle="pill" href="#v-pills-app-onco" role="tab"
-        aria-controls="v-pills-app-onco" aria-selected="false"><i class="fas fa-box-open"></i>&nbsp;&nbsp;GRASP Onco</a>
+<div class="ms-2">
+  <div class="row mb-3 mt-2">
+    <div class="col">
+      <h2><i class="fas fa-angle-double-right text-primary"></i>&nbsp;&nbsp;Configuration</h2>
     </div>
-    <!-- Tab navs -->
   </div>
 
-  <div class="col-12 col-md-10">
-    <!-- Tab content -->
-    <div class="tab-content ms-md-3" id="v-pills-tabContent">
-
-      <div class="tab-pane show active" id="v-pills-home" role="tabpanel" aria-labelledby="v-pills-home-tab">
-        <h4>General Settings</h4>
+  <div class="row">
+    <div class="col-12 col-md-2 pb-4">
+      <!-- Tab navs -->
+      <div class="nav flex-column nav-pills text-center" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+        <a class="nav-link active" id="v-pills-status-tab" data-mdb-toggle="pill" href="#v-pills-status" role="tab"
+          aria-controls="v-pills-status" aria-selected="true"><i class="fas fa-power-off"></i>&nbsp;&nbsp;System Status</a>
+        <a class="nav-link" id="v-pills-home-tab" data-mdb-toggle="pill" href="#v-pills-home" role="tab"
+          aria-controls="v-pills-home" aria-selected="false"><i class="fas fa-cog"></i>&nbsp;&nbsp;General</a>
+        <a class="nav-link" id="v-pills-accounts-tab" data-mdb-toggle="pill" href="#v-pills-accounts" role="tab"
+          aria-controls="v-pills-accounts" aria-selected="false"><i class="fas fa-user-friends"></i>&nbsp;&nbsp;Accounts</a>
+        <a class="nav-link" id="v-pills-tags-management-tab" data-mdb-toggle="pill" href="#v-pills-tags-management" role="tab"
+          aria-controls="v-pills-tags-management" aria-selected="false"><i class="fas fa-tags"></i>&nbsp;&nbsp;Tags</a>
+        <a class="nav-link" id="v-pills-app-mra-tab" data-mdb-toggle="pill" href="#v-pills-app-mra" role="tab"
+          aria-controls="v-pills-app-mra" aria-selected="false"><i class="fas fa-box-open"></i>&nbsp;&nbsp;GRASP MRA</a>
+        <a class="nav-link" id="v-pills-app-onco-tab" data-mdb-toggle="pill" href="#v-pills-app-onco" role="tab"
+          aria-controls="v-pills-app-onco" aria-selected="false"><i class="fas fa-box-open"></i>&nbsp;&nbsp;GRASP Onco</a>
       </div>
-
-      <div class="tab-pane" id="v-pills-status" role="tabpanel" aria-labelledby="v-pills-status-tab">
-        <h4>System Status</h4>
-      </div>
-
-      <div class="tab-pane" id="v-pills-accounts" role="tabpanel" aria-labelledby="v-pills-accounts-tab">
-        <h4>Accounts</h4>
-      </div>
-
-      <!-- Tag management -->
-      {{ tags|json_script:"tags_data" }}
-      <script type="text/javascript">
-        const tags_data_parsed = JSON.parse(document.getElementById('tags_data').textContent);    
-      </script>
-      <div x-data="{count: 0, tags: tags_data_parsed }" class="tab-pane" id="v-pills-tags-management" role="tabpanel" aria-labelledby="v-pills-tags-management-tab">
-        <h4>Tags Management</h4>
-        <div class="tag-list mt-4">
-          <ul class="list-group list-group-dark">
-            <template x-for="tag in tags">
-              <li class="list-group-item list-tag-item d-flex justify-content-between align-items-center">
-                <div class="ms-2 me-auto" id="selected-tags" >
-                  <input @change="count += ($event.target.checked) ? +$event.target.value : -$event.target.value;" class="tag-check form-check-input me-2" type="checkbox" value="1" x-bind:name="tag[0]"/>
-                  <span x-text="tag[0]"></span>
-                </div>              
-                <div style="width:70px">
-                  <span x-text="tag[1]" class="badge badge-danger rounded-pill" ></span>
-                </div>
-                <div>
-                  <button type="button" x-bind:disabled="!(tag[1] > 0)" class="btn btn-sm btn-primary" x-bind:value="tag[2]" @click="showCasesInfo(tag[2])"><i class="fas fa-list"></i>&nbsp;&nbsp;Show</button>
-                </div>
-              </li>
-            </template>
-          </ul>
-        </div>
-        <div>
-          <button type="button" x-bind:disabled="!(count > 0)" @click="tags = await updateCaseTags(tags); count=0;" class="btn btn-primary mt-4"><i class="fa-solid fa-trash"></i>&nbsp;&nbsp;Delete</button>
-        </div>
-      </div>
-
-      <div class="tab-pane" id="v-pills-app-mra" role="tabpanel" aria-labelledby="v-pills-app-mra-tab">
-        <h4>Application &minus; GRASP MRA</h4>
-        <p class="mt-4">TODO</p>
-      </div>
-
-      <div class="tab-pane" id="v-pills-app-onco" role="tabpanel" aria-labelledby="v-pills-app-onco-tab">
-        <h4>Application &minus; GRASP Onco</h4>
-        <p class="mt-4">TODO</p>
-      </div>
-
+      <!-- Tab navs -->
     </div>
-    <!-- Tab content -->
+
+    <div class="col-12 col-md-10">
+      <!-- Tab content -->
+      <div class="tab-content ms-md-3" id="v-pills-tabContent" style="margin-top: 0.2rem;">
+
+        <div class="tab-pane show active" id="v-pills-status" role="tabpanel" aria-labelledby="v-pills-status-tab">
+          <h4>System Status</h4>
+        </div>
+
+        <div class="tab-pane" id="v-pills-home" role="tabpanel" aria-labelledby="v-pills-home-tab">
+          <h4>General Settings</h4>
+        </div>
+
+        <div class="tab-pane" id="v-pills-accounts" role="tabpanel" aria-labelledby="v-pills-accounts-tab">
+          <h4>Accounts</h4>
+        </div>
+
+        <!-- Tag management -->
+        {{ tags|json_script:"tags_data" }}
+        <script type="text/javascript">
+          const tags_data_parsed = JSON.parse(document.getElementById('tags_data').textContent);    
+        </script>
+        <div x-data="{count: 0, tags: tags_data_parsed }" class="tab-pane" id="v-pills-tags-management" role="tabpanel" aria-labelledby="v-pills-tags-management-tab">
+          <h4>Tags Management</h4>
+          <div class="tag-list mt-4">
+            <ul class="list-group list-group-dark">
+              <template x-for="tag in tags">
+                <li class="list-group-item list-tag-item d-flex justify-content-between align-items-center">
+                  <div class="ms-2 me-auto" id="selected-tags" >
+                    <input @change="count += ($event.target.checked) ? +$event.target.value : -$event.target.value;" class="tag-check form-check-input me-2" type="checkbox" value="1" x-bind:name="tag[0]"/>
+                    <span x-text="tag[0]"></span>
+                  </div>              
+                  <div style="width:70px">
+                    <span x-text="tag[1]" class="badge badge-danger rounded-pill" ></span>
+                  </div>
+                  <div>
+                    <button type="button" x-bind:disabled="!(tag[1] > 0)" class="btn btn-sm btn-primary" x-bind:value="tag[2]" @click="showCasesInfo(tag[2])"><i class="fas fa-list"></i>&nbsp;&nbsp;Show</button>
+                  </div>
+                </li>
+              </template>
+            </ul>
+          </div>
+          <div>
+            <button type="button" x-bind:disabled="!(count > 0)" @click="tags = await updateCaseTags(tags); count=0;" class="btn btn-primary mt-4"><i class="fa-solid fa-trash"></i>&nbsp;&nbsp;Delete</button>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="v-pills-app-mra" role="tabpanel" aria-labelledby="v-pills-app-mra-tab">
+          <h4>Application &minus; GRASP MRA</h4>
+          <p class="mt-4">TODO</p>
+        </div>
+
+        <div class="tab-pane" id="v-pills-app-onco" role="tabpanel" aria-labelledby="v-pills-app-onco-tab">
+          <h4>Application &minus; GRASP Onco</h4>
+          <p class="mt-4">TODO</p>
+        </div>
+
+      </div>
+      <!-- Tab content -->
+    </div>
   </div>
 </div>
 <!-- Tabs content -->

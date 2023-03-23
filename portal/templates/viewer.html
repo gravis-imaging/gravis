@@ -139,7 +139,7 @@
 
     <button title="Toggle free MPR rotation" :class="(viewer && viewer.rotate_mode)? 'btn-danger': 'btn-primary'" class="btn-large btn-viewer ms-2" 
     :disabled="should_disable" disabled="disabled" 
-    @click="viewer.toggleRotateMode()"><i :class="(viewer && viewer.rotate_mode)? 'fa-solid fa-lock-open': 'fa-solid fa-lock'"></i>
+    @click="viewer.toggleRotateMode()" style="color: #fff;"><i class="fa-solid fa-lock" :class="(viewer && viewer.rotate_mode)? 'fa-solid fa-lock-open': 'fa-solid fa-lock'" ></i>
     </button> 
 
     <!-- Annotations -->
@@ -328,7 +328,7 @@
         :disabled="should_disable" disabled="disabled"
         @click="await viewer.annotation_manager.exportChart(case_data)"><i class="fa-solid fa-download"></i>
      </button>
-      <button title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer"
+      <button title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-1"
         :disabled="should_disable() || read_only" disabled="disabled"
         @click="await viewer.storeChartFinding()"><i class="fa-solid fa-camera"></i>
      </button>

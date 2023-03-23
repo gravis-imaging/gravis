@@ -90,56 +90,57 @@
     });
 </script>  
 
-<div class="row mb-3">
-    <div class="col">
-        <h2><i class="fas fa-angle-double-right text-primary text-primary"></i>&nbsp;&nbsp;Import Case</h2>
+<div class="ms-2">
+    <div class="row mb-3 mt-2">
+        <div class="col">
+            <h2><i class="fas fa-angle-double-right text-primary text-primary"></i>&nbsp;&nbsp;Import Case</h2>
+        </div>
     </div>
-</div>
-<div class="row mt-4">
-    <div x-data="browser" style="padding-left: 3em; padding-right: 3em;">
-        <template x-if="mode == 'case_selected'">
-            <form :action="`/api/filebrowser/submit${encodeURIComponent(path)}`" method="post" x-ref="case_form" >
-                {% csrf_token %}
-                {% for field in form %}
-                {% if field.field.widget.input_type != "select" %}
-                    <div class="input-group form-outline mb-3">
-                        <input type="{{ field.field.widget.input_type }}" class="form-control" id="{{ field.id_for_label }}" name="{{field.name}}" {% if field.field.disabled %}disabled{%endif%} autocomplete="off">
-                        <label class="form-label" for="{{field.id_for_label}}">{{field.label}}</label>
-                        {% comment %} <div class="form-notch"><div class="form-notch-leading" style="width: 42px;"></div><div class="form-notch-middle" style="width: 59.2px;"></div><div class="form-notch-trailing"></div></div> {% endcomment %}
+    <div class="row">
+        <div x-data="browser">
+            <template x-if="mode == 'case_selected'">
+                <form :action="`/api/filebrowser/submit${encodeURIComponent(path)}`" method="post" x-ref="case_form" >
+                    {% csrf_token %}
+                    {% for field in form %}
+                    {% if field.field.widget.input_type != "select" %}
+                        <div class="input-group form-outline mb-3">
+                            <input type="{{ field.field.widget.input_type }}" class="form-control" id="{{ field.id_for_label }}" name="{{field.name}}" {% if field.field.disabled %}disabled{%endif%} autocomplete="off">
+                            <label class="form-label" for="{{field.id_for_label}}">{{field.label}}</label>
+                            {% comment %} <div class="form-notch"><div class="form-notch-leading" style="width: 42px;"></div><div class="form-notch-middle" style="width: 59.2px;"></div><div class="form-notch-trailing"></div></div> {% endcomment %}
+                        </div>
+                    {% else %}
+                    <div class="select-wrapper">
+                        <select class="form-control" name="{{field.name}}" id="{{ field.id_for_label }}">
+                        <option value="" disabled>{{field.name | capfirst}}</option>
+                        {% for choice in field.field.choices %}
+                            <option value="{{choice.1}}">{{choice.1}}</option>
+                        {% endfor %}
+                        </select>
                     </div>
-                {% else %}
-                <div class="select-wrapper">
-                    <select class="form-control" name="{{field.name}}" id="{{ field.id_for_label }}">
-                    <option value="" disabled>{{field.name | capfirst}}</option>
-                    {% for choice in field.field.choices %}
-                        <option value="{{choice.1}}">{{choice.1}}</option>
+                
+                    {% endif %}
                     {% endfor %}
-                    </select>
+                    <div class="py-2">
+                        <button class="btn-primary btn btn-viewer btn-viewer" @click="submit()">Submit </button>
+                        <button class="btn-primary btn btn-viewer btn-viewer" @click="mode = 'navigator'">Back</button>
+                    </div>
+                </form>
+                
+            </template>
+            <template x-if="mode == 'navigator'">
+                <div>
+                <h4 class="mb-3"><span x-text="path" style="word-break: break-all"></span></h4>
+                <button class="btn-primary btn btn-viewer px-2 mb-3" @click="nav_up"><i class="fa-solid fa-arrow-turn-up fa-flip-horizontal"></i>&nbsp;&nbsp;Up</button>
+                <div style="background-color: #444; border-radius: 4px;" class="px-3 py-2 me-5">
+                    <div style="overflow-y: auto; height: 50vh;">
+                    <template x-for="l of listings">
+                        <div x-text="`${l.name}${l.is_dir? '/':''}`" @click="if (l.is_dir) navigate('/'+l.location)" :class="l.is_dir? 'filebrowser_entry':''"></div>
+                    </template>
+                    </div>
                 </div>
-            
-                {% endif %}
-                {% endfor %}
-                <div class="py-2">
-                    <button class="btn-primary btn btn-viewer btn-viewer" @click="submit()">Submit </button>
-                    <button class="btn-primary btn btn-viewer btn-viewer" @click="mode = 'navigator'">Back</button>
-                </div>
-            </form>
-            
-        </template>
-        <template x-if="mode == 'navigator'">
-            <div>
-            <h4 class="mb-3"><span x-text="path" style="word-break: break-all"></span></h4>
-            <button class="btn-primary btn btn-viewer px-2 mb-3" @click="nav_up"><i class="fa-solid fa-arrow-turn-up fa-flip-horizontal"></i>&nbsp;&nbsp;Up</button>
-            <div style="background-color: #444; border-radius: 4px;" class="px-3 py-2 me-5">
-                <div style="overflow-y: auto; height: 50vh;">
-                <template x-for="l of listings">
-                    <div x-text="`${l.name}${l.is_dir? '/':''}`" @click="if (l.is_dir) navigate('/'+l.location)" :class="l.is_dir? 'filebrowser_entry':''"></div>
-                </template>
-                </div>
-            </div>
-            <button class="btn-primary btn btn-viewer mt-4" @click="select_case" :disabled=""><i class="fa-solid fa-upload"></i>&nbsp;&nbsp;Import Folder</button>
-        </template>
+                <button class="btn-primary btn btn-viewer mt-4" @click="select_case" :disabled=""><i class="fa-solid fa-upload"></i>&nbsp;&nbsp;Import Folder</button>
+            </template>
+        </div>
     </div>
 </div>
-
 {% endblock %}
