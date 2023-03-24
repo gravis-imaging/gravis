@@ -33,15 +33,15 @@
       <div class="tab-content ms-md-3" id="v-pills-tabContent" style="margin-top: 0.2rem;">
 
         <div class="tab-pane show active" id="v-pills-status" role="tabpanel" aria-labelledby="v-pills-status-tab">
-          <h4>System Status</h4>
+          <h4><i class="fas fa-power-off" style="color: #1266f1;"></i>&nbsp;&nbsp;System Status</h4>
         </div>
 
         <div class="tab-pane" id="v-pills-home" role="tabpanel" aria-labelledby="v-pills-home-tab">
-          <h4>General Settings</h4>
+          <h4><i class="fas fa-cog" style="color: #1266f1;"></i>&nbsp;&nbsp;General Settings</h4>
         </div>
 
         <div class="tab-pane" id="v-pills-accounts" role="tabpanel" aria-labelledby="v-pills-accounts-tab">
-          <h4>Accounts</h4>
+          <h4><i class="fas fa-user-friends" style="color: #1266f1;"></i>&nbsp;&nbsp;Accounts</h4>
         </div>
 
         <!-- Tag management -->
@@ -50,7 +50,7 @@
           const tags_data_parsed = JSON.parse(document.getElementById('tags_data').textContent);    
         </script>
         <div x-data="{count: 0, tags: tags_data_parsed }" class="tab-pane" id="v-pills-tags-management" role="tabpanel" aria-labelledby="v-pills-tags-management-tab">
-          <h4>Tags Management</h4>
+          <h4><i class="fas fa-tags" style="color: #1266f1;"></i>&nbsp;&nbsp;Tags Management</h4>
           <div class="tag-list mt-4">
             <ul class="list-group list-group-dark">
               <template x-for="tag in tags">
@@ -75,12 +75,12 @@
         </div>
 
         <div class="tab-pane" id="v-pills-app-mra" role="tabpanel" aria-labelledby="v-pills-app-mra-tab">
-          <h4>Application &minus; GRASP MRA</h4>
+          <h4><i class="fas fa-box-open" style="color: #1266f1;"></i>&nbsp;&nbsp;Application &minus; GRASP MRA</h4>
           <p class="mt-4">TODO</p>
         </div>
 
         <div class="tab-pane" id="v-pills-app-onco" role="tabpanel" aria-labelledby="v-pills-app-onco-tab">
-          <h4>Application &minus; GRASP Onco</h4>
+          <h4><i class="fas fa-box-open" style="color: #1266f1;"></i>&nbsp;&nbsp;Application &minus; GRASP Onco</h4>
           <p class="mt-4">TODO</p>
         </div>
 
