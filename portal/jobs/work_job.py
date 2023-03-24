@@ -87,7 +87,7 @@ class WorkJobView(View):
             job.dicom_set = DICOMSet.objects.get(type=job.parameters["source_type"], processing_job__id = job.parameters["source_job"])
 
         job_result =  cls.do_job(job)
-        if job_result is not None:
+        if type(job_result) in (list, tuple) and len(job_result) >= 2:
             job.json_result = job_result[0]
             dicom_sets = job_result[1]
         else:

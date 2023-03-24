@@ -7,6 +7,7 @@ from loguru import logger
 from pathlib import Path
 import shutil
 import os, json
+import stat
 from django.db import transaction
 
 from django.conf import settings
@@ -22,41 +23,32 @@ class LoadDicomsJob(WorkJobView):
     
     @classmethod
     def do_job(cls, job):
-        process_folder(job)
+        incoming_folder = Path(job.parameters["incoming_folder"])
 
-def process_folder(job: ProcessingJob):
-    incoming_folder = Path(job.parameters["incoming_folder"])
-    is_copying = job.parameters.get("is_copying", False)
-    override_json = job.parameters.get("study_json", None)
+        logger.info(f"Processing {incoming_folder}")
 
-    logger.info(f"Processing {incoming_folder}")
+        cases = Path(settings.CASES_FOLDER)
+        dest_folder_name = helper.generate_folder_name()
+        new_folder = cases / dest_folder_name
+        error_folder = Path(settings.ERROR_FOLDER) / dest_folder_name
+        input_dest_folder = new_folder / GravisFolderNames.INPUT
+        processed_dest_folder = new_folder / GravisFolderNames.PROCESSED
+        findings_dest_folder = new_folder / GravisFolderNames.FINDINGS
+        # complete_file_path = Path(incoming_folder) / GravisNames.COMPLETE
+        lock_file_path = Path(incoming_folder) / GravisNames.LOCK
 
-    cases = Path(settings.CASES_FOLDER)
-    dest_folder_name = helper.generate_folder_name()
-    new_folder = cases / dest_folder_name
-    error_folder = Path(settings.ERROR_FOLDER) / dest_folder_name
-    input_dest_folder = new_folder / GravisFolderNames.INPUT
-    processed_dest_folder = new_folder / GravisFolderNames.PROCESSED
-    findings_dest_folder = new_folder / GravisFolderNames.FINDINGS
-    # complete_file_path = Path(incoming_folder) / GravisNames.COMPLETE
-    lock_file_path = Path(incoming_folder) / GravisNames.LOCK
+        lock = None
+        new_case = None
 
-    lock = None
-    new_case = None
+        try:
+            # Move from incoming to cases
+            if lock_file_path.exists():
+                # Series is locked, so another instance might be working on it
+                return
 
-    try:
-        # Move from incoming to cases
-        if lock_file_path.exists():
-            # Series is locked, so another instance might be working on it
-            return True
-
-        if not is_copying:
             # Create lock file in the incoming folder and prevent other instances from working on this series
             lock = helper.FileLock(lock_file_path)
-        
-        if override_json is not None:
-            new_case = case_from_payload(override_json, new_folder)
-        else:
+            
             try:
                 status, new_case = load_json(incoming_folder, new_folder, error_folder)
             except:
@@ -64,43 +56,34 @@ def process_folder(job: ProcessingJob):
             
             if not status:
                 raise Exception(f"Error loading study.json from {incoming_folder}.")
-        
-        job.case = new_case
-        job.save()
-        # Create directories for further processing.
-        try:
-            if not is_copying:
+            
+            job.case = new_case
+            job.save()
+            # Create directories for further processing.
+            try:
                 input_dest_folder.mkdir(parents=True, exist_ok=False)
-            processed_dest_folder.mkdir(parents=True, exist_ok=False)
-            findings_dest_folder.mkdir(parents=True, exist_ok=False)
-        except:
-            raise Exception(
-                f"Cannot create one of the processing folders for {incoming_folder}"
-            )
+                processed_dest_folder.mkdir(parents=True, exist_ok=False)
+                findings_dest_folder.mkdir(parents=True, exist_ok=False)
+                # TODO: do we really need open permissions like this?
+                new_folder.chmod(new_folder.stat().st_mode | stat.S_IROTH | stat.S_IXOTH)
+            except:
+                raise Exception(
+                    f"Cannot create one of the processing folders for {incoming_folder}"
+                )
 
-        if not is_copying:
             # Move files
             if not dicomset_utils.move_files(incoming_folder, input_dest_folder):
                 # new_case.delete()
                 raise Exception(f"Error moving files from {incoming_folder} to {input_dest_folder}")
-        else:
-            try:
-                shutil.copytree(incoming_folder, input_dest_folder)
-            except: 
-                raise Exception(f"Error copying files from {incoming_folder} to {input_dest_folder}")
-        if override_json is not None:
-            study_json = input_dest_folder / "study.json"
-            study_json.touch()
-            with open(study_json,"wt") as f:
-                json.dump(override_json, f)
+            
+            input_dest_folder.chmod(input_dest_folder.stat().st_mode | stat.S_IROTH | stat.S_IXOTH)
 
-        dicomset_utils.register(
-            str(input_dest_folder), new_case, "Incoming", job.id, "ORI"
-        )
-        job.dicom_set = new_case.dicom_sets.get(origin="Incoming")
-        job.save()
+            dicomset_utils.register(
+                input_dest_folder, new_case, "Incoming", job.id, "ORI"
+            )
+            # job.dicom_set = new_case.dicom_sets.get(origin="Incoming")
+            job.save()
 
-        if not is_copying:
             lock.free()
             try:
                 os.rmdir(incoming_folder)
@@ -108,20 +91,68 @@ def process_folder(job: ProcessingJob):
                 logger.exception(f"Exception during deleting empty folder: {incoming_folder}")
                 # Don't actually throw, this case is probably fine
 
-        new_case.status = Case.CaseStatus.QUEUED
-        new_case.save()
-        job.status = "Success"
-        job.save()
-        
-        logger.info(f"Done loading {incoming_folder}")
-        return True
-    except Exception as e:
-        if not is_copying:
+            new_case.status = Case.CaseStatus.QUEUED
+            new_case.save()
+            job.status = "Success"
+            job.save()
+            
+            logger.info(f"Done loading {incoming_folder}")
+        except Exception as e:
             move_to_error_folder(new_case, incoming_folder, error_folder, lock)
             if new_case:
                 new_case.case_location = str(error_folder)
                 new_case.save()
-        raise e
+            raise e
+
+
+class CopyDicomsJob(WorkJobView):
+    type = "CopyDICOMSet"
+    queue = "cheap"
+    
+    @classmethod
+    def do_job(cls, job):
+        incoming_folder = Path(job.parameters["incoming_folder"])
+        override_json = job.parameters["study_json"]
+        logger.info(f"Processing {incoming_folder}")
+
+        cases = Path(settings.CASES_FOLDER)
+        dest_folder_name = helper.generate_folder_name()
+        new_folder = cases / dest_folder_name
+        input_dest_folder = new_folder / GravisFolderNames.INPUT
+        processed_dest_folder = new_folder / GravisFolderNames.PROCESSED
+        findings_dest_folder = new_folder / GravisFolderNames.FINDINGS
+
+        new_case = case_from_payload(override_json, new_folder)
+        job.case = new_case
+        job.save()
+        # Create directories for further processing.
+        try:
+            processed_dest_folder.mkdir(parents=True, exist_ok=False)
+            findings_dest_folder.mkdir(parents=True, exist_ok=False)
+            new_folder.chmod(new_folder.stat().st_mode | stat.S_IROTH | stat.S_IXOTH)
+        except:
+            raise Exception(f"Cannot create one of the processing folders for {incoming_folder}")
+
+        try:
+            shutil.copytree(incoming_folder, input_dest_folder)
+        except: 
+            raise Exception(f"Error copying files from {incoming_folder} to {input_dest_folder}")
+
+        input_dest_folder.chmod(input_dest_folder.stat().st_mode | stat.S_IROTH | stat.S_IXOTH)
+
+        study_json = input_dest_folder / "study.json"
+        study_json.touch()
+        with open(study_json,"wt") as f:
+            json.dump(override_json, f)
+
+        dicomset_utils.register( input_dest_folder, new_case, "Incoming", job.id, "ORI")
+
+        new_case.status = Case.CaseStatus.QUEUED
+        job.status = "Success"
+        new_case.save()
+        job.save()
+        
+        logger.info(f"Done loading {incoming_folder}")
 
 def case_from_payload(payload, new_folder):
     try:

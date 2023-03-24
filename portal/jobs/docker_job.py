@@ -109,7 +109,7 @@ def do_docker_job(job):
     try:
         subfolders = [ f.path for f in os.scandir(output_folder) if f.is_dir() ]
         for folder in subfolders:
-            dicomset_utils.register( folder, job.case, "Processed", job_id)
+            dicomset_utils.register( Path(folder), job.case, "Processed", job_id)
 
         job.status = "Success"
         job.save()

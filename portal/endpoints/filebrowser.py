@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import redirect
 import pydicom
-from portal.jobs.load_dicoms_job import LoadDicomsJob
+from portal.jobs.load_dicoms_job import CopyDicomsJob
 
 from portal.models import *
 from pathlib import Path
@@ -98,7 +98,7 @@ def submit_directory(request, name, path):
         exam_time="1900-01-01 00:00-05:00"
     )
     print(study_json)
-    LoadDicomsJob.enqueue_work(case=None,parameters=dict(incoming_folder=str(full_path), is_copying=True,study_json=study_json))
+    CopyDicomsJob.enqueue_work(case=None,parameters=dict(incoming_folder=str(full_path), study_json=study_json))
 
     return redirect("/filebrowser")
     # study_json = {}

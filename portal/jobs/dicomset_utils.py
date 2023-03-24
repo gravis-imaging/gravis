@@ -9,20 +9,18 @@ from portal.models import DICOMInstance, DICOMSet
 import pydicom
 
 
-def register(set_path: str, case, origin, job_id=None, type=""):
+def register(set_path, case, origin, job_id=None, type=""):
 
     # Register DICOM Set    
-    size = len(list(Path(set_path).glob("**/*.dcm")))
-    if size < 1:
-        return(False, f"No DICOM files found in {set_path}")
-
-    dcm = list(Path(set_path).glob("**/*.dcm"))[0]
+    try: 
+        dcm = next(set_path.glob("**/*.dcm"))
+    except:
+        raise Exception(f"No DICOM files found in {set_path}")
 
     if type == "":
         try:
             ds = pydicom.dcmread(str(dcm), stop_before_pixels=True)
-            imageType = ds.get("ImageType",[])
-            print(imageType) # SECONDARY/DERIVED/TYPE (eg)
+            imageType = ds.get("ImageType",[]) # SECONDARY/DERIVED/TYPE (eg)
             if len(imageType) > 2:
                 type = ds.ImageType[2]
         except:
@@ -44,25 +42,25 @@ def register(set_path: str, case, origin, job_id=None, type=""):
         raise Exception(f"Cannot create a db table for incoming data set {set_path}")
 
     # Register DICOM Instances
-    for dcm in Path(set_path).glob("**/*.dcm"):
+    for dcm in set_path.glob("**/*.dcm"):
         if not dcm.is_file():
             continue
         try:
             ds = pydicom.dcmread(str(dcm), stop_before_pixels=True)
-        except Exception as e:
+        except:
             raise Exception(
                 f"Exception during dicom file reading. Cannot process incoming instance {str(dcm)}"
             )
         try:
             instance = DICOMInstance.from_dataset(ds)
-            instance.instance_location = str(dcm.relative_to(Path(set_path)))
+            instance.instance_location = str(dcm.relative_to(set_path))
             instance.dicom_set = dicom_set
             instance.save()
-        except Exception as e:
+        except:
             raise Exception(
                 f"Exception during DICOMInstance model creation. Cannot process incoming instance {str(dcm)}"
             )
-
+    return dicom_set
 
 def move_files(source_folder: Path, destination_folder: Path):
     try:
