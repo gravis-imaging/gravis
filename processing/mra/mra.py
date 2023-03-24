@@ -1,4 +1,5 @@
 # Standard Python includes
+import stat
 from loguru import logger
 import numpy as np
 import time, os
@@ -378,6 +379,8 @@ class MRA:
             if not os.path.exists(output_dir_name):
                 os.mkdir(output_dir_name)
                 logger.info(f"Directory {output_dir_name} created ")
+            outdir_path = Path(output_dir_name)
+            outdir_path.chmod(outdir_path.stat().st_mode | stat.S_IROTH | stat.S_IXOTH | stat.S_IWOTH)
             # else:
             #     logger.info(f"Directory {output_dir_name} already exists")
 
@@ -492,6 +495,9 @@ class MRA:
                     writer.SetFileName(path_name)
                     writer.Execute(image_slice)
                     i += 1
+
+            for p in Path(output_dir_name).glob("**/*"):
+                p.chmod(p.stat().st_mode | stat.S_IROTH | stat.S_IXOTH | stat.S_IWOTH)
         except Exception as e:
             logger.exception(f"Error saving files in {output_dir_name}.")
             return self.__return_codes.ERROR_SAVING_FILES
