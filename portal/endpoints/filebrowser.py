@@ -37,7 +37,6 @@ class SubmitForm(forms.Form):
      case_type = forms.ChoiceField(choices=[("GRASP MRA","GRASP MRA"), ("GRASP Onco","GRASP Onco"),("Series Viewer","Series Viewer")])
 
 
-
 def resolve_path(name,path):
     for d in settings.BROWSER_BASE_DIRS:
         if d["name"] == name:
@@ -71,7 +70,9 @@ def case_directory(request, name, path):
         case_info = json.load(study_json.open("r"))
         case_info["study_description"] = ds.StudyDescription
     else:
-        case_info=dict(patient_name=str(ds.get("PatientName","")),acc=str(ds.get("AccessionNumber","")), patient_id=str(ds.get("PatientID","")),study_description=str(ds.get("StudyDescription","")))
+        def getstr(k):
+            return str(ds.get(k,""))
+        case_info=dict(patient_name=getstr("PatientName"),acc=getstr("AccessionNumber"), patient_id=getstr("PatientID"),study_description=getstr("StudyDescription"))
 
     return JsonResponse(dict(case_info = case_info))
     
@@ -94,8 +95,6 @@ def submit_directory(request, name, path):
         case_type=form.cleaned_data["case_type"],
         status="",
         reader="",
-        received="1900-01-01 00:00-05:00",
-        exam_time="1900-01-01 00:00-05:00"
     )
     print(study_json)
     CopyDicomsJob.enqueue_work(case=None,parameters=dict(incoming_folder=str(full_path), study_json=study_json))

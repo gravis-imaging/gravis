@@ -170,14 +170,14 @@ class ProcessingJob(models.Model):
     json_result = models.JSONField(null=True)
     parameters = models.JSONField(null=True)
     dicom_set = models.ForeignKey("DICOMSet", on_delete=models.CASCADE, null=True, blank=True)
-    case = models.ForeignKey(Case, on_delete=models.CASCADE, null=True, blank=True)
+    case = models.ForeignKey(Case, on_delete=models.CASCADE, null=True, blank=True, related_name="processing_jobs")
     docker_image = models.CharField(max_length=100, blank=True, null=True)
     rq_id = models.CharField(max_length=100, blank=True, null=True)
 
     objects = models.Manager() 
     successful = SuccessfulProcessingJobManager() # Only successful processing jobs.
     def __str__(self):
-        return "; ".join([f"{x}: {getattr(self,x)}" for x in "id category parameters status error_description".split()])
+        return f"{self.id} ("+ "; ".join([f"{x}: {getattr(self,x)}" for x in "category parameters status error_description".split()])+")"
 
     class Meta:
         db_table = "gravis_processing_job"
@@ -222,6 +222,9 @@ class DICOMSet(models.Model):
 
     objects = models.Manager() 
     processed_success = DICOMSetSuccessfulProcessingJobManager() # Only results of successful processing jobs
+
+    def __str__(self):
+        return f"{self.id} (type: {self.type}, instances: {self.instances.count()})"
     class Meta:
         db_table = "gravis_dicom_set"
 

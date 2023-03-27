@@ -1,6 +1,7 @@
+from datetime import datetime
 from typing import Tuple
 from .work_job import WorkJobView
-from portal.models import Case, DICOMInstance, DICOMSet, ProcessingJob
+from portal.models import Case, Tag
 from loguru import logger
 from pathlib import Path
 from loguru import logger
@@ -9,7 +10,7 @@ import shutil
 import os, json
 import stat
 from django.db import transaction
-
+import pydicom
 from django.conf import settings
 
 import portal.jobs.dicomset_utils as dicomset_utils
@@ -50,7 +51,7 @@ class LoadDicomsJob(WorkJobView):
             lock = helper.FileLock(lock_file_path)
             
             try:
-                status, new_case = load_json(incoming_folder, new_folder, error_folder)
+                status, new_case = load_json(incoming_folder, new_folder)
             except:
                 raise Exception(f"Error loading study.json from {incoming_folder}.")
             
@@ -122,7 +123,12 @@ class CopyDicomsJob(WorkJobView):
         processed_dest_folder = new_folder / GravisFolderNames.PROCESSED
         findings_dest_folder = new_folder / GravisFolderNames.FINDINGS
 
-        new_case = case_from_payload(override_json, new_folder)
+        try:
+            example_dcm = next(incoming_folder.glob("**/*.dcm"))
+        except StopIteration:
+            raise Exception("Directory does not contain any .dcm files.")
+        
+        new_case = case_from_payload(override_json, new_folder, example_dcm)
         job.case = new_case
         job.save()
         # Create directories for further processing.
@@ -154,30 +160,37 @@ class CopyDicomsJob(WorkJobView):
         
         logger.info(f"Done loading {incoming_folder}")
 
-def case_from_payload(payload, new_folder):
+def case_from_payload(payload, new_folder, example_dcm):
+    def getvals(*args):
+        return {k:payload.get(k,"") for k in args}
     try:
         new_case = Case(
-            patient_name=payload.get("patient_name", ""),
-            mrn=payload.get("mrn", ""),
-            acc=payload.get("acc", ""),
-            case_type=payload.get("case_type", ""),
-            exam_time=payload.get("exam_time", "1900-01-01 00:00-05:00"),
-            receive_time=payload.get("receive_time", "1900-01-01 00:00-05:00"),
-            twix_id=payload.get("twix_id", ""),
-            num_spokes=payload.get("num_spokes", ""),
-            case_location=str(new_folder),
-            settings=payload.get("settings", ""),
-            incoming_payload=payload,
-            status=Case.CaseStatus.PROCESSING,
-        )  # Case(data_location="./data/cases)[UID]")
+            **getvals("patient_name", "mrn", "acc", "case_type", "twix_id", "num_spokes", "settings"),
+            exam_time = payload.get("exam_time", None),
+            receive_time = payload.get("receive_time", datetime.now().astimezone()),
+            case_location = str(new_folder),
+            incoming_payload = payload,
+            status = Case.CaseStatus.PROCESSING,
+        )
+        if not new_case.exam_time:
+            ds = pydicom.dcmread(example_dcm, specific_tags=("StudyDate", "StudyTime"), stop_before_pixels=True)
+            new_case.exam_time = datetime.combine(
+                pydicom.valuerep.DA(ds.StudyDate), pydicom.valuerep.TM(ds.StudyTime)
+            )
+
         with transaction.atomic():
             new_case.save()
+            for tag in payload.get("tags",[]):
+                t, created = Tag.objects.get_or_create(name=tag)
+                if created:
+                    t.save()
+                new_case.tags.add(t)
             new_case.add_shadow()
         return new_case
-    except Exception as e:
+    except:
         raise Exception(f"Cannot create case for {payload}.")
 
-def load_json(incoming_folder, new_folder, error_folder) -> Tuple[bool, Case]:
+def load_json(incoming_folder, new_folder) -> Tuple[bool, Case]:
     json_name = "study.json"
     incoming_json_file = Path(incoming_folder / json_name)
 
@@ -189,8 +202,14 @@ def load_json(incoming_folder, new_folder, error_folder) -> Tuple[bool, Case]:
             payload = json.load(f)
     except Exception:
         raise Exception(f"Unable to read {json_name} in {incoming_folder}.")
-    new_case = case_from_payload(payload,new_folder)
-    study_keys = ["patient_name", "mrn", "acc", "case_type", "exam_time", "twix_id", "num_spokes"]
+
+    try:
+        example_dcm = next(incoming_folder.glob("**/*.dcm"))
+    except StopIteration:
+        raise Exception("Directory does not contain any .dcm files.")
+
+    new_case = case_from_payload(payload, new_folder, example_dcm)
+    study_keys = ["patient_name", "mrn", "acc", "case_type"]
     # TODO check that values for these fields are valid. If not set status to ERROR/.
     for key in study_keys:
         if key not in payload:
