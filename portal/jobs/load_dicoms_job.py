@@ -135,7 +135,6 @@ class CopyDicomsJob(WorkJobView):
         try:
             processed_dest_folder.mkdir(parents=True, exist_ok=False)
             findings_dest_folder.mkdir(parents=True, exist_ok=False)
-            new_folder.chmod(new_folder.stat().st_mode | stat.S_IROTH | stat.S_IXOTH)
         except:
             raise Exception(f"Cannot create one of the processing folders for {incoming_folder}")
 
@@ -144,7 +143,8 @@ class CopyDicomsJob(WorkJobView):
         except: 
             raise Exception(f"Error copying files from {incoming_folder} to {input_dest_folder}")
 
-        input_dest_folder.chmod(input_dest_folder.stat().st_mode | stat.S_IROTH | stat.S_IXOTH)
+        for f in [processed_dest_folder, findings_dest_folder, input_dest_folder, new_folder]:
+            f.chmod(f.stat().st_mode | stat.S_IROTH | stat.S_IXOTH) # TODO: is this necessary?
 
         study_json = input_dest_folder / "study.json"
         study_json.touch()

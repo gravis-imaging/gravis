@@ -1,4 +1,6 @@
 import json
+from pathlib import Path
+import stat
 
 import django_rq
 from django.http import HttpResponseNotFound, JsonResponse
@@ -85,7 +87,7 @@ class WorkJobView(View):
         job = ProcessingJob.objects.get(id=id)
         if job.dicom_set is None and "source_type" in job.parameters:
             job.dicom_set = DICOMSet.objects.get(type=job.parameters["source_type"], processing_job__id = job.parameters["source_job"])
-
+        
         job_result =  cls.do_job(job)
         if type(job_result) in (list, tuple) and len(job_result) >= 2:
             job.json_result = job_result[0]
@@ -93,6 +95,11 @@ class WorkJobView(View):
         else:
             job.json_result = {}
             dicom_sets = []
+
+        for f in (Path(job.case.case_location) / "processed").glob("*/"):
+            if not f.is_dir():
+                continue
+            f.chmod(f.stat().st_mode | stat.S_IROTH | stat.S_IXOTH) # TODO: is this necessary?
 
         job.status = "SUCCESS"
 
