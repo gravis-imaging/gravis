@@ -1,7 +1,7 @@
 import { AnnotationManager } from "./annotations.js"
 import { StateManager } from "./state.js"
 import { MIPManager } from "./mip.js"
-import { doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch, chartToImage, successToast, fixUpCrosshairs } from "./utils.js"
+import { doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch, chartToImage, successToast, fixUpCrosshairs,decacheVolumes, errorPrompt, errorToast } from "./utils.js"
 
 
 const SOP_INSTANCE_UID = '00080018';
@@ -441,10 +441,9 @@ class GraspViewer {
         // dest_viewport.setVOI({lower, upper})
 
         console.log("Caching volume...")
-        this.volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, {
-            imageIds,
-        });
 
+        decacheVolumes();
+        this.volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, { imageIds });
         // this is meant to "snap" the direction onto the nearest axes
         this.volume.imageData.setDirection(this.volume.direction.map(Math.round))
 
@@ -505,7 +504,12 @@ class GraspViewer {
                 this.previewViewports.slice(0,3).map(async (v, n) => {
                 v.setVOI({lower, upper});
                 // Get closest preview image if only fraction of preview images were generated.
-                await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / this.current_study.length));
+                try {
+                    await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / this.current_study.length));
+                } catch (e) {
+                    console.error(e);
+                    await errorToast("Failed to show preview image.");
+                }
             }))
         } catch (e) {
             console.error(e);
@@ -525,7 +529,12 @@ class GraspViewer {
             let [lower, upper] = this.getVolumeVOI(this.viewports[0])
             console.log("Volume VOI", upper,lower)
             this.previewViewports[n].setVOI({lower, upper});
-            await this.setPreviewStackForViewport(n, this.previewViewports[n]) 
+            try {
+                await this.setPreviewStackForViewport(n, this.previewViewports[n]) 
+            } catch (e) {
+                console.error(e);
+                await errorToast("Failed to set preview stack.");
+            }
             this.previewViewports[n].setVOI({lower, upper});
         }))
     }

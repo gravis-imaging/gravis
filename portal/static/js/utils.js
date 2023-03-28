@@ -350,6 +350,27 @@ const scrollViewportToPoint = (viewport, centerPoint) => {
     fixUpCrosshairs();
 }
 
+function decacheVolumes() {
+    // This preemptively boots volumes if the cache is getting too large. 
+    // Struggled to reliably recover from a full-cache situation; this tries to always leave headroom. 
+    // Additionally, and very puzzlingly, catching CACHE_SIZE_EXCEEDED errors seems to only sort of work, 
+    // in that catching it doesn't prevent the error showing up in the console. 
+    const volumeIterator = cornerstone.cache._volumeCache.keys();
+
+    const maxCacheSize = cornerstone.cache.getMaxCacheSize();
+    while ( cornerstone.cache.getCacheSize() / maxCacheSize > 0.8 ) {
+        const { value: volumeId, done } = volumeIterator.next();
+        if (done) {
+            break;
+        }
+        console.warn("Decaching volumes...", volumeId);
+        cornerstone.cache.removeVolumeLoadObject(volumeId);
+        cornerstone.triggerEvent(cornerstone.eventTarget, cornerstone.Enums.Events.VOLUME_CACHE_VOLUME_REMOVED, {
+            volumeId,
+        });
+    }
+}
+
 const CommonSwal = Swal.mixin({
     showClass: {
         backdrop: 'swal2-noanimation',
@@ -447,4 +468,4 @@ async function successToast(title) {
         title: title,
     });
 }
-export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, fixUpCrosshairs, Vector, chartToImage, confirmPrompt, inputPrompt, errorPrompt, errorToast, successPrompt,infoPrompt, successToast };
+export { setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, fixUpCrosshairs, Vector, chartToImage, decacheVolumes, confirmPrompt, inputPrompt, errorPrompt, errorToast, successPrompt,infoPrompt, successToast };
