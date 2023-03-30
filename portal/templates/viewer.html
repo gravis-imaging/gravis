@@ -435,6 +435,7 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
         try {
           targetURL = "/api/case/{{current_case.id}}/status/" + (confirmed? 'ready' : 'complete');
           await doFetch(targetURL);
+          this.viewer.state_manager.setIgnoreChanged();
           window.open("/", "_self");        
         } catch (e) {
           console.warn(e)
@@ -443,7 +444,7 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
     })}
     await Swal.fire({
       title: 'Close case?',
-      text: "Unsaved annotations will be lost.",
+      text: "Unsaved changes will be lost.",
       icon: 'question',
       showDenyButton: true,
       showCancelButton: true,
