@@ -96,10 +96,10 @@
             <h2><i class="fas fa-angle-double-right text-primary text-primary"></i>&nbsp;&nbsp;Import Case</h2>
         </div>
     </div>
-    <div class="row">
+    <div class="row me-1">
         <div x-data="browser">
             <template x-if="mode == 'case_selected'">
-                <form :action="`/api/filebrowser/submit${encodeURIComponent(path)}`" method="post" x-ref="case_form" >
+                <form :action="`/api/filebrowser/submit${encodeURIComponent(path)}`" method="post" x-ref="case_form" class="mt-2">
                     {% csrf_token %}
                     {% for field in form %}
                     {% if field.field.widget.input_type != "select" %}
@@ -120,7 +120,7 @@
                 
                     {% endif %}
                     {% endfor %}
-                    <div class="py-2">
+                    <div class="py-2 mt-3">
                         <button class="btn-primary btn btn-viewer btn-viewer" @click="submit()">Submit </button>
                         <button class="btn-primary btn btn-viewer btn-viewer" @click="mode = 'navigator'">Back</button>
                     </div>
@@ -129,9 +129,9 @@
             </template>
             <template x-if="mode == 'navigator'">
                 <div>
-                <h4 class="mb-3"><span x-text="path" style="word-break: break-all"></span></h4>
+                <h4 class="mb-4"><span x-text="path" style="word-break: break-all"></span></h4>
                 <button class="btn-primary btn btn-viewer px-2 mb-3" @click="nav_up"><i class="fa-solid fa-arrow-turn-up fa-flip-horizontal"></i>&nbsp;&nbsp;Up</button>
-                <div style="background-color: #444; border-radius: 4px;" class="px-3 py-2 me-5">
+                <div style="background-color: #444; border-radius: 4px;" class="px-3 py-2">
                     <div style="overflow-y: auto; height: 50vh;">
                     <template x-for="l of listings">
                         <div x-text="`${l.name}${l.is_dir? '/':''}`" @click="if (l.is_dir) navigate('/'+l.location)" :class="l.is_dir? 'filebrowser_entry':''"></div>

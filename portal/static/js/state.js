@@ -5,12 +5,14 @@ class StateManager {
     background_save_interval;
     current_state;
     changed;
+    ignore_changed;
     just_loaded;
     session_id;
     session_list = [];
 
     constructor( viewer ) {
         this.viewer = viewer;
+        this.ignore_changed=false;
     }
 
     _calcAnnotations() {
@@ -177,7 +179,14 @@ class StateManager {
         return true;
     }
 
+    setIgnoreChanged() {
+        this.ignore_changed=true;
+    }
+
     getChanged() {
+        if (this.ignore_changed) {
+            return false;
+        }
         if (this.changed) {
             return true;
         }

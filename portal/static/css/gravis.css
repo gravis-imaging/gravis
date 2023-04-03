@@ -627,3 +627,11 @@ textarea.select2-search__field {
     text-decoration: underline;
 }
 
+.form-outline .form-control:disabled {
+    background-color: hsla(0,0%,100%,0.05);
+    color: hsla(0,0%,100%,.25);
+}
+
+.form-outline .form-control:disabled~.form-label {
+    color: hsla(0,0%,100%,.25);
+}

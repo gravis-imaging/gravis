@@ -33,7 +33,7 @@ class SubmitForm(forms.Form):
      mrn = forms.CharField(label='MRN', max_length=100)
      acc = forms.CharField(label='Accession', max_length=100)
      study_description = forms.CharField(label='Study Description', max_length=100,disabled=True, required=False)
-     num_spokes = forms.IntegerField(label='Num spokes')
+     num_spokes = forms.IntegerField(label='Num spokes', min_value=0)
      case_type = forms.ChoiceField(choices=[("GRASP MRA","GRASP MRA"), ("GRASP Onco","GRASP Onco"),("Series Viewer","Series Viewer")])
 
 
@@ -52,6 +52,7 @@ def resolve_path(name,path):
         raise Exception()
     
     return full_path, top_dir, top_dir_name
+
 
 @login_required
 def case_directory(request, name, path):
@@ -76,6 +77,7 @@ def case_directory(request, name, path):
 
     return JsonResponse(dict(case_info = case_info))
     
+
 @login_required
 def submit_directory(request, name, path):
     try:
@@ -101,6 +103,7 @@ def submit_directory(request, name, path):
 
     return redirect("/filebrowser")
     # study_json = {}
+
 
 @login_required
 def list_directory(request, name=None, path=None):

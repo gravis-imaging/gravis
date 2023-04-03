@@ -150,5 +150,5 @@ def viewer(request, case_id):
 
 def file_browser(request):
     form = SubmitForm()
-    context = {"form":form}
+    context = {"form": form}
     return render(request, "filebrowser.html", context)
