@@ -446,7 +446,7 @@ input::selection {
 }
   
 .timeslider::-moz-range-thumb, .timeslider::-moz-range-thumb:hover {
-    background-color: #777  !important;  
+    background-color: #ffffff  !important;  
 }
 
 .timeslider::-moz-range-thumb {
@@ -462,6 +462,7 @@ input::selection {
 
 .timeslider:disabled::-moz-range-thumb {
     cursor: default;
+    background-color: #777 !important; 
 }
 
 .timeslider::-webkit-slider-runnable-track {

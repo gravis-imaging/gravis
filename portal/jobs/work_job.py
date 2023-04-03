@@ -98,7 +98,10 @@ class WorkJobView(View):
             job.json_result = {}
             dicom_sets = []
 
-        for f in (Path(job.case.case_location) / "processed").glob("*/"):
+        p = Path(job.case.case_location) / "processed"
+        p.chmod(p.stat().st_mode | stat.S_IROTH | stat.S_IXOTH)
+
+        for f in p.glob("*/"):
             if not f.is_dir():
                 continue
             f.chmod(f.stat().st_mode | stat.S_IROTH | stat.S_IXOTH) # TODO: is this necessary?

@@ -1,4 +1,5 @@
 import json
+import stat
 import uuid
 from pathlib import Path
 
@@ -165,7 +166,10 @@ class GeneratePreviewsJob(WorkJobView):
                 ds.SeriesInstanceUID = new_series_uid
                 ds.SOPInstanceUID    = pydicom.uid.generate_uid()
 
-                ds.save_as(Path(dicom_sets[axis].set_location) / f"multiframe.{i}.dcm")
+                p = Path(dicom_sets[axis].set_location) / f"multiframe.{i}.dcm"
+                ds.save_as(p)
+                p.chmod(p.stat().st_mode | stat.S_IROTH | stat.S_IXOTH) #TODO: is this necessary?
+
                 new_instance = DICOMInstance.from_dataset(ds)
                 new_instance.dicom_set = dicom_sets[axis]
                 new_instance.instance_location = f"multiframe.{i}.dcm"

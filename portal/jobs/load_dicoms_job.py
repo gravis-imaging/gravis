@@ -49,7 +49,6 @@ class LoadDicomsJob(WorkJobView):
 
             # Create lock file in the incoming folder and prevent other instances from working on this series
             lock = helper.FileLock(lock_file_path)
-            
             try:
                 status, new_case = load_json(incoming_folder, new_folder)
             except:
@@ -65,8 +64,6 @@ class LoadDicomsJob(WorkJobView):
                 input_dest_folder.mkdir(parents=True, exist_ok=False)
                 processed_dest_folder.mkdir(parents=True, exist_ok=False)
                 findings_dest_folder.mkdir(parents=True, exist_ok=False)
-                # TODO: do we really need open permissions like this?
-                new_folder.chmod(new_folder.stat().st_mode | stat.S_IROTH | stat.S_IXOTH)
             except:
                 raise Exception(
                     f"Cannot create one of the processing folders for {incoming_folder}"
@@ -77,7 +74,8 @@ class LoadDicomsJob(WorkJobView):
                 # new_case.delete()
                 raise Exception(f"Error moving files from {incoming_folder} to {input_dest_folder}")
             
-            input_dest_folder.chmod(input_dest_folder.stat().st_mode | stat.S_IROTH | stat.S_IXOTH)
+            for f in [processed_dest_folder, findings_dest_folder, input_dest_folder, new_folder]:
+                f.chmod(f.stat().st_mode | stat.S_IROTH | stat.S_IXOTH) # TODO: is this necessary?
 
             dicomset_utils.register(
                 input_dest_folder, new_case, "Incoming", job.id, "ORI"
