@@ -1,7 +1,42 @@
+import json
 import django_rq
 from loguru import logger
+import requests
+from django.conf import settings
 
-from portal.models import Case, ProcessingJob
+from portal.models import ProcessingJob
+import pydicom
+
+def dicom_kw_to_json(keyword):
+        return pydicom.datadict.tag_for_keyword(keyword)[2:]
+
+def send_notification(detail):
+    if settings.WEBEX_TOKEN is None:
+        return
+    requests.post(f"https://api.ciscospark.com/v1/webhooks/incoming/{settings.WEBEX_TOKEN}",
+                  json=dict(markdown=detail))
+
+def send_success_notification(job: ProcessingJob):
+    message = f"""### GRAVIS case ready for viewing
+    Patient: {job.case.patient_name}
+    ACC: {job.case.acc}
+    [Open case](https://localhost:4443/viewer/{job.case.id})"""
+    send_notification(message)
+
+def send_failure_notification(job: ProcessingJob):
+    message = f"### GRAVIS: case processing failure\n"
+    message += f"Job id: {job.id}, {job.category}\n"
+
+    if job.parameters:
+        message += f"Parameters: {job.parameters}\n"
+    if job.error_description: 
+        message += f"Error: {job.error_description}\n"
+    
+    if job.case is not None:
+        message += f"""Patient: {job.case.patient_name}
+        ACC: {job.case.acc}"""
+    send_notification(message)
+
 
 def report_success(job, connection, result, *args, **kwargs):
     logger.info(

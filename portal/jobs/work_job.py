@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from portal.models import Case, DICOMInstance, DICOMSet, ProcessingJob
 from loguru import logger
+from portal.jobs.utils import send_failure_notification
 
 def do_job(View,id):
     View._do_job(id)
@@ -23,7 +24,8 @@ def report_failure(job, connection, type, value, traceback):
         job.case.status = Case.CaseStatus.ERROR
         job.case.save()
     job.save()
-    
+    send_failure_notification(job)
+
 @method_decorator(login_required, name='dispatch')
 class WorkJobView(View):
     type = "GENERIC"

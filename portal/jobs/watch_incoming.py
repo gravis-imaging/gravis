@@ -4,26 +4,14 @@ from loguru import logger
 from pathlib import Path
 import shutil
 from time import sleep
-import os, json
-from typing import Tuple
-from uuid import uuid4
+import os
 
 from django.conf import settings
-from django.db import transaction
 
-import django_rq
-
-import portal.jobs.dicomset_utils as dicomset_utils
-import portal.jobs.docker_utils as docker_utils
 from portal.jobs.load_dicoms_job import LoadDicomsJob
-from portal.models import Case, ProcessingJob
-from common.constants import GravisNames, GravisFolderNames
-from .cine_generation import GeneratePreviewsJob
-from .work_job import do_job
-
+from portal.models import Case
+from common.constants import GravisNames
 from . import pipelines
-from .utils import report_failure, report_success
-import common.helper as helper
 
 # logging.basicConfig(filename='watch_incoming.log', filemode='a', format='%(name)s - %(levelname)s - %(message)s')
 # logger = logging.getLogger(__name__)

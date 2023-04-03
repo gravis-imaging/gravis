@@ -22,7 +22,7 @@ env = environ.Env(
     CASES_FOLDER=(str, "/opt/gravis/data/cases"),
     ERROR_FOLDER=(str, "/opt/gravis/data/error"),
     INCOMING_SCAN_INTERVAL=(int, 1),
-    DB_BACKEND=(str, "postgres"),   
+    DB_BACKEND=(str, "postgres"),
     DB_USER=(str, "gravis"),
     TEST_FOLDER_PATH=(str, "/tmp"),
     SECRET_KEY=(str, "django-insecure-r$afdbw+6xgz#af8-e2z=#@kjs2r#$th^m=60v1&almulq5fuh"),
@@ -39,6 +39,8 @@ environ.Env.read_env(BASE_DIR / "gravis.env")
 environ.Env.read_env(BASE_DIR / "local.env")
 
 SECRET_KEY = env("SECRET_KEY")
+WEBEX_TOKEN = env("WEBEX_TOKEN",default=None)
+
 DEBUG = env("DEBUG")
 GRAVIS_VERSION=env("GRAVIS_VERSION")
 APPLIANCE_NAME = env("APPLIANCE_NAME")
