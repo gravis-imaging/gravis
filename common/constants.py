@@ -19,6 +19,7 @@ class GravisFolderNames:
     INPUT = "input"
     PROCESSED = "processed"
     FINDINGS = "findings"
+    LOGS = "logs"
 
     
 class DockerReturnCodes(Enum):

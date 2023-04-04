@@ -8,6 +8,7 @@ from portal.jobs.work_job import WorkJobView
 
 from subprocess import CalledProcessError, check_output, STDOUT
 
+from loguru import logger
 
 class SendFindingsJob(WorkJobView):
     type="SEND_FINDINGS"
@@ -49,13 +50,13 @@ class SendFindingsJob(WorkJobView):
 
         for dicom in dicoms:
             command = cls.get_command(job, dicom)
-            print(" ".join(command))
+            logger.info(" ".join(command))
             try:
                 result = check_output(command, encoding="utf-8", stderr=STDOUT)
             except CalledProcessError as e:
                 raise Exception(f"Exited with value {e.returncode}, {cls.DCMSEND_ERROR_CODES[e.returncode]}")
             else:
-                print(result)
+                logger.info(result)
 
         return {}, []
 

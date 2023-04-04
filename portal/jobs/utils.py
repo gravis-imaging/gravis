@@ -3,6 +3,7 @@ import django_rq
 from loguru import logger
 import requests
 from django.conf import settings
+from textwrap import dedent
 
 from portal.models import ProcessingJob
 import pydicom
@@ -17,10 +18,11 @@ def send_notification(detail):
                   json=dict(markdown=detail))
 
 def send_success_notification(job: ProcessingJob):
-    message = f"""### GRAVIS case ready for viewing
+    message = dedent(f"""
+    ### GRAVIS case ready for viewing
     Patient: {job.case.patient_name}
     ACC: {job.case.acc}
-    [Open case](https://localhost:4443/viewer/{job.case.id})"""
+    [Open case](https://localhost:4443/viewer/{job.case.id})""")
     send_notification(message)
 
 def send_failure_notification(job: ProcessingJob):

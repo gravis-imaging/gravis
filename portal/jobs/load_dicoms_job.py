@@ -35,6 +35,7 @@ class LoadDicomsJob(WorkJobView):
         input_dest_folder = new_folder / GravisFolderNames.INPUT
         processed_dest_folder = new_folder / GravisFolderNames.PROCESSED
         findings_dest_folder = new_folder / GravisFolderNames.FINDINGS
+        logs_folder = new_folder / GravisFolderNames.LOGS
         # complete_file_path = Path(incoming_folder) / GravisNames.COMPLETE
         lock_file_path = Path(incoming_folder) / GravisNames.LOCK
 
@@ -64,6 +65,7 @@ class LoadDicomsJob(WorkJobView):
                 input_dest_folder.mkdir(parents=True, exist_ok=False)
                 processed_dest_folder.mkdir(parents=True, exist_ok=False)
                 findings_dest_folder.mkdir(parents=True, exist_ok=False)
+                logs_folder.mkdir(parents=True, exist_ok=False)
             except:
                 raise Exception(
                     f"Cannot create one of the processing folders for {incoming_folder}"
@@ -74,7 +76,7 @@ class LoadDicomsJob(WorkJobView):
                 # new_case.delete()
                 raise Exception(f"Error moving files from {incoming_folder} to {input_dest_folder}")
             
-            for f in [processed_dest_folder, findings_dest_folder, input_dest_folder, new_folder]:
+            for f in [processed_dest_folder, findings_dest_folder, input_dest_folder, new_folder, logs_folder]:
                 f.chmod(f.stat().st_mode | stat.S_IROTH | stat.S_IXOTH) # TODO: is this necessary?
 
             dicomset_utils.register(

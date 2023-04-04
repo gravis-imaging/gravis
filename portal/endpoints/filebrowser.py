@@ -98,7 +98,6 @@ def submit_directory(request, name, path):
         status="",
         reader="",
     )
-    print(study_json)
     CopyDicomsJob.enqueue_work(case=None,parameters=dict(incoming_folder=str(full_path), study_json=study_json))
 
     return redirect("/filebrowser")

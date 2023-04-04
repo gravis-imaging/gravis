@@ -2,7 +2,6 @@ import logging
 import json
 from django.http import HttpResponse, HttpResponseBadRequest,HttpResponseForbidden, HttpResponseNotAllowed, JsonResponse
 from django.conf import settings
-from django.views.decorators.http import require_http_methods, require_POST, require_GET
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import redirect, render, get_object_or_404
@@ -81,7 +80,6 @@ def user(request):
     show_confirm = False
 
     if request.method == 'POST':
-        print(request.POST)
         form = ProfileUpdateForm(request.POST, request.FILES)
         if form.is_valid():
             try:           
@@ -89,8 +87,7 @@ def user(request):
                 current_user.profile.save() 
                 show_confirm = True
             except Exception as e:
-                print("Error while saving profile data")
-                print(e)
+                logger.exception("Error while saving profile data")
                 return HttpResponseBadRequest('Unable to save data')   
         else:
             return HttpResponseBadRequest('Invalid form data')   
@@ -152,3 +149,9 @@ def file_browser(request):
     form = SubmitForm()
     context = {"form": form}
     return render(request, "filebrowser.html", context)
+
+def case_details(request, case_id):
+    case = get_object_or_404(Case, id=case_id)
+    jobs = case.processing_jobs.order_by("id").all()
+    context = {"case": case, "jobs":jobs}
+    return render(request, "case_info.html", context)

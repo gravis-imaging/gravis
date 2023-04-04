@@ -87,33 +87,39 @@ class WorkJobView(View):
     @classmethod
     def _do_job(cls,id):
         job = ProcessingJob.objects.get(id=id)
-        if job.dicom_set is None and "source_type" in job.parameters:
-            job.dicom_set = DICOMSet.objects.get(type=job.parameters["source_type"], processing_job__id = job.parameters["source_job"])
-        
-        job_result =  cls.do_job(job)
-        if type(job_result) in (list, tuple) and len(job_result) >= 2:
-            job.json_result = job_result[0]
-            dicom_sets = job_result[1]
-        else:
-            job.json_result = {}
-            dicom_sets = []
+        log_id = None
+        if job.case:
+            log_id = logger.add(Path(job.case.case_location) / "logs" / f"{job.id}_{cls.type}.log")
+        try:
+            if job.dicom_set is None and "source_type" in job.parameters:
+                job.dicom_set = DICOMSet.objects.get(type=job.parameters["source_type"], processing_job__id = job.parameters["source_job"])
+            
+            job_result =  cls.do_job(job)
+            if type(job_result) in (list, tuple) and len(job_result) >= 2:
+                job.json_result = job_result[0]
+                dicom_sets = job_result[1]
+            else:
+                job.json_result = {}
+                dicom_sets = []
 
-        p = Path(job.case.case_location) / "processed"
-        p.chmod(p.stat().st_mode | stat.S_IROTH | stat.S_IXOTH)
+            p = Path(job.case.case_location) / "processed"
+            p.chmod(p.stat().st_mode | stat.S_IROTH | stat.S_IXOTH)
 
-        for f in p.glob("*/"):
-            if not f.is_dir():
-                continue
-            f.chmod(f.stat().st_mode | stat.S_IROTH | stat.S_IXOTH) # TODO: is this necessary?
+            for f in p.glob("*/"):
+                if not f.is_dir():
+                    continue
+                f.chmod(f.stat().st_mode | stat.S_IROTH | stat.S_IXOTH) # TODO: is this necessary?
 
-        job.status = "SUCCESS"
+            job.status = "SUCCESS"
 
-        for d in dicom_sets:
-            d.processing_job = job
-            d.save()
+            for d in dicom_sets:
+                d.processing_job = job
+                d.save()
 
-        job.save()
-
+            job.save()
+        finally:
+            if log_id is not None:
+                logger.remove(log_id)
 
     @classmethod
     def enqueue_work(cls, case, dicom_set=None, *, docker_image=None, depends_on=None, parameters={}):
