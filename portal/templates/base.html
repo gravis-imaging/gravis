@@ -8,12 +8,12 @@
     <title>GRAVIS</title>
 
     <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" rel="stylesheet" crossorigin />
+    <link href="/static/css/external/font-awesome@6.2.0.all.min.css" rel="stylesheet" />
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" crossorigin />
+    <link href="/static/css/external/roboto.css" rel="stylesheet" />
     <!-- MDB -->
-    <link href="/static/css/external/mdb.dark.min.css" rel="stylesheet" crossorigin />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@5/dark.css" />
+    <link href="/static/css/external/mdb.dark.min.css" rel="stylesheet" />
+    <link href="/static/css/external/sweetalert2.dark@5.css" rel="stylesheet" />
     <!-- GRAVIS specific -->
     <link href="/static/css/gravis.css" rel="stylesheet" />
 
@@ -32,8 +32,8 @@
     {% endblock %}
     <script type="text/javascript" src="/static/js/external/jquery-3.6.1.min.js"></script>
     <script type="text/javascript" src="/static/js/external/mdb.min.js"></script>
-    <script src="https://unpkg.com/htmx.org@1.8.0" crossorigin></script>
-    <script src="https://unpkg.com/hyperscript.org@0.9.7" crossorigin></script>
+    <!-- <script src="https://unpkg.com/htmx.org@1.8.0" crossorigin></script>
+    <script src="https://unpkg.com/hyperscript.org@0.9.7" crossorigin></script> -->
     {% block addedscripts %}
     {% endblock %}   
     <!--
@@ -41,8 +41,8 @@
          as soon as Alpine loads, and if those scripts require anything in addedscripts, those might not be 
          available yet.
     -->
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" crossorigin></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js" crossorigin></script>
+    <script defer src="/static/js/external/alpinejs@3.12.0.cdn.min.js"></script>
+    <script src="/static/js/external/sweetalert2@11.min.js"></script>
     <script type="module">
         import { confirmPrompt, errorPrompt, errorToast, successPrompt, successToast, infoPrompt, doFetch } from "/static/js/utils.js"
         window.confirmPrompt = confirmPrompt;
