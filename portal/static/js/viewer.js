@@ -492,6 +492,7 @@ class GraspViewer {
         this.previewViewports.slice(0,3).map((v, n) => {
             v.element.getElementsByTagName('svg')[0].innerHTML = this.viewports[n].element.getElementsByTagName('svg')[0].innerHTML
         });
+        this.snapToSlice();
     }
 
     async setPreview(idx) {
@@ -543,6 +544,7 @@ class GraspViewer {
         this.chart.renderGraph_();
         await this.setVolumeBySeries(series_uid);
         const volume_result = await this.loadVolumeWithRetry();
+        this.fixShift();
     }    
 
     async switchToIndex(index) {
@@ -567,6 +569,24 @@ class GraspViewer {
         errorToast('Error while loading volume, some slices may be missing.');
 
         return false;
+    }
+    snapToSlice() {
+        for ( var i=0;i<3;i++) {
+            cornerstone.tools.utilities.scroll(viewer.viewports[i],{delta:0,volumeId:viewer.viewports[i].getDefaultActor().uid})
+            viewer.viewports[i].render();
+        }
+        fixUpCrosshairs()
+    }
+    fixShift() {
+        for ( var i=0; i<3; i++) {
+            // This tries to align the centers of the viewports and the preview viewports.
+            let center_a = this.viewports[i].worldToCanvas(this.viewports[i].getDefaultActor().actor.getCenter());
+            let center_b = this.previewViewports[i].worldToCanvas(this.previewViewports[i].getDefaultActor().actor.getCenter());
+            let shift = Vector.sub(center_b, center_a);
+            this.viewports[i].setPan(shift,true);
+            this.viewports[i].render();
+        }
+        fixUpCrosshairs()
     }
     async switchStudy(study_uid, dicom_set, case_id, keepCamera=true) {       
         this.study_uid = study_uid;
@@ -608,12 +628,13 @@ class GraspViewer {
         this.mip_manager.init(graspVolumeInfo, selected_index);
 
         const volume_result = await this.loadVolumeWithRetry();
-
+        
         try {
             await this.updatePreview();
         } catch (e) {
             console.error(e);
         }
+        this.fixShift();
         
         console.log("Study switched");
 
