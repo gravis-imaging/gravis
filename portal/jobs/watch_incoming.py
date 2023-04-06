@@ -53,14 +53,19 @@ def trigger_queued_cases():
         case.status = Case.CaseStatus.PROCESSING
         case.save()
 
-        if case.case_type not in pipelines.registered:
-            logger.error(f"Unknown case_type {Case.case_type}")
+        pipeline = None
+        for type, func in pipelines.registered.items():
+            if case.case_type in (type, type.label):
+                pipeline = func
+                break
+        else:
+            logger.error(f"Unknown case_type '{case.case_type}'")
             case.status = Case.CaseStatus.ERROR
             case.save()
             continue
             # TODO: send case to error folder
         try:
-            pipelines.registered[case.case_type](case)
+            pipeline(case)
         except:
             case.status = Case.CaseStatus.ERROR
             case.save()
@@ -70,13 +75,10 @@ def trigger_queued_cases():
 def delete_cases():
     try:
         cases = Case.objects.filter(status="DEL")
-        cases_locations_to_delete = []
         for case in cases:
             print(f"Marked for deletion {case.id} {case.case_location}")
-            cases_locations_to_delete.append(case.case_location)
-        cases.delete()
-        for case_location in cases_locations_to_delete:
-            shutil.rmtree(case_location)
+            shutil.rmtree(case.case_location)
+            case.delete()
         
     except Exception as e:
         print(e)
