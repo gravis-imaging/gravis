@@ -22,7 +22,8 @@ class DockerJob(WorkJobView):
     def do_job(cls, job: ProcessingJob):
         do_docker_job(job)
 
-    
+class ReportedException(Exception):
+    pass
 
 def do_docker_job(job):
     # Run the container and handle errors of running the container
@@ -91,7 +92,9 @@ def do_docker_job(job):
         # Check if the processing was successful (i.e., container returned exit code 0)
         exit_code = docker_result.get("StatusCode")
         if exit_code != 0:
-            raise Exception(f"Error while running container {docker_tag} - exit code {exit_code}. Value {DockerReturnCodes(exit_code).name}.")
+            raise ReportedException(f"Error while running container {docker_tag} - exit code {exit_code}. Value {DockerReturnCodes(exit_code).name}.")
+    except ReportedException:
+        raise
     except docker.errors.APIError as e:
         # Something really serious happened
         raise Exception(

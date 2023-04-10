@@ -27,7 +27,7 @@ class MIPManager {
         }
     }
     async switch(index, preview, targetImageIdIndex=null) {
-        console.log("switch")
+        // console.log("switch")
         this.is_switching = true;
         try {
             const current_info = this.viewer.current_study[index];
@@ -54,14 +54,14 @@ class MIPManager {
     }
 
     async cache() {
-        console.log("cache")
+        // console.log("cache")
         const viewport = this.viewport;
         
         let slice_location = 0.0;
         try {
             slice_location = this.mip_details[viewport.targetImageIdIndex]["slice_location"]; 
         } catch (e) {
-            console.log("mip_details is not initialized yet. setting slice_location to 0.0.")
+            // console.log("mip_details is not initialized yet. setting slice_location to 0.0.")
         }
         let imageIdsToPrefetch = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/processed_results/MIP?slice_location=${slice_location}`,null, "GET")).urls;
         
@@ -94,7 +94,7 @@ class MIPManager {
     }
 
     async startPreview(idx) {
-        console.log("startPreview")
+        // console.log("startPreview")
         if (this.previewing) {
             return;
         }
@@ -116,26 +116,27 @@ class MIPManager {
             // Update MIP Viewport
             const vp = this.viewport;
             await vp.setImageIdIndex(idx);
-            // The idea here is to try and force it to automatically recalculate the VOI.
-            vp.stackInvalidated = true;
-            vp._resetProperties();
-            await vp.setImageIdIndex(idx);
-            if (vp.voiRange.lower == vp.voiRange.upper) {
-                vp.setVOI({lower:vp.voiRange.lower, upper: vp.voiRange.lower+1});
-            }
 
-            /*
-            const imageMetadata = vp._getImageDataMetadata(vp.csImage);
-            console.error(imageMetadata.imagePixelModule);
-            const { windowCenter, windowWidth } = imageMetadata.imagePixelModule;
-            let voiRange = typeof windowCenter === 'number' && typeof windowWidth === 'number'
-                ? cornerstone.utilities.windowLevel.toLowHighRange(windowWidth, windowCenter)
-                : undefined;
-            if (voiRange.lower == voiRange.upper) {
-                vp.setVOI({lower:voiRange.lower, upper: voiRange.lower+1});
-            } else {
-                vp.setVOI(voiRange);
-            }*/
+            // The idea here is to try and force it to automatically recalculate the VOI.
+            // vp.stackInvalidated = true;
+            // vp._resetProperties();
+            // await vp.setImageIdIndex(idx);
+            // if (vp.voiRange.lower == vp.voiRange.upper) {
+                // vp.setVOI({lower:vp.voiRange.lower, upper: vp.voiRange.lower+1});
+            // }
+
+            // const imageMetadata = vp._getImageDataMetadata(vp.csImage);
+            // console.warn(imageMetadata.imagePixelModule);
+            // let { windowCenter, windowWidth } = imageMetadata.imagePixelModule;
+            // let voiRange = typeof windowCenter === 'number' && typeof windowWidth === 'number'
+            //     ? cornerstone.utilities.windowLevel.toLowHighRange(windowWidth, windowCenter)
+            //     : undefined;
+            // console.warn(voiRange);
+            // if (voiRange.lower == voiRange.upper) {
+            //     vp.setVOI({lower:voiRange.lower, upper: voiRange.lower+1});
+            // } else {
+            //     vp.setVOI(voiRange);
+            // }
             vp.render();
         } catch (e) {
             console.error(e);
@@ -143,7 +144,7 @@ class MIPManager {
     }
 
     async stopPreview(idx) {
-        console.log("stopPreview")
+        // console.log("stopPreview")
 
         // Resetting MIP image stack with images at a given time point with all available angles.
         try {

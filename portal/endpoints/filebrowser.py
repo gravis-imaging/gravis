@@ -47,9 +47,9 @@ def resolve_path(name,path):
         raise Exception()
     full_path = top_dir / path
     if not full_path.is_dir():
-        raise Exception()
+        raise Exception(f"{full_path} is not a directory.")
     if not full_path.is_relative_to(top_dir):
-        raise Exception()
+        raise Exception(f"{full_path} is not a proper subdirectory.")
     
     return full_path, top_dir, top_dir_name
 
