@@ -10,6 +10,7 @@ import pydicom
 
 from portal.models import Case, DICOMInstance, DICOMSet, ProcessingJob
 from .work_job import WorkJobView
+from loguru import logger
 
 def cross(*c) -> npt.ArrayLike:
     return np.cross(*c)
@@ -84,6 +85,14 @@ class GeneratePreviewsJob(WorkJobView):
         def get_position(instance):
             return np.asarray(json.loads(instance.json_metadata)["00200032"]["Value"])
 
+
+        locations = sorted([np.dot(z_axis,get_position(k)) for k in instances if k.series_uid == instances[0].series_uid])
+        logger.info(f"z-axis {z_axis}")
+
+        average_z_spacing = (max(locations) - min(locations)) / (len(locations)-1) #TODO: really subtract 1 here? why does this work? 
+
+        voxel_spacing = [average_z_spacing, *first_instance_metadata["00280030"]["Value"]]
+        logger.info(f"====== Voxel spacing is {voxel_spacing} =====")
         series_uids = { k.series_uid for k in instances }
         split_by_series = [ sorted([k for k in instances if k.series_uid == uid], key = lambda x:np.dot(z_axis,get_position(x))) for uid in series_uids ]
         files_by_series = [ [ Path(i.dicom_set.set_location) / i.instance_location for i in k] for k in sorted(split_by_series,key=lambda x:x[0].acquisition_seconds) ]
@@ -131,8 +140,10 @@ class GeneratePreviewsJob(WorkJobView):
         rotations = cls.mat_to_rotations(orient)
         for k,axes in rotations:
             volume = np.rot90(volume,k=k, axes=[a+1 for a in axes])
-        print(volume.shape)
+        logger.info(f"Volume shape: {volume.shape}")
 
+        voxel_spacing_rot = np.abs(orient @ voxel_spacing)
+        logger.info(f"Voxel spacing rotated {voxel_spacing_rot}")
         def get_index(axis,volume_slice, time=slice(None)):
             return [(time,volume_slice,        slice(None),  slice(None)), # axial 
                     (time,slice(None,None,-1), volume_slice, slice(None)), # coronal
@@ -151,7 +162,14 @@ class GeneratePreviewsJob(WorkJobView):
             new_study_uid = pydicom.uid.generate_uid()
             new_series_uid = pydicom.uid.generate_uid()
             
-            
+            if axis == 0: # TODO: make sure this is right
+                pixel_spacing = [voxel_spacing_rot[2],voxel_spacing_rot[1]]
+            elif axis == 1:
+                pixel_spacing = [voxel_spacing_rot[2],voxel_spacing_rot[0]]
+            elif axis == 2:
+                pixel_spacing = voxel_spacing_rot[0:2].tolist()
+
+            logger.info(f"Axis {axis} pixel spacing {pixel_spacing}")
             for i in range(volume.shape[axis+1]):
                 t_array = volume[get_index(axis,i)]
                 ds = prototype_ds.copy()
@@ -165,6 +183,7 @@ class GeneratePreviewsJob(WorkJobView):
                 ds.StudyInstanceUID  = new_study_uid
                 ds.SeriesInstanceUID = new_series_uid
                 ds.SOPInstanceUID    = pydicom.uid.generate_uid()
+                ds.PixelSpacing      = pixel_spacing
 
                 p = Path(dicom_sets[axis].set_location) / f"multiframe.{i}.dcm"
                 ds.save_as(p)
