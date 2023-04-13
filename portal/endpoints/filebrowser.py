@@ -1,6 +1,7 @@
 import json
+import shutil
 
-from django.http import HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotAllowed, HttpResponseNotFound, JsonResponse
+from django.http import HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotAllowed, HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import redirect
@@ -88,6 +89,11 @@ def submit_directory(request, name, path):
         # check whether it's valid:
     if not form.is_valid():
         return HttpResponseBadRequest(json.dumps(dict(validation_errors=form.errors)))
+
+    _, _, free = shutil.disk_usage(settings.CASES_FOLDER)
+    path_size = sum(f.stat().st_size for f in full_path.glob('**/*') if f.is_file())
+    if free < 4*path_size:
+        return HttpResponse("Insufficient disk space available.", status=507)
 
     study_json = dict(
         patient_name=form.cleaned_data["patient_name"],

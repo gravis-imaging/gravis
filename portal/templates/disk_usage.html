@@ -1,0 +1,16 @@
+<!-- Footer -->
+    <section class="d-flex justify-content-center justify-content-lg-between p-4 border-top border-bottom mt-4">
+      <div class="container text-center text-md-start">
+        <div class="row mt-3">  
+          <div class="col-md-5 col-lg-5 col-xl-5 mx-auto mb-md-0 mb-5">
+            <div class="progress" style="height: 1.5em; border-radius:1em; display:inline-block; width: 50%;">
+                <div class="progress-bar {{disk_usage.warn}}" role="progressbar" style="width: {{disk_usage.percent}}%;" aria-valuenow="{{disk_usage.percent}}" aria-valuemin="0" aria-valuemax="100">{{disk_usage.percent|floatformat}}%</div>
+            </div>
+            <span style="display:inline-flex; vertical-align: text-bottom; margin-left: 2em;">
+                {{disk_usage.used | filesizeformat}} / {{disk_usage.total | filesizeformat}} ({{disk_usage.free | filesizeformat}} free)
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+  <!-- Footer -->

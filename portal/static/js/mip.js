@@ -23,7 +23,7 @@ class MIPManager {
             await this.switch(selected_index, false);
             await this.setPreview(selected_index);
         } catch (e) {
-            console.error(e); 
+            console.warn(e); 
         }
     }
     async switch(index, preview, targetImageIdIndex=null) {
@@ -103,7 +103,7 @@ class MIPManager {
         try {
             await this.switch(idx, true);
         } catch (e) {
-            console.error(e);
+            console.warn(e);
         }
     }
 
@@ -139,7 +139,7 @@ class MIPManager {
             // }
             vp.render();
         } catch (e) {
-            console.error(e);
+            console.warn(e);
         }
     }
 
@@ -156,7 +156,7 @@ class MIPManager {
             console.log(JSON.stringify(vp.voiRange));
 
         } catch (e) {
-            console.error(e);
+            console.warn(e);
         }
     }
 }

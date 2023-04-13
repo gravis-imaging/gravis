@@ -1,5 +1,6 @@
 import logging
 import json
+import shutil
 from django.http import HttpResponse, HttpResponseBadRequest,HttpResponseForbidden, HttpResponseNotAllowed, JsonResponse
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -67,10 +68,21 @@ def logout_request(request):
     logout(request)
     return redirect("/login")
 
+def calc_disk_usage():
+    total, used, free = shutil.disk_usage(settings.CASES_FOLDER)
+    percent = 100*used/float(total)
+
+    if free < 10e9:
+        warn = "bg-danger"
+    elif free < 30e9:
+        warn = "bg-warning"
+    else:
+        warn = ""
+    return dict(total=total,used=used,free=free,percent = percent, warn=warn)
 
 @login_required
 def index(request):
-    context = {}
+    context = {"disk_usage":calc_disk_usage()}
     return render(request, "index.html", context)
 
 
@@ -145,11 +157,14 @@ def viewer(request, case_id):
     return render(request, "viewer.html", context)
 
 
+@login_required
 def file_browser(request):
     form = SubmitForm()
-    context = {"form": form}
+    context = {"form": form,
+               "disk_usage":calc_disk_usage()}
     return render(request, "filebrowser.html", context)
 
+@login_required
 def case_details(request, case_id):
     case = get_object_or_404(Case, id=case_id)
     jobs = case.processing_jobs.order_by("id").all()

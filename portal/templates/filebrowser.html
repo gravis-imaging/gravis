@@ -63,7 +63,6 @@
                 const result = await fetch(form.action,{method:'post', body: new FormData(form)});
                 if (!result.ok) {
                     const text = await result.text();
-                    console.log(JSON.parse(text));
                     try {
                         const errors = JSON.parse(text).validation_errors;
                         if (errors) {
@@ -73,7 +72,7 @@
                             await errorPrompt(text);
                         }
                     } catch(e) {
-                        console.log(e)
+                        console.warn(e)
                         await errorPrompt(text);
                     }
                 } else {
@@ -83,7 +82,7 @@
                 }
             } catch (e) {
                 await errorPrompt("Error submitting case.");
-                console.error(e);
+                console.warn(e);
             }
         }
       }));
@@ -143,4 +142,7 @@
         </div>
     </div>
 </div>
+<footer class="text-center text-lg-start text-muted">
+    {% include "disk_usage.html" %}
+</footer>
 {% endblock %}
