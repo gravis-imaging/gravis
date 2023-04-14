@@ -1,6 +1,6 @@
 <!-- Footer -->
     <section class="d-flex justify-content-start p-0 py-1 border-top border-bottom">
-      <div class="ms-auto me-4" style="vertical-align: text-top;" data-mdb-toggle="tooltip" data-mdb-html="true"  title="Disk utilization:<br> {{disk_usage.used | filesizeformat}}&nbsp;used / {{disk_usage.free | filesizeformat}}&nbsp;free">
+      <div class="ms-auto me-4" style="vertical-align: text-top;" data-mdb-toggle="tooltip" data-mdb-html="true"  title="Disk utilization:<br> {{disk_usage.used | filesizeformat}}&nbsp;used<br>{{disk_usage.free | filesizeformat}}&nbsp;free">
         <div class="progress align-middle" style="height: 1.5em; border-radius:1em; display:inline-block; width: 12rem; background-color: #424242;">
             <div class="progress-bar {{disk_usage.warn}} " role="progressbar" style="width: {{disk_usage.percent}}%;" aria-valuenow="{{disk_usage.percent}}" aria-valuemin="0" aria-valuemax="100">{{disk_usage.percent|floatformat}}%</div>
         </div>
