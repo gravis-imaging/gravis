@@ -159,12 +159,27 @@
                         const result = await confirmPrompt("Do you really want to delete the case?", "Are you sure?", async () => {
                             try {
                                 await doFetch(`/api/case/${case_id}/delete`);
-                                await successPrompt("The case has been deleted.");
+                                await successToast("The case has been deleted.");
                                 case_data_table.ajax.reload();
                             } catch (e) {
                                 Swal.showValidationMessage("A problem occurred while deleting the case. Please try again.")
                             }
                         })
+                    }
+                },
+                {
+                    extend: "selectedSingle",
+                    text: '<i class="fa-solid fa-gear"></i>',
+                    titleAttr: 'Reprocess Case',
+                    action: async function (e, dt, node, config) {
+                        const case_id = case_data_table.row({selected: true}).data().case_id;
+                        const { isConfirmed } = await confirmPrompt("Reprocess this case?")
+                        if (!isConfirmed) {
+                            return;
+                        }
+                        await doFetch(`/api/case/${case_id}/reprocess`);
+                        await successToast("The case will be reprocessed.");
+                        case_data_table.ajax.reload();
                     }
                 },
                 {% endif %}

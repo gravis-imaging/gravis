@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST, require_GET
 from django.shortcuts import get_object_or_404
+from portal.jobs.load_dicoms_job import CopyDicomsJob
 from portal.models import *
 from .common import get_im_orientation_mat, user_opened_case
 from django.db import transaction
@@ -33,6 +34,20 @@ def delete_case(request, case):
 
     case.status = Case.CaseStatus.DELETE
     case.save()
+    return HttpResponse() 
+
+@login_required
+@require_POST
+def reprocess_case(request, case):
+    if not (request.user.is_staff):
+        return HttpResponseForbidden()
+    case = get_object_or_404(Case, id=case)
+    directory = Path(case.case_location) / "input"
+    with open(directory / "study.json","r") as f:
+        study_json = json.load(f)
+
+    CopyDicomsJob.enqueue_work(case=None,parameters=dict(incoming_folder=str(directory), study_json=study_json))
+
     return HttpResponse() 
 
 @login_required
