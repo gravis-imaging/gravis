@@ -147,6 +147,21 @@
                 },
                 {
                     extend: "selectedSingle",
+                    text: '<i class="fa-solid fa-cogs"></i>',
+                    titleAttr: 'Reprocess case',
+                    action: async function (e, dt, node, config) {
+                        const case_id = case_data_table.row({selected: true}).data().case_id;
+                        const { isConfirmed } = await confirmPrompt("Reprocess selected case?")
+                        if (!isConfirmed) {
+                            return;
+                        }
+                        await doFetch(`/api/case/${case_id}/reprocess`);
+                        await successToast("The case will be reprocessed.");
+                        case_data_table.ajax.reload();
+                    }
+                },
+                {
+                    extend: "selectedSingle",
                     text: '<i class="fas fa-trash"></i>',
                     titleAttr: 'Remove case',
                     action: async function (e, dt, node, config) {
@@ -165,21 +180,6 @@
                                 Swal.showValidationMessage("A problem occurred while deleting the case. Please try again.")
                             }
                         })
-                    }
-                },
-                {
-                    extend: "selectedSingle",
-                    text: '<i class="fa-solid fa-gear"></i>',
-                    titleAttr: 'Reprocess Case',
-                    action: async function (e, dt, node, config) {
-                        const case_id = case_data_table.row({selected: true}).data().case_id;
-                        const { isConfirmed } = await confirmPrompt("Reprocess this case?")
-                        if (!isConfirmed) {
-                            return;
-                        }
-                        await doFetch(`/api/case/${case_id}/reprocess`);
-                        await successToast("The case will be reprocessed.");
-                        case_data_table.ajax.reload();
                     }
                 },
                 {% endif %}
@@ -228,12 +228,6 @@
             initComplete: () => {             
                 $("#tablewrapper").show();
             }
-        });
-
-        $('#casetable tbody').on( 'dblclick', 'tr', function () {
-            const tr = $(this).closest('tr');
-            const selected_row = case_data_table.row(tr).data();
-            openCase(selected_row.case_id, selected_row.status, selected_row.last_read_by_id);           
         });
         
         $('#casetable tbody').on('click', 'tr', function () {

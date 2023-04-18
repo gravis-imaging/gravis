@@ -68,6 +68,7 @@ def logout_request(request):
     logout(request)
     return redirect("/login")
 
+
 def calc_disk_usage():
     total, used, free = shutil.disk_usage(settings.CASES_FOLDER)
     percent = 100*used/float(total)
@@ -79,6 +80,7 @@ def calc_disk_usage():
     else:
         warn = ""
     return dict(total=total,used=used,free=free,percent = percent, warn=warn)
+
 
 @login_required
 def index(request):
@@ -122,6 +124,7 @@ def config(request):
     tags.sort(key=lambda a: a[1])
     context = {
         "tags": tags,
+        "disk_usage":calc_disk_usage()
     }
     return render(request, "config.html", context)
 

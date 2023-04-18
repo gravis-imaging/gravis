@@ -33,7 +33,19 @@
       <div class="tab-content ms-md-3" id="v-pills-tabContent" style="margin-top: 0.2rem;">
 
         <div class="tab-pane show active" id="v-pills-status" role="tabpanel" aria-labelledby="v-pills-status-tab">
-          <h4><i class="fas fa-power-off" style="color: #1266f1;"></i>&nbsp;&nbsp;System Status</h4>
+          <h4 style="margin-bottom: 2.5rem;"><i class="fas fa-power-off" style="color: #1266f1;"></i>&nbsp;&nbsp;System Status</h4>
+
+          <h5>Disk Utilization</h5>
+          <div class="ms-auto me-4" style="vertical-align: text-top;">
+            <div class="progress align-middle" style="height: 1.5em; border-radius:1em; display:inline-block; width: 12rem; background-color: #424242;">
+                <div class="progress-bar {{disk_usage.warn}} " role="progressbar" style="width: {{disk_usage.percent}}%;" aria-valuenow="{{disk_usage.percent}}" aria-valuemin="0" aria-valuemax="100">{{disk_usage.percent|floatformat}}%</div>
+            </div>
+            <span class="align-middle" style="display:inline-flex; vertical-align: text-bottom; margin-left: 0.8rem;">
+                {{disk_usage.used | filesizeformat}} / {{disk_usage.total | filesizeformat}} ({{disk_usage.free | filesizeformat}}&nbsp;free) 
+            </span>
+          </div>            
+
+
         </div>
 
         <div class="tab-pane" id="v-pills-home" role="tabpanel" aria-labelledby="v-pills-home-tab">
