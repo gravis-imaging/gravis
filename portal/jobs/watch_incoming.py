@@ -76,8 +76,9 @@ def delete_cases():
     try:
         cases = Case.objects.filter(status="DEL")
         for case in cases:
-            print(f"Marked for deletion {case.id} {case.case_location}")
-            shutil.rmtree(case.case_location)
+            if Path(case.case_location).exists():
+                print(f"Deleting {case.id} {case.case_location}")
+                shutil.rmtree(case.case_location)
             case.delete()
         
     except Exception as e:

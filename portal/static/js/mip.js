@@ -1,19 +1,34 @@
 import { confirmPrompt, doFetch, errorPrompt } from "./utils.js";
 
-class MIPManager {
+class AuxManager {
     viewer;
     viewport;
     mip_details;
     previewing = false; 
     is_switching = false;
     ori_dicom_set;
+
     constructor( viewer, viewport ) {
         this.viewer = viewer;
         this.viewport = viewport;
         this.previewing = false;
-        this.ori_dicom_set = this.viewer.studies_data.find(x=>x.type=="ORI").dicom_set;
+        this.ori_dicom_set = this.viewer.studies_data.volumes.find(x=>x.type=="ORI").dicom_set;
     }
+    async init(graspVolumeInfo, selected_index) {
+    }
+    async switch(index, preview, targetImageIdIndex=null) {}
+    async cache() {}
+    async startPreview(idx) {}
+    async setPreview(idx) {}
+    async stopPreview() {}
+    async selectStack(type) {
+        const  urls = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/processed_results/${type}`,null, "GET")).urls;
+        const index = this.viewer.auxViewport.getCurrentImageIdIndex() || 0
+        await this.viewport.setStack(urls, index);
+    }
+}
 
+class MIPManager extends AuxManager{
     async init(graspVolumeInfo, selected_index) {
         // Get MIP metadata info, currently only need slice_locations
         const current_info = graspVolumeInfo[selected_index];
@@ -161,4 +176,4 @@ class MIPManager {
     }
 }
 
-export { MIPManager }
+export { MIPManager, AuxManager }

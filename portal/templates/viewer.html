@@ -47,9 +47,9 @@
         init: async function() {
           this.loading = true; 
           await this.$nextTick();
-          viewer = await new GraspViewer(this.$refs.viewer_main, this.$refs.viewer_preview, this.studies_data); 
+          viewer = await new GraspViewer(this.$refs.viewer_main, this.$refs.viewer_preview, this.studies_data, this.case_data); 
           window.viewer = viewer; 
-          await viewer.switchStudy(this.studies_data[0].uid, this.studies_data[0].dicom_set, this.case_id);
+          await viewer.switchStudy(this.studies_data.volumes[0].uid, this.studies_data.volumes[0].dicom_set, this.case_id);
           this.viewer = viewer;
           this.loading = false;
           // Prompt the user if there are unsaved changes.
@@ -61,12 +61,12 @@
         volume_picker: {
           async ['@mouseup']() {
             this.previewing = false;
-            this.viewer.mip_manager.stopPreview(this.$event.target.value);
+            this.viewer.aux_manager.stopPreview(this.$event.target.value);
           },
           async ['@mousedown']() {
             const v = this.$event.target.value;
-            await this.viewer.mip_manager.startPreview(v); 
-            this.viewer.mip_manager.setPreview(v);
+            await this.viewer.aux_manager.startPreview(v); 
+            this.viewer.aux_manager.setPreview(v);
           },
           async ['@input']() {
             const v = this.$event.target.value; 
@@ -74,7 +74,7 @@
             this.previewing = true;
             this.viewer.selected_time = this.viewer.current_study[v].acquisition_seconds;
             this.viewer.setPreview(v);
-            this.viewer.mip_manager.setPreview(v);
+            this.viewer.aux_manager.setPreview(v);
           },
           async ['@change']() { 
             try {
@@ -100,7 +100,7 @@
       <select id="studies" name="studies" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-outline-light btn-lg btn-rounded text-light btn-viewer-toolbar" data-width="100px"
       @change="loading=true; await $nextTick(); await viewer.switchStudy(...$event.target.value.split('__'), case_id);  loading=false;" title="Displayed series">
         <optgroup label="Displayed Series">
-          <template x-for='study in studies_data'>
+          <template x-for='study in studies_data.volumes'>
             <option :value="`${study.uid}__${study.dicom_set}`" x-text="study.type"></option>
           </template>
         </optgroup>
@@ -163,7 +163,9 @@
         </ul>
       </div>    
     </div>
-  
+    <button @click="previewing = !previewing" class="btn-primary btn-large btn-viewer ms-2">
+      P
+    </button>
     <button title="Duplicate selected annotation" class="btn-primary btn-large btn-viewer ms-2" 
         :disabled="should_disable() || read_only" disabled="disabled" 
         @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
@@ -273,7 +275,7 @@
               :disabled="should_disable" disabled="disabled" 
                 @click="viewer.viewports[i-1].setZoom(1); viewer.viewports[i-1].setPan([0,0]); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-magnifying-glass-minus"></i>
             </button><button
-             title="Store finding || read_only" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
+             title="Store finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
               :disabled="should_disable() || read_only" disabled="disabled" 
                 @click="job_loading = true; await viewer.storeFinding(viewer.viewports[i-1]); job_loading = false;"><i class="fa-solid fa-camera"></i>
             </button>
@@ -299,6 +301,16 @@
          :disabled="should_disable() || read_only" disabled="disabled"
          @click="job_loading = true; viewer.storeFinding(viewer.auxViewport); job_loading = false;"><i class="fa-solid fa-camera"></i>
        </button>
+       <template x-if="studies_data.others.length > 1">
+        <select id="aux_select" name="studies" autocomplete="off" class="selectpicker show-tick all-pointer-events" value="" data-style="btn btn-lg text-light btn-viewer-toolbar"
+        @change="job_loading=true; await $nextTick(); await viewer.aux_manager.selectStack($event.target.value); job_loading=false;" title="Displayed series">
+          <optgroup label="">
+            <template x-for="study in studies_data.others">
+              <option :value="study.type" x-text="study.type"></option>
+            </template>
+          </optgroup>
+        </select>
+      </template>
     </div>
   </div>
 
@@ -326,7 +338,7 @@
     <div style="align-self:end;justify-self:end;">
       <button title="Export to CSV" class="all-pointer-events btn-primary btn-large btn-viewer"
         :disabled="should_disable" disabled="disabled"
-        @click="await viewer.annotation_manager.exportChart(case_data)"><i class="fa-solid fa-download"></i>
+        @click="await viewer.annotation_manager.exportChart(case_data.acc)"><i class="fa-solid fa-download"></i>
      </button>
       <button title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-1"
         :disabled="should_disable() || read_only" disabled="disabled"

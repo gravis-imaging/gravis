@@ -26,9 +26,9 @@ class AnnotationManager {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
     }
-    exportChart(case_data) {
+    exportChart(acc) {
         const name = ["gravis",
-                        case_data.acc,
+                        acc,
                         this.viewer.chart_options['adjust'],
                         this.viewer.chart_options['mode'],
                         new Date().toLocaleString('sv').replace(' ','T').replaceAll(':','')

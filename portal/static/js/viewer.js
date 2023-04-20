@@ -1,6 +1,6 @@
 import { AnnotationManager } from "./annotations.js"
 import { StateManager } from "./state.js"
-import { MIPManager } from "./mip.js"
+import { MIPManager, AuxManager } from "./mip.js"
 import { doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch, chartToImage, successToast, fixUpCrosshairs,decacheVolumes, errorPrompt, errorToast } from "./utils.js"
 
 
@@ -116,8 +116,9 @@ class GraspViewer {
           })();   
         }
 
-        async initialize( main, preview, studies_data ) {
+        async initialize( main, preview, studies_data, case_data ) {
             this.studies_data = studies_data;
+            this.case_data = case_data;
             // Force cornerstone to try to use GPU rendering even if it thinks the GPU is weak.
             cornerstone.setUseCPURendering(false);
             await cornerstone.helpers.initDemo(); 
@@ -167,7 +168,6 @@ class GraspViewer {
             }
 
             const auxViewport = this.genViewportDescription("AUX", null, document.getElementById("aux-container"), "VIEW")
-
             auxViewport.element.ondblclick = e => {
                 //const el = auxViewport.element;
                 const el = document.getElementById("aux-container-outer");
@@ -186,9 +186,9 @@ class GraspViewer {
             
             auxViewport.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(500, async (evt) => {                
                 try {
-                    await this.mip_manager.cache();
+                    await this.aux_manager.cache();
                 } catch (e) {
-                    console.error(e);
+                    console.warn(e);
                 }
             }));
 
@@ -197,12 +197,29 @@ class GraspViewer {
             this.previewViewportIds = previewViewportIds;
             this.viewports = viewportIds.map((c)=>this.renderingEngine.getViewport(c));
             this.auxViewport = this.renderingEngine.getViewport("VIEW_AUX");
+
+            const transferFunction = ({lower, upper}) => {
+                const cfun = vtk.Rendering.Core.vtkColorTransferFunction.newInstance();
+                const presetToUse = vtk.Rendering.Core.vtkColorTransferFunction.vtkColorMaps.getPresetByName('2hot');
+                cfun.applyColorMap(presetToUse);
+                cfun.setMappingRange(lower, upper);
+                // cfun.addRGBPoint(lower, 0.0, 0.0, 0.0);
+                // cfun.addRGBPoint(upper, 0.0, 0.0, 1.0);
+                return cfun;
+            }
+            this.auxViewport.setProperties( { "RGBTransferFunction": transferFunction})
+
+
             this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c));
 
             this.annotation_manager = new AnnotationManager(this);
             this.state_manager = new StateManager(this);
-            this.mip_manager = new MIPManager(this, this.auxViewport);
-
+            if (case_data.case_type == "GRASP MRA") {
+                this.aux_manager = new MIPManager(this, this.auxViewport);
+            } else {
+                this.aux_manager = new AuxManager(this, this.auxViewport);
+            }
+            
             cornerstone.tools.synchronizers.createVOISynchronizer("SYNC_CAMERAS");
             this.createTools();
             this.renderingEngine.renderViewports([...this.viewportIds, ...this.previewViewports]);
@@ -241,7 +258,7 @@ class GraspViewer {
                         await this.updatePreview(n)
                         this.previewViewports[n].setZoom(v.getZoom());
                         this.previewViewports[n].setPan(v.getPan());
-                        this.renderingEngine.renderViewports([this.previewViewportIds[n]])    
+                        this.previewViewports[n].render();
                     } catch (e) {
                         console.error(e);
                     }
@@ -625,7 +642,7 @@ class GraspViewer {
         
         this.current_study = graspVolumeInfo;
          
-        this.mip_manager.init(graspVolumeInfo, selected_index);
+        this.aux_manager.init(graspVolumeInfo, selected_index);
 
         const volume_result = await this.loadVolumeWithRetry();
         
@@ -806,7 +823,7 @@ class GraspViewer {
             }
         }
 
-        for (const [index, info] of this.studies_data.entries()) {
+        for (const [index, info] of this.studies_data.volumes.entries()) {
             if (info.dicom_set === finding.dicom_set && info.dicom_set != this.dicom_set){
                 for (const [index, info] of this.current_study.entries()) { 
                     if ( Math.abs(info.acquisition_seconds - finding.data.time) < 0.001 ) {
@@ -824,7 +841,7 @@ class GraspViewer {
             this.selected_time = new_selected_time;
             document.getElementById("volume-picker").value = new_selected_index;
             await Promise.all([
-                this.mip_manager.switch(new_selected_index, false, finding.data.imageIdIndex),
+                this.aux_manager.switch(new_selected_index, false, finding.data.imageIdIndex),
                 this.switchToIndex(new_selected_index)])
         } else {
             if (finding.data.viewportId == "VIEW_AUX") {
