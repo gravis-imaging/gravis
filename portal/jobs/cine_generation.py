@@ -183,7 +183,7 @@ class GeneratePreviewsJob(WorkJobView):
                 ds.StudyInstanceUID  = new_study_uid
                 ds.SeriesInstanceUID = new_series_uid
                 ds.SOPInstanceUID    = pydicom.uid.generate_uid()
-                # ds.PixelSpacing      = pixel_spacing
+                ds.PixelSpacing      = pixel_spacing
 
                 p = Path(dicom_sets[axis].set_location) / f"multiframe.{i}.dcm"
                 ds.save_as(p)
