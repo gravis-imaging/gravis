@@ -224,21 +224,19 @@ class GraspViewer {
                         this.auxViewport.targetImageIdIndex = this.auxViewport.getCurrentImageIdIndex();
                     })
                 }
+                const transferFunction = ({lower, upper}) => {
+                    const cfun = vtk.Rendering.Core.vtkColorTransferFunction.newInstance();
+                    const presetToUse = vtk.Rendering.Core.vtkColorTransferFunction.vtkColorMaps.getPresetByName('2hot');
+                    cfun.applyColorMap(presetToUse);
+                    cfun.setMappingRange(lower, upper);
+                    // cfun.addRGBPoint(lower, 0.0, 0.0, 0.0);
+                    // cfun.addRGBPoint(upper, 0.0, 0.0, 1.0);
+                    return cfun;
+                }
+                this.auxViewport.setProperties( { "RGBTransferFunction": transferFunction})
             }
-            const transferFunction = ({lower, upper}) => {
-                const cfun = vtk.Rendering.Core.vtkColorTransferFunction.newInstance();
-                const presetToUse = vtk.Rendering.Core.vtkColorTransferFunction.vtkColorMaps.getPresetByName('2hot');
-                cfun.applyColorMap(presetToUse);
-                cfun.setMappingRange(lower, upper);
-                // cfun.addRGBPoint(lower, 0.0, 0.0, 0.0);
-                // cfun.addRGBPoint(upper, 0.0, 0.0, 1.0);
-                return cfun;
-            }
-            this.auxViewport.setProperties( { "RGBTransferFunction": transferFunction})
-
 
             this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c));
-
             this.annotation_manager = new AnnotationManager(this);
             this.state_manager = new StateManager(this);
             if (case_data.case_type == "GRASP MRA") {
