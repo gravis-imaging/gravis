@@ -1,4 +1,4 @@
-import { confirmPrompt, doFetch, errorPrompt } from "./utils.js";
+import { confirmPrompt, doFetch, errorPrompt, errorToast } from "./utils.js";
 
 class AuxManager {
     viewer;
@@ -22,9 +22,15 @@ class AuxManager {
     async setPreview(idx) {}
     async stopPreview() {}
     async selectStack(type) {
-        const  urls = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/processed_results/${type}`,null, "GET")).urls;
-        const index = this.viewer.auxViewport.getCurrentImageIdIndex() || 0
-        await this.viewport.setStack(urls, index);
+        try {
+            const  urls = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/processed_results/${type}`,null, "GET")).urls;
+            const native_vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0])
+            const index = native_vp._getImageIdIndex() || this.viewer.auxViewport.getCurrentImageIdIndex() || 0
+            await this.viewport.setStack(urls, index);
+        } catch (e) {
+            console.error(e);
+            errorToast(`Error displaying ${type}.`)
+        }
     }
 }
 
