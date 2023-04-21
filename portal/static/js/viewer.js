@@ -168,7 +168,14 @@ class GraspViewer {
             }
 
             const auxViewport = this.genViewportDescription("AUX", null, document.getElementById("aux-container"), "VIEW")
-            auxViewport.element.ondblclick = e => {
+            this.renderingEngine.setViewports([...previewViewports, ...viewViewports, auxViewport]);
+
+            this.viewportIds = [...viewportIds , auxViewport.viewportId];
+            this.previewViewportIds = previewViewportIds;
+            this.viewports = viewportIds.map((c)=>this.renderingEngine.getViewport(c));
+            this.auxViewport = this.renderingEngine.getViewport("VIEW_AUX");
+
+            this.auxViewport.element.ondblclick = e => {
                 //const el = auxViewport.element;
                 const el = document.getElementById("aux-container-outer");
                 if (el.getAttribute("fullscreen") != "true") {
@@ -182,22 +189,40 @@ class GraspViewer {
                 }
                 this.renderingEngine.resize(true, true);
             }
-            auxViewport.element.oncontextmenu = e=>e.preventDefault();
+            this.auxViewport.element.oncontextmenu = e=>e.preventDefault();
             
-            auxViewport.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(500, async (evt) => {                
+            this.auxViewport.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(500, async (evt) => {                
                 try {
                     await this.aux_manager.cache();
                 } catch (e) {
                     console.warn(e);
                 }
             }));
+            this.auxViewport.element.addEventListener("CORNERSTONE_STACK_VIEWPORT_SCROLL",async (evt) => {           
+                const vp = this.renderingEngine.getViewport(this.getNativeViewports()[0])     
+                const current_image_id = this.auxViewport.getCurrentImageId();
+                if (!current_image_id) return;
+                const position = cornerstone.metaData.get("imagePlaneModule",current_image_id).imagePositionPatient;
+                if (!position)  return;
+                // console.log("Scrolling native viewport to", position);
+                scrollViewportToPoint(vp,this.auxViewport.getCamera().focalPoint); 
+                // console.log("Scrolled native viewport to", vp._getImageIdIndex());
+                vp.render();
+                
+            });
 
-            this.renderingEngine.setViewports([...previewViewports, ...viewViewports, auxViewport]);
-            this.viewportIds = [...viewportIds , auxViewport.viewportId];
-            this.previewViewportIds = previewViewportIds;
-            this.viewports = viewportIds.map((c)=>this.renderingEngine.getViewport(c));
-            this.auxViewport = this.renderingEngine.getViewport("VIEW_AUX");
-
+            for (const vp of this.viewports) {
+                vp.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED",async (evt) => {    
+                    if (this.getNativeViewports().indexOf(vp.id) == -1) return;
+                    if (viewer.auxViewport.getImageIds().length == 0) return;
+                    // console.log("Scrolling aux viewport to index", vp._getImageIdIndex());
+                    this.auxViewport.suppressEvents = true;
+                    this.auxViewport.setImageIdIndex(vp._getImageIdIndex());
+                    this.auxViewport.suppressEvents = false;
+                    // console.log("Scrolled aux viewport to index", this.auxViewport.getCurrentImageIdIndex());
+                    this.auxViewport.targetImageIdIndex = this.auxViewport.getCurrentImageIdIndex();
+                })
+            }
             const transferFunction = ({lower, upper}) => {
                 const cfun = vtk.Rendering.Core.vtkColorTransferFunction.newInstance();
                 const presetToUse = vtk.Rendering.Core.vtkColorTransferFunction.vtkColorMaps.getPresetByName('2hot');
@@ -545,7 +570,7 @@ class GraspViewer {
         }
         await Promise.all(update.map(async n => {
             let [lower, upper] = this.getVolumeVOI(this.viewports[0])
-            console.log("Volume VOI", upper,lower)
+            // console.log("Volume VOI", upper,lower)
             this.previewViewports[n].setVOI({lower, upper});
             try {
                 await this.setPreviewStackForViewport(n, this.previewViewports[n]) 

@@ -330,7 +330,7 @@ class Vector {
 }
 
 
-const scrollViewportToPoint = (viewport, centerPoint) => {
+const scrollViewportToPoint = (viewport, centerPoint, noEvent=false) => {
     let cam = viewport.getCamera();
     const moveAmount = Vector.dot(cam.viewPlaneNormal, centerPoint) - Vector.dot(cam.viewPlaneNormal, cam.focalPoint)
     const delta = Vector.mul(cam.viewPlaneNormal, moveAmount);    
@@ -346,7 +346,11 @@ const scrollViewportToPoint = (viewport, centerPoint) => {
     //             position: Vector.add(centerPoint,offset)
     //         }
     // }
-    viewport.setCamera(cam);
+    if (noEvent){
+        viewport.setCameraNoEvent(cam);
+    } else {
+        viewport.setCamera(cam);
+    }
     fixUpCrosshairs();
 }
 
