@@ -209,11 +209,9 @@ class GraspViewer {
                 // cfun.addRGBPoint(upper, 0.0, 0.0, 1.0);
                 return cfun;
             }
-            this.auxViewport.setProperties( { "RGBTransferFunction": transferFunction})
             if (this.case_type=="Onco") {
                 this.auxViewport.setProperties( { "RGBTransferFunction": transferFunction})
             }
-
 
             this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c));
 
