@@ -102,6 +102,7 @@ class GraspViewer {
     current_study;
     selected_time = 0;
     chart_options = {mode: "mean", adjust:"standard"};
+    case_type = "MRA";
 
     mip_details = [];
 
@@ -200,7 +201,8 @@ class GraspViewer {
 
             const transferFunction = ({lower, upper}) => {
                 const cfun = vtk.Rendering.Core.vtkColorTransferFunction.newInstance();
-                const presetToUse = vtk.Rendering.Core.vtkColorTransferFunction.vtkColorMaps.getPresetByName('2hot');
+                //const presetToUse = vtk.Rendering.Core.vtkColorTransferFunction.vtkColorMaps.getPresetByName('2hot');
+                const presetToUse = vtk.Rendering.Core.vtkColorTransferFunction.vtkColorMaps.getPresetByName('jet');
                 cfun.applyColorMap(presetToUse);
                 cfun.setMappingRange(lower, upper);
                 // cfun.addRGBPoint(lower, 0.0, 0.0, 0.0);
@@ -208,6 +210,9 @@ class GraspViewer {
                 return cfun;
             }
             this.auxViewport.setProperties( { "RGBTransferFunction": transferFunction})
+            if (this.case_type=="Onco") {
+                this.auxViewport.setProperties( { "RGBTransferFunction": transferFunction})
+            }
 
 
             this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c));

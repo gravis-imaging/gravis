@@ -149,17 +149,19 @@ def viewer(request, case_id):
             case.status = Case.CaseStatus.VIEWING
             case.save()
 
-    instances = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set__type__in=("ORI", "SUB")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")
+    instances = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set__type__in=("ORI", "SUB")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")   
     
     other_instances = DICOMInstance.objects.filter(dicom_set__case=case).exclude(dicom_set__type__in=("ORI", "SUB", "CINE/AX","CINE/COR", "CINE/SAG")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")
     def i_to_dict(k):
-        return dict(uid=k.study_uid,dicom_set=k.dicom_set.id, type=k.dicom_set.type)
+        return dict(uid=k.study_uid,dicom_set=k.dicom_set.id, type=k.dicom_set.type)    
+
     context = {
         "studies": {"volumes": [i_to_dict(k) for k in instances],
                     "others": [i_to_dict(k) for k in other_instances]},
         "current_case": case.to_dict(request.user.profile.privacy_mode),
         "original_dicom_set_id": instances[0].dicom_set.id,
-        "read_only": "true" if read_only else "false"
+        "read_only": "true" if read_only else "false",
+        "case_type": case.case_type
     }
     return render(request, "viewer.html", context)
 

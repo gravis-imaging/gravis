@@ -43,6 +43,7 @@
         studies_data: parse_json_element("studies_data"),
         case_data: parse_json_element("case_data"),
         case_id: "{{current_case.id}}",
+        case_type: "{{case_type}}",
         read_only: {{read_only}},
         init: async function() {
           this.loading = true; 
