@@ -202,13 +202,7 @@ class GraspViewer {
             if (this.case_data.case_type == "GRASP Onco") {
                 this.auxViewport.element.addEventListener("CORNERSTONE_STACK_VIEWPORT_SCROLL",async (evt) => {           
                     const vp = this.renderingEngine.getViewport(this.getNativeViewports()[0])     
-                    // const current_image_id = this.auxViewport.getCurrentImageId();
-                    // if (!current_image_id) return;
-                    // const position = cornerstone.metaData.get("imagePlaneModule",current_image_id).imagePositionPatient;
-                    // if (!position)  return;
-                    // console.log("Scrolling native viewport to", position);
                     scrollViewportToPoint(vp,this.auxViewport.getCamera().focalPoint, true); 
-                    // console.log("Scrolled native viewport to", vp._getImageIdIndex());
                     vp.render();
                     
                 });
@@ -217,21 +211,17 @@ class GraspViewer {
                     vp.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED",async (evt) => {    
                         if (this.getNativeViewports().indexOf(vp.id) == -1) return;
                         if (viewer.auxViewport.getImageIds().length == 0) return;
-                        // console.log("Scrolling aux viewport to index", vp._getImageIdIndex());
                         this.auxViewport.suppressEvents = true;
                         this.auxViewport.setImageIdIndex(vp._getImageIdIndex());
                         this.auxViewport.suppressEvents = false;
-                        // console.log("Scrolled aux viewport to index", this.auxViewport.getCurrentImageIdIndex());
                         this.auxViewport.targetImageIdIndex = this.auxViewport.getCurrentImageIdIndex();
                     })
                 }
                 const transferFunction = ({lower, upper}) => {
                     const cfun = vtk.Rendering.Core.vtkColorTransferFunction.newInstance();
-                    const presetToUse = vtk.Rendering.Core.vtkColorTransferFunction.vtkColorMaps.getPresetByName('2hot');
+                    const presetToUse = vtk.Rendering.Core.vtkColorTransferFunction.vtkColorMaps.getPresetByName('jet');
                     cfun.applyColorMap(presetToUse);
                     cfun.setMappingRange(lower, upper);
-                    // cfun.addRGBPoint(lower, 0.0, 0.0, 0.0);
-                    // cfun.addRGBPoint(upper, 0.0, 0.0, 1.0);
                     return cfun;
                 }
                 this.auxViewport.setProperties( { "RGBTransferFunction": transferFunction})
