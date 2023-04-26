@@ -102,6 +102,7 @@ class GraspViewer {
     current_study;
     selected_time = 0;
     chart_options = {mode: "mean", adjust:"standard"};
+    case_type = "MRA";
 
     mip_details = [];
 
