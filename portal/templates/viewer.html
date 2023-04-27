@@ -50,6 +50,9 @@
           viewer = await new GraspViewer(this.$refs.viewer_main, this.$refs.viewer_preview, this.studies_data, this.case_data); 
           window.viewer = viewer; 
           await viewer.switchStudy(this.studies_data.volumes[0].uid, this.studies_data.volumes[0].dicom_set, this.case_id);
+          if (this.studies_data.others.length > 0) {
+            await viewer.aux_manager.selectStack(this.studies_data.others[0].type);
+          }
           this.viewer = viewer;
           this.loading = false;
           // Prompt the user if there are unsaved changes.
@@ -96,7 +99,8 @@
   <!-- dicom set selector -->
   <div class="toolbar-area">
     <!-- dicom set selection -->
-    <div class="me-2" style="width: 100px;">
+    <div class="me-2" style="min-width: 100px;">
+      <template x-if="studies_data.volumes.length > 1">
       <select id="studies" name="studies" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-outline-light btn-lg btn-rounded text-light btn-viewer-toolbar" data-width="100px"
       @change="loading=true; await $nextTick(); await viewer.switchStudy(...$event.target.value.split('__'), case_id);  loading=false;" title="Displayed series">
         <optgroup label="Displayed Series">
@@ -105,8 +109,19 @@
           </template>
         </optgroup>
       </select>
-    </div>    
-
+    </div>
+    </template>
+    <template x-if="studies_data.others.length > 1">
+      <select id="aux_select" name="studies" autocomplete="off" class="selectpicker show-tick all-pointer-events" value="" data-style="btn btn-lg text-light btn-viewer-toolbar" data-width="200px"
+      @change="job_loading=true; await $nextTick(); await viewer.aux_manager.selectStack($event.target.value); job_loading=false;" title="Displayed series">
+        <optgroup label="">
+          <template x-for="study in studies_data.others">
+            <option :value="study.type" x-text="study.type"></option>
+          </template>
+        </optgroup>
+      </select>
+    </template>
+    </div>
     <!-- Indicators -->
     <div class="ms-2 me-3" style="width:1.8em; height: 28px; margin-top: auto; margin-bottom: auto;">
       <div :class="(loading || switching || job_loading) || 'invisible'" class="spinner-grow spinner-grow-sm ms-2 z-index-1" role="status" style="position:absolute; color: hsla(0,0%,100%,.2); margin-top: 0.3em;">
@@ -300,17 +315,11 @@
       title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer"
          :disabled="should_disable() || read_only" disabled="disabled"
          @click="job_loading = true; viewer.storeFinding(viewer.auxViewport); job_loading = false;"><i class="fa-solid fa-camera"></i>
-       </button>
-       <template x-if="studies_data.others.length > 1">
-        <select id="aux_select" name="studies" autocomplete="off" class="selectpicker show-tick all-pointer-events" value="" data-style="btn btn-lg text-light btn-viewer-toolbar"
-        @change="job_loading=true; await $nextTick(); await viewer.aux_manager.selectStack($event.target.value); job_loading=false;" title="Displayed series">
-          <optgroup label="">
-            <template x-for="study in studies_data.others">
-              <option :value="study.type" x-text="study.type"></option>
-            </template>
-          </optgroup>
-        </select>
-      </template>
+       </button><button
+       title="Add probe annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2" 
+          :disabled="should_disable() || read_only || viewer.rotate_mode" disabled="disabled" 
+          @click="viewer.annotation_manager.addAnnotationToViewport('Probe','aux');"><i class="fa-solid fa-plus"></i>
+      </button>
     </div>
   </div>
 

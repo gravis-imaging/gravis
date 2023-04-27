@@ -195,7 +195,11 @@ class AnnotationManager {
     }
 
     addAnnotationToViewport(tool_name,viewport_n) {
-        var viewport = this.viewer.viewports[viewport_n]
+        if (viewport_n == 'aux') {
+            var viewport = this.viewer.auxViewport;
+        } else {
+            var viewport = this.viewer.viewports[viewport_n];
+        }
         var cam = viewport.getCamera()
         var center_point = viewport.worldToCanvas(cam.focalPoint)
         if (tool_name == "EllipticalROI" )
@@ -211,9 +215,14 @@ class AnnotationManager {
             throw Error(`Unknown annotation type ${tool_name}`)
         }
         let new_annotation = this.createAnnotationTemplate(tool_name);
+
+        if (viewport.type == "stack") {
+            new_annotation.metadata.referencedImageId = viewport.getCurrentImageId();
+        }
+        // "referencedImageId":"wadouri:/media/cases/835a6e6e-5b02-41c2-8e8b-d563f6202a84/processed/dc38895f-b3d3-48a0-ab09-3ebf1202772a/METS_AUC/1.2.826.0.1.3680043.8.498.11734583966325913475023864237373123772_METS_AUC_088.dcm"
         new_annotation.metadata = {
             ...new_annotation.metadata,
-            viewportId: this.viewer.viewportIds[viewport_n],
+            viewportId: viewport.id,
             cam: viewport.getCamera(),
             toolName: tool_name,
             viewPlaneNormal: cam.viewPlaneNormal,
@@ -224,8 +233,7 @@ class AnnotationManager {
         cornerstone.tools.annotation.state.addAnnotation(viewport.element,new_annotation)
         cornerstone.tools.annotation.selection.setAnnotationSelected(new_annotation.annotationUID, true, false);
 
-        cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,[this.viewer.viewportIds[viewport_n]]) 
-
+        viewport.render()
         this.annotations[new_annotation.annotationUID] = { uid: new_annotation.annotationUID, label: new_annotation.data.label, ...new_annotation.metadata }
     }
 
@@ -243,7 +251,12 @@ class AnnotationManager {
         const viewport = this.viewer.viewports.find( x => x.id == annotation_info.viewportId);
         const annotation = cornerstone.tools.annotation.state.getAnnotation(uid);
         const centerPoint = Vector.avg(annotation.data.handles.points);
-        scrollViewportToPoint(viewport, centerPoint);
+        if (viewport.type == "volume") {
+            scrollViewportToPoint(viewport, centerPoint);
+        } else { // stack
+            const idx = viewport.imageIds.indexOf(annotation.metadata.referencedImageId)
+            viewport.setImageIdIndex(idx);
+        }
         cornerstone.tools.annotation.selection.setAnnotationSelected(uid, true, false);
         this.viewer.renderingEngine.renderViewports([annotation_info.viewportId]);
         cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,[annotation_info.viewportId]) 

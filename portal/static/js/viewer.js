@@ -173,9 +173,8 @@ class GraspViewer {
 
             this.viewportIds = [...viewportIds , auxViewport.viewportId];
             this.previewViewportIds = previewViewportIds;
-            this.viewports = viewportIds.map((c)=>this.renderingEngine.getViewport(c));
+            this.viewports = this.viewportIds.map((c)=>this.renderingEngine.getViewport(c));
             this.auxViewport = this.renderingEngine.getViewport("VIEW_AUX");
-
             this.auxViewport.element.ondblclick = e => {
                 //const el = auxViewport.element;
                 const el = document.getElementById("aux-container-outer");
@@ -207,7 +206,7 @@ class GraspViewer {
                     
                 });
 
-                for (const vp of this.viewports) {
+                for (const vp of this.viewports.slice(0,3)) {
                     vp.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED",async (evt) => {    
                         if (this.getNativeViewports().indexOf(vp.id) == -1) return;
                         if (viewer.auxViewport.getImageIds().length == 0) return;
@@ -369,9 +368,9 @@ class GraspViewer {
         toolGroupAux.addTool(StackScrollTool.toolName, {loopScroll: true});
         toolGroupAux.addTool(StackScrollMouseWheelTool.toolName, {loopScroll: true});
         
-        toolGroupMain.addTool(ProbeTool.toolName, {
+        [toolGroupMain, toolGroupAux].map(x=>x.addTool(ProbeTool.toolName, {
             customTextLines: (data) => [ data.label ]
-        });
+        }));
 
         toolGroupMain.addTool(EllipticalROITool.toolName, {
             centerPointRadius: 1,
@@ -436,14 +435,19 @@ class GraspViewer {
             ],
         });
 
-        toolGroupMain.setToolPassive(Tools.ProbeTool.toolName, {
+        [toolGroupMain, toolGroupAux].map(x=>x.setToolPassive(Tools.ProbeTool.toolName, {
             bindings: [
                 {
                     mouseButton: Enums.MouseBindings.Primary,
                 },
             ],
-        });
-
+        }));
+        toolGroupAux.setToolActive(Tools.ProbeTool.toolName,{
+            bindings: [
+                {
+                    mouseButton: Enums.MouseBindings.Secondary,
+                },
+        ]});
         toolGroupAux.setToolActive(Tools.StackScrollTool.toolName,{
             bindings: [
                 {
