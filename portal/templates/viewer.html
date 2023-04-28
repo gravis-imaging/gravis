@@ -50,7 +50,7 @@
           viewer = await new GraspViewer(this.$refs.viewer_main, this.$refs.viewer_preview, this.studies_data, this.case_data); 
           window.viewer = viewer; 
           await viewer.switchStudy(this.studies_data.volumes[0].uid, this.studies_data.volumes[0].dicom_set, this.case_id);
-          if (this.studies_data.others.length > 0) {
+          if (this.studies_data.others.length > 0 && viewer.aux_manager.type != "MIP") {
             await viewer.aux_manager.selectStack(this.studies_data.others[0].type);
           }
           this.viewer = viewer;

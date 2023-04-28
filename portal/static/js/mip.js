@@ -1,6 +1,7 @@
 import { confirmPrompt, doFetch, errorPrompt, errorToast } from "./utils.js";
 
 class AuxManager {
+    type = "generic";
     viewer;
     viewport;
     mip_details;
@@ -35,6 +36,12 @@ class AuxManager {
 }
 
 class MIPManager extends AuxManager{
+    type = "MIP"
+
+    async selectStack(type) {
+        // Do nothing; MIP manager juggles stacks itself.
+    }
+
     async init(graspVolumeInfo, selected_index) {
         // Get MIP metadata info, currently only need slice_locations
         const current_info = graspVolumeInfo[selected_index];
