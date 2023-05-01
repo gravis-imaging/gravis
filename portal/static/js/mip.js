@@ -1,4 +1,4 @@
-import { confirmPrompt, doFetch, errorPrompt, errorToast } from "./utils.js";
+import { confirmPrompt, scrollViewportToPoint, doFetch, errorPrompt, errorToast, debounce } from "./utils.js";
 
 class AuxManager {
     type = "generic";
@@ -9,9 +9,8 @@ class AuxManager {
     is_switching = false;
     ori_dicom_set;
 
-    constructor( viewer, viewport ) {
+    constructor( viewer ) {
         this.viewer = viewer;
-        this.viewport = viewport;
         this.previewing = false;
         this.ori_dicom_set = this.viewer.studies_data.volumes.find(x=>x.type=="ORI").dicom_set;
     }
@@ -24,6 +23,65 @@ class AuxManager {
     async setPreview(idx) {}
     async stopPreview() {}
 
+    async createViewport(){
+        const auxViewportInput = this.viewer.genViewportDescription("AUX", null, document.getElementById("aux-container"), "VIEW")
+        this.viewer.renderingEngine.enableElement(auxViewportInput)
+        this.viewport = this.viewer.renderingEngine.getViewport(auxViewportInput.viewportId);
+        const el = this.viewport.element;
+
+        el.ondblclick = e => {
+            //const el = auxViewport.element;
+            const el = document.getElementById("aux-container-outer");
+            if (el.getAttribute("fullscreen") != "true") {
+                el.setAttribute("fullscreen", "true");
+                el.style.gridArea = "e / e / f / f";
+                el.style.zIndex = 1;
+            } else {
+                el.removeAttribute("fullscreen");
+                el.style.gridArea = "d";
+                el.style.zIndex = 0;
+            }
+            this.renderingEngine.resize(true, true);
+        }
+        el.oncontextmenu = e=>e.preventDefault();
+        
+        el.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(500, async (evt) => {                
+            try {
+                await this.cache();
+            } catch (e) {
+                console.warn(e);
+            }
+        }));
+        if (this.viewer.case_data.case_type == "GRASP Onco") {
+            el.addEventListener("CORNERSTONE_STACK_VIEWPORT_SCROLL",async (evt) => {           
+                const vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0])     
+                scrollViewportToPoint(vp,this.viewport.getCamera().focalPoint, true); 
+                vp.render();
+                
+            });
+
+            for (const vp of this.viewer.viewports.slice(0,3)) {
+                vp.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED",async (evt) => {    
+                    if (this.viewer.getNativeViewports().indexOf(vp.id) == -1) return;
+                    if (this.viewport.getImageIds().length == 0) return;
+                    this.viewport.suppressEvents = true;
+                    this.viewport.setImageIdIndex(vp._getImageIdIndex());
+                    this.viewport.suppressEvents = false;
+                    this.viewport.targetImageIdIndex = this.viewport.getCurrentImageIdIndex();
+                })
+            }
+            const transferFunction = ({lower, upper}) => {
+                const cfun = vtk.Rendering.Core.vtkColorTransferFunction.newInstance();
+                const presetToUse = vtk.Rendering.Core.vtkColorTransferFunction.vtkColorMaps.getPresetByName('jet');
+                cfun.applyColorMap(presetToUse);
+                cfun.setMappingRange(lower, upper);
+                return cfun;
+            }
+            this.viewport.setProperties( { "RGBTransferFunction": transferFunction})
+        }
+
+
+    }
     async loadVolume(type, urls) {
         const volumeId = `cornerstoneStreamingImageVolume:${type}`;
         const volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, { imageIds:urls });
@@ -38,11 +96,11 @@ class AuxManager {
         return volume;
     }
     async loadStack(urls) {
-            const native_vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0])
-            const index = native_vp._getImageIdIndex() || this.viewer.auxViewport.getCurrentImageIdIndex() || 0
-            await this.viewport.setStack(urls, index);
+        const native_vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0]);
+        const index = native_vp._getImageIdIndex() || this.viewport.getCurrentImageIdIndex() || 0;
+        await this.viewport.setStack(urls, index);
         this.viewport.render();
-        }
+    }
     async showImages(type, urls) {
         if (this.viewport.type == "stack") {
             return await this.loadStack(urls);
@@ -64,10 +122,13 @@ class MIPManager extends AuxManager{
     }
 
     async init(graspVolumeInfo, selected_index) {
+        console.log("mip init", graspVolumeInfo, selected_index)
         // Get MIP metadata info, currently only need slice_locations
         const current_info = graspVolumeInfo[selected_index];
+        console.warn(current_info)
         try {
             this.mip_details = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/mip_metadata?acquisition_number=${current_info.acquisition_number}`,null, "GET")).details;
+            console.log("mip details", this.mip_details)
             // Set Initial MIP Image         
             await this.switch(selected_index, false);
             await this.setPreview(selected_index);
@@ -76,7 +137,7 @@ class MIPManager extends AuxManager{
         }
     }
     async switch(index, preview, targetImageIdIndex=null) {
-        // console.log("switch")
+        console.log("switch", index, preview, targetImageIdIndex)
         this.is_switching = true;
         try {
             const current_info = this.viewer.current_study[index];
@@ -90,7 +151,7 @@ class MIPManager extends AuxManager{
             const query = ( preview? `slice_location=${slice_location}`: `acquisition_number=${current_info.acquisition_number}`)
 
             mip_urls = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/processed_results/MIP?`+ query,null, "GET")).urls;
-
+            console.log("mip_urls", mip_urls);
             if ( mip_urls.length > 0 ) {
                 await viewport.setStack(mip_urls, targetImageIdIndex || viewport.targetImageIdIndex);
                 cornerstone.tools.utilities.stackPrefetch.enable(viewport.element);
@@ -103,7 +164,7 @@ class MIPManager extends AuxManager{
     }
 
     async cache() {
-        // console.log("cache")
+        console.log("cache")
         const viewport = this.viewport;
         
         let slice_location = 0.0;
@@ -143,10 +204,10 @@ class MIPManager extends AuxManager{
     }
 
     async startPreview(idx) {
-        // console.log("startPreview")
         if (this.previewing) {
             return;
         }
+        console.log("startPreview", idx)
         this.previewing = true;
         // Resetting MIP image stack with images at the last saved angle for all time points
         try {
@@ -157,10 +218,11 @@ class MIPManager extends AuxManager{
     }
 
     async setPreview(idx) {
-        console.log("setPreview")
         if (this.is_switching) {
             return;
         }
+        console.log("setPreview",idx)
+
         try {
             // Update MIP Viewport
             const vp = this.viewport;
@@ -193,8 +255,7 @@ class MIPManager extends AuxManager{
     }
 
     async stopPreview(idx) {
-        // console.log("stopPreview")
-
+        console.log("stopPreview", idx)
         // Resetting MIP image stack with images at a given time point with all available angles.
         try {
             this.previewing = false;

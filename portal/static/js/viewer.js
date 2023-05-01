@@ -1,7 +1,7 @@
 import { AnnotationManager } from "./annotations.js"
 import { StateManager } from "./state.js"
 import { MIPManager, AuxManager } from "./mip.js"
-import { doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch, chartToImage, successToast, fixUpCrosshairs,decacheVolumes, errorPrompt, errorToast } from "./utils.js"
+import { debounce, doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch, chartToImage, successToast, fixUpCrosshairs,decacheVolumes, errorPrompt, errorToast } from "./utils.js"
 
 
 const SOP_INSTANCE_UID = '00080018';
@@ -70,18 +70,6 @@ const resizeObserver = new ResizeObserver(() => {
       renderingEngine.resize(true, true);
     }
 });
-
-
-function debounce(delay, callback) {
-    let timeout
-    return (...args) => {
-        clearTimeout(timeout)
-        timeout = setTimeout(() => {
-            callback(...args)
-        }, delay)
-    }
-}
-
 
 class GraspViewer {
     renderingEngine;
@@ -168,72 +156,23 @@ class GraspViewer {
                 }
             }
 
-            const auxViewport = this.genViewportDescription("AUX", null, document.getElementById("aux-container"), "VIEW")
-            this.renderingEngine.setViewports([...previewViewports, ...viewViewports, auxViewport]);
-
-            this.viewportIds = [...viewportIds , auxViewport.viewportId];
+            if (case_data.case_type == "GRASP MRA") {
+                this.aux_manager = new MIPManager(this);
+            } else {
+                this.aux_manager = new AuxManager(this);
+            }
+            this.renderingEngine.setViewports([...previewViewports, ...viewViewports]);
+            this.viewportIds = [...viewportIds];
             this.previewViewportIds = previewViewportIds;
             this.viewports = this.viewportIds.map((c)=>this.renderingEngine.getViewport(c));
-            this.auxViewport = this.renderingEngine.getViewport("VIEW_AUX");
-            this.auxViewport.element.ondblclick = e => {
-                //const el = auxViewport.element;
-                const el = document.getElementById("aux-container-outer");
-                if (el.getAttribute("fullscreen") != "true") {
-                    el.setAttribute("fullscreen", "true");
-                    el.style.gridArea = "e / e / f / f";
-                    el.style.zIndex = 1;
-                } else {
-                    el.removeAttribute("fullscreen");
-                    el.style.gridArea = "d";
-                    el.style.zIndex = 0;
-                }
-                this.renderingEngine.resize(true, true);
-            }
-            this.auxViewport.element.oncontextmenu = e=>e.preventDefault();
-            
-            this.auxViewport.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(500, async (evt) => {                
-                try {
-                    await this.aux_manager.cache();
-                } catch (e) {
-                    console.warn(e);
-                }
-            }));
-            if (this.case_data.case_type == "GRASP Onco") {
-                this.auxViewport.element.addEventListener("CORNERSTONE_STACK_VIEWPORT_SCROLL",async (evt) => {           
-                    const vp = this.renderingEngine.getViewport(this.getNativeViewports()[0])     
-                    scrollViewportToPoint(vp,this.auxViewport.getCamera().focalPoint, true); 
-                    vp.render();
-                    
-                });
 
-                for (const vp of this.viewports.slice(0,3)) {
-                    vp.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED",async (evt) => {    
-                        if (this.getNativeViewports().indexOf(vp.id) == -1) return;
-                        if (viewer.auxViewport.getImageIds().length == 0) return;
-                        this.auxViewport.suppressEvents = true;
-                        this.auxViewport.setImageIdIndex(vp._getImageIdIndex());
-                        this.auxViewport.suppressEvents = false;
-                        this.auxViewport.targetImageIdIndex = this.auxViewport.getCurrentImageIdIndex();
-                    })
-                }
-                const transferFunction = ({lower, upper}) => {
-                    const cfun = vtk.Rendering.Core.vtkColorTransferFunction.newInstance();
-                    const presetToUse = vtk.Rendering.Core.vtkColorTransferFunction.vtkColorMaps.getPresetByName('jet');
-                    cfun.applyColorMap(presetToUse);
-                    cfun.setMappingRange(lower, upper);
-                    return cfun;
-                }
-                this.auxViewport.setProperties( { "RGBTransferFunction": transferFunction})
-            }
-
+            await this.aux_manager.createViewport()
+            this.auxViewport = this.aux_manager.viewport;
+            this.viewportIds.push(this.aux_manager.viewport.id)
             this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c));
             this.annotation_manager = new AnnotationManager(this);
             this.state_manager = new StateManager(this);
-            if (case_data.case_type == "GRASP MRA") {
-                this.aux_manager = new MIPManager(this, this.auxViewport);
-            } else {
-                this.aux_manager = new AuxManager(this, this.auxViewport);
-            }
+
             
             cornerstone.tools.synchronizers.createVOISynchronizer("SYNC_CAMERAS");
             this.createTools();
@@ -865,7 +804,7 @@ class GraspViewer {
                 this.switchToIndex(new_selected_index)])
         } else {
             if (finding.data.viewportId == "VIEW_AUX") {
-                await this.auxViewport.setImageIdIndex(finding.data.imageIdIndex);
+                await this.aux_manager.viewport.setImageIdIndex(finding.data.imageIdIndex);
             }
         }
     }
