@@ -153,6 +153,23 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function loadVolumeWithRetry(volume) {
+    for ( let i=0;i<2;i++) {
+        const load_result = await new Promise( resolve => {
+            volume.load( e => resolve(e) );
+        });
+        if ( load_result.framesLoaded == load_result.numFrames ) {
+            return true;
+        }
+        console.error("Detected error during volume loading.");
+        volume.loadStatus.loaded = false;
+    }
+
+    errorToast('Error while loading volume, some slices may be missing.');
+
+    return false;
+}
+
 
 function getJobInstances(result, case_id) {
     var urls = []
@@ -362,6 +379,7 @@ const scrollViewportToPoint = (viewport, centerPoint, noEvent=false) => {
         viewport.setCamera(cam);
     }
     fixUpCrosshairs();
+    viewport.render()
 }
 
 function decacheVolumes() {
@@ -482,4 +500,4 @@ async function successToast(title) {
         title: title,
     });
 }
-export { debounce, setCookie, getCookie, HSLToRGB, doJob, doFetch, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, fixUpCrosshairs, Vector, chartToImage, decacheVolumes, confirmPrompt, inputPrompt, errorPrompt, errorToast, successPrompt,infoPrompt, successToast };
+export { debounce, setCookie, getCookie, HSLToRGB, doJob, doFetch, loadVolumeWithRetry, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, fixUpCrosshairs, Vector, chartToImage, decacheVolumes, confirmPrompt, inputPrompt, errorPrompt, errorToast, successPrompt,infoPrompt, successToast };

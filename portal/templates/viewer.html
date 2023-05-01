@@ -314,10 +314,10 @@
       <button
       title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer"
          :disabled="should_disable() || read_only" disabled="disabled"
-         @click="job_loading = true; viewer.storeFinding(viewer.auxViewport); job_loading = false;"><i class="fa-solid fa-camera"></i>
+         @click="job_loading = true; viewer.storeFinding(viewer.aux_manager.viewport); job_loading = false;"><i class="fa-solid fa-camera"></i>
        </button><button
        title="Add probe annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2" 
-          :disabled="should_disable() || read_only || viewer.rotate_mode" disabled="disabled" 
+          :disabled="should_disable() || read_only || viewer.rotate_mode || viewer.aux_manager.viewport.type == 'stack'" disabled="disabled" 
           @click="viewer.annotation_manager.addAnnotationToViewport('Probe','aux');"><i class="fa-solid fa-plus"></i>
       </button>
     </div>

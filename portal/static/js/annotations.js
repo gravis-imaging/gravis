@@ -233,7 +233,8 @@ class AnnotationManager {
         cornerstone.tools.annotation.state.addAnnotation(viewport.element,new_annotation)
         cornerstone.tools.annotation.selection.setAnnotationSelected(new_annotation.annotationUID, true, false);
 
-        viewport.render()
+        viewport.render();
+        this.viewer.aux_manager.viewport.render();
         this.annotations[new_annotation.annotationUID] = { uid: new_annotation.annotationUID, label: new_annotation.data.label, ...new_annotation.metadata }
     }
 

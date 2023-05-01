@@ -1,4 +1,12 @@
-import { confirmPrompt, scrollViewportToPoint, doFetch, errorPrompt, errorToast, debounce } from "./utils.js";
+import { confirmPrompt, scrollViewportToPoint, doFetch, errorPrompt, errorToast, debounce, loadVolumeWithRetry } from "./utils.js";
+const transferFunction = ({lower, upper}) => {
+    const cfun = vtk.Rendering.Core.vtkColorTransferFunction.newInstance();
+    const presetToUse = vtk.Rendering.Core.vtkColorTransferFunction.vtkColorMaps.getPresetByName('jet');
+    cfun.applyColorMap(presetToUse);
+    cfun.setMappingRange(lower, upper);
+    return cfun;
+}
+
 
 class AuxManager {
     type = "generic";
@@ -8,11 +16,17 @@ class AuxManager {
     previewing = false; 
     is_switching = false;
     ori_dicom_set;
+    current_set_type;
 
     constructor( viewer ) {
         this.viewer = viewer;
         this.previewing = false;
         this.ori_dicom_set = this.viewer.studies_data.volumes.find(x=>x.type=="ORI").dicom_set;
+        this.stackAuxScroll = this.stackAuxScroll.bind(this)
+        
+        this.stackMainScroll = this.stackMainScroll.bind(this)
+        this.volumeAuxScroll = this.volumeAuxScroll.bind(this)
+        this.volumeMainScroll = this.volumeMainScroll.bind(this)
     }
 
     async init(graspVolumeInfo, selected_index) {
@@ -23,12 +37,41 @@ class AuxManager {
     async setPreview(idx) {}
     async stopPreview() {}
 
+    installEventHandlers(el) {
+        
+    }
+    stackAuxScroll(evt) {           
+        const vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0])     
+        scrollViewportToPoint(vp,this.viewport.getCamera().focalPoint, true); 
+    }
+    
+    stackMainScroll(evt) {    
+        const vp = this.viewer.viewports.find(v=>v.element==evt.target);
+        if (this.viewer.getNativeViewports().indexOf(vp.id) == -1) return;
+        if (this.viewport.getImageIds().length == 0) return;
+        this.viewport.suppressEvents = true;
+        this.viewport.setImageIdIndex(vp._getImageIdIndex());
+        this.viewport.suppressEvents = false;
+        this.viewport.targetImageIdIndex = this.viewport.getCurrentImageIdIndex();
+    }
+    
+    volumeAuxScroll(evt) {           
+        const vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0])
+        if (!vp) return;
+        scrollViewportToPoint(vp,this.viewport.getCamera().focalPoint, true); 
+    }
+    
+    volumeMainScroll(evt) {
+        // if (this.viewer.getNativeViewports().indexOf(vp.id) == -1) return;
+        // if (!this.viewport.getCurrentImageId()) return;
+        const vp = this.viewer.viewports.find(v=>v.element==evt.target);
+        scrollViewportToPoint(this.viewport,vp.getCamera().focalPoint, true); 
+    }
+    
     async createViewport(){
-        const auxViewportInput = this.viewer.genViewportDescription("AUX", null, document.getElementById("aux-container"), "VIEW")
-        this.viewer.renderingEngine.enableElement(auxViewportInput)
-        this.viewport = this.viewer.renderingEngine.getViewport(auxViewportInput.viewportId);
-        const el = this.viewport.element;
+        await this.switchViewportType('orthographic')
 
+        const el = this.viewport.element;
         el.ondblclick = e => {
             //const el = auxViewport.element;
             const el = document.getElementById("aux-container-outer");
@@ -41,7 +84,7 @@ class AuxManager {
                 el.style.gridArea = "d";
                 el.style.zIndex = 0;
             }
-            this.renderingEngine.resize(true, true);
+            this.viewer.renderingEngine.resize(true, true);
         }
         el.oncontextmenu = e=>e.preventDefault();
         
@@ -52,65 +95,106 @@ class AuxManager {
                 console.warn(e);
             }
         }));
-        if (this.viewer.case_data.case_type == "GRASP Onco") {
-            el.addEventListener("CORNERSTONE_STACK_VIEWPORT_SCROLL",async (evt) => {           
-                const vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0])     
-                scrollViewportToPoint(vp,this.viewport.getCamera().focalPoint, true); 
-                vp.render();
-                
-            });
-
-            for (const vp of this.viewer.viewports.slice(0,3)) {
-                vp.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED",async (evt) => {    
-                    if (this.viewer.getNativeViewports().indexOf(vp.id) == -1) return;
-                    if (this.viewport.getImageIds().length == 0) return;
-                    this.viewport.suppressEvents = true;
-                    this.viewport.setImageIdIndex(vp._getImageIdIndex());
-                    this.viewport.suppressEvents = false;
-                    this.viewport.targetImageIdIndex = this.viewport.getCurrentImageIdIndex();
-                })
-            }
-            const transferFunction = ({lower, upper}) => {
-                const cfun = vtk.Rendering.Core.vtkColorTransferFunction.newInstance();
-                const presetToUse = vtk.Rendering.Core.vtkColorTransferFunction.vtkColorMaps.getPresetByName('jet');
-                cfun.applyColorMap(presetToUse);
-                cfun.setMappingRange(lower, upper);
-                return cfun;
-            }
+    }
+    async switchViewportType(type) {
+        const ORIENTATION = cornerstone.CONSTANTS.MPR_CAMERA_VALUES;
+        var orient = null;
+        if (type != 'stack') {
+            orient = ORIENTATION.axial
+        }
+        const auxViewportInput = this.viewer.genViewportDescription("AUX", orient, document.getElementById("aux-container"), "VIEW")
+        if (this.viewport) {
+            this.removeCameraSyncEvents(this.viewport.element);
+        }
+        this.viewer.renderingEngine.enableElement(auxViewportInput)
+        this.viewport = this.viewer.renderingEngine.getViewport(auxViewportInput.viewportId);
+        if (type == 'stack'  && this.viewer.case_data.case_type == "GRASP Onco") {
             this.viewport.setProperties( { "RGBTransferFunction": transferFunction})
         }
-
-
+        this.addCameraSyncEvents(this.viewport.element);
+        const tool_group = cornerstone.tools.ToolGroupManager.getToolGroup(`STACK_TOOL_GROUP_AUX`);
+        if (tool_group) {
+            tool_group.addViewport(this.viewport.id, this.viewer.renderingEngine.id);
+        }
+    }
+    removeCameraSyncEvents(el) {
+        if (this.viewport.type != 'stack') {
+            el.removeEventListener("CORNERSTONE_CAMERA_MODIFIED",this.volumeAuxScroll);
+            for (const vp of this.viewer.viewports.slice(0,3)) {
+                vp.element.removeEventListener("CORNERSTONE_CAMERA_MODIFIED", this.volumeMainScroll)
+            }
+        } else {
+            el.removeEventListener("CORNERSTONE_STACK_VIEWPORT_SCROLL",this.stackAuxScroll);
+            for (const vp of this.viewer.viewports.slice(0,3)) {
+                vp.element.removeEventListener("CORNERSTONE_CAMERA_MODIFIED", this.stackMainScroll)
+            }
+        }
+    }
+    addCameraSyncEvents(el) {
+        if (this.viewport.type == 'stack' && this.viewer.case_data.case_type == "GRASP Onco") {
+            el.addEventListener("CORNERSTONE_STACK_VIEWPORT_SCROLL",this.stackAuxScroll);
+            for (const vp of this.viewer.viewports.slice(0,3)) {
+                vp.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", this.stackMainScroll)
+            }
+        } else {
+            el.addEventListener("CORNERSTONE_CAMERA_MODIFIED", this.volumeAuxScroll);
+            for (const vp of this.viewer.viewports.slice(0,3)) {
+                vp.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", this.volumeMainScroll)
+            }
+        }
     }
     async loadVolume(type, urls) {
         const volumeId = `cornerstoneStreamingImageVolume:${type}`;
         const volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, { imageIds:urls });
+
         volume.imageData.setDirection(volume.direction.map(Math.round))
-        volume.load();
         await cornerstone.setVolumesForViewports( 
             this.viewer.renderingEngine,
             [{volumeId},],
             [this.viewport.id]
-        );      
-        this.viewport.render();
+        );
+        const actor = this.viewport.getDefaultActor().actor;
+        const [ lower, upper ] = actor.getProperty().getRGBTransferFunction(0).getRange(); // Not totally sure about this
+        actor.getProperty().setRGBTransferFunction(0, transferFunction({lower, upper}));
+        loadVolumeWithRetry(volume);
         return volume;
     }
     async loadStack(urls) {
         const native_vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0]);
         const index = native_vp._getImageIdIndex() || this.viewport.getCurrentImageIdIndex() || 0;
         await this.viewport.setStack(urls, index);
-        this.viewport.render();
+        cornerstone.tools.utilities.stackPrefetch.enable(this.viewport.element);
+        
     }
     async showImages(type, urls) {
-        if (this.viewport.type == "stack") {
-            return await this.loadStack(urls);
-        } else {
+        try {
+            if (this.viewport.type == "stack") {
+                this.switchViewportType("volume");
+            }
             return await this.loadVolume(type, urls);
+        } catch (e) {
+            this.switchViewportType("stack");
+            return await this.loadStack(urls);
         }
     }
     async selectStack(type) {
+        this.current_set_type = type;
         const urls = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/processed_results/${type}`,null, "GET")).urls;
+        const [ zoom, pan ] = [this.viewport.getZoom(), this.viewport.getPan()]
+        const fp = this.viewport.getCamera().focalPoint
+        const native_vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0]);
+
         await this.showImages(type,urls)
+
+        this.viewport.setZoom(zoom);
+        this.viewport.setPan(pan);    
+
+        if (this.viewport.type != 'stack') {
+            scrollViewportToPoint(this.viewport,fp, true);
+            scrollViewportToPoint(native_vp,fp, true);
+        }
+        // this.viewport.resetCamera();
+        this.viewport.render();
     }
 }
 

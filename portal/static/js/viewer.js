@@ -1,7 +1,7 @@
 import { AnnotationManager } from "./annotations.js"
 import { StateManager } from "./state.js"
 import { MIPManager, AuxManager } from "./mip.js"
-import { debounce, doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch, chartToImage, successToast, fixUpCrosshairs,decacheVolumes, errorPrompt, errorToast } from "./utils.js"
+import { debounce, doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch, loadVolumeWithRetry, chartToImage, successToast, fixUpCrosshairs,decacheVolumes, errorPrompt, errorToast } from "./utils.js"
 
 
 const SOP_INSTANCE_UID = '00080018';
@@ -381,12 +381,7 @@ class GraspViewer {
                 },
             ],
         }));
-        toolGroupAux.setToolActive(Tools.ProbeTool.toolName,{
-            bindings: [
-                {
-                    mouseButton: Enums.MouseBindings.Secondary,
-                },
-        ]});
+
         toolGroupAux.setToolActive(Tools.StackScrollTool.toolName,{
             bindings: [
                 {
@@ -519,7 +514,7 @@ class GraspViewer {
     async switchSeries(series_uid) {
         this.chart.renderGraph_();
         await this.setVolumeBySeries(series_uid);
-        const volume_result = await this.loadVolumeWithRetry();
+        const volume_result = await loadVolumeWithRetry(this.volume);
         this.fixShift();
     }    
 
@@ -530,22 +525,6 @@ class GraspViewer {
         this.selected_time = current_info.acquisition_seconds; 
     }
 
-    async loadVolumeWithRetry() {
-        for ( let i=0;i<2;i++) {
-            const load_result = await new Promise( resolve => {
-                this.volume.load( e => resolve(e) );
-            });
-            if ( load_result.framesLoaded == load_result.numFrames ) {
-                return true;
-            }
-            console.error("Detected error during volume loading.");
-            this.volume.loadStatus.loaded = false;
-        }
-
-        errorToast('Error while loading volume, some slices may be missing.');
-
-        return false;
-    }
     snapToSlice() {
         for ( var i=0;i<3;i++) {
             cornerstone.tools.utilities.scroll(viewer.viewports[i],{delta:0,volumeId:viewer.viewports[i].getDefaultActor().uid})
@@ -603,7 +582,7 @@ class GraspViewer {
          
         this.aux_manager.init(graspVolumeInfo, selected_index);
 
-        const volume_result = await this.loadVolumeWithRetry();
+        const volume_result = await loadVolumeWithRetry(this.volume);
         
         try {
             await this.updatePreview();
