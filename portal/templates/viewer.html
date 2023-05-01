@@ -333,8 +333,19 @@
   </div>
 
   <!-- Chart -->
-  <div style="grid-area: f; background-color: black; ">
+  <div style="grid-area: f; background-color: black; display: flex;">
+    <div x-show="case_data.case_type == 'GRASP Onco'" id="aux_stats" style="width:100px;">
+      <div x-data="{'stats':[]}" x-on:stats-update.window="stats = $event.detail.items;">
+      <template x-for="a of stats || []"  :key="a.label">
+        <p class="mb-0">
+          <span x-text="a.label"></span>: <span x-text="a.stats? (Math.round(a.stats.mean*100)/100) : '?'"></span>
+        </p>
+      </template>
+    </div>
+    </div>
+    <div style="flex-shrink: 1; width:100%; height:100%">
     <div id="chart" style="background-color: black; color: white;"></div>
+    </div>
   </div>
   <div style="grid-area: f;">
     <template x-if="viewer">

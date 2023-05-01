@@ -36,6 +36,11 @@ class AuxManager {
     async setPreview(idx) {}
     async stopPreview() {}
 
+    getStats() {
+        const annotations = cornerstone.tools.annotation.state.getAnnotations(this.viewport.element,"EllipticalROI") || [];
+        const stats = annotations.map(a=>{return {label: a.data.label, stats:a.data.cachedStats[`volumeId:cornerstoneStreamingImageVolume:${this.current_set_type}`]}})
+        return stats;
+    }
     installEventHandlers() {
         const el = this.viewport.element;
         el.ondblclick = e => {

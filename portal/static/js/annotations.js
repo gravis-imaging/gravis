@@ -3,7 +3,7 @@ import { doFetch, HSLToRGB, Vector, scrollViewportToPoint, confirmPrompt, errorT
 class AnnotationManager {
     viewer;
     annotations = {};
-
+    aux_stats = [];
     constructor( viewer ) {
         this.viewer = viewer;
     }
@@ -56,7 +56,14 @@ class AnnotationManager {
         }
         var data = []
         var labels = ["time",]
-        
+        if (this.viewer.aux_manager.getStats) {
+            let event = new CustomEvent("stats-update", {
+                detail: {
+                  items: this.viewer.aux_manager.getStats()
+                }
+              });
+              window.dispatchEvent(event);
+        }
         var seriesOptions = {}
         for (var annotation of annotations){
             let handles_indexes = annotation.data.handles.points.map( pt=>cornerstone.utilities.transformWorldToIndex(this.viewer.volume.imageData, pt))
