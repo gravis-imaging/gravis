@@ -248,10 +248,10 @@ class AnnotationManager {
     
     goToAnnotation(uid) {
         const annotation_info = this.annotations[uid];
-        const viewport = this.viewer.viewports.find( x => x.id == annotation_info.viewportId);
+        const viewport = [...this.viewer.viewports,this.viewer.auxViewport].find( x => x.id == annotation_info.viewportId);
         const annotation = cornerstone.tools.annotation.state.getAnnotation(uid);
         const centerPoint = Vector.avg(annotation.data.handles.points);
-        if (viewport.type == "volume") {
+        if (viewport.type == "orthographic") {
             scrollViewportToPoint(viewport, centerPoint);
         } else { // stack
             const idx = viewport.imageIds.indexOf(annotation.metadata.referencedImageId)

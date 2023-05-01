@@ -178,9 +178,9 @@
         </ul>
       </div>    
     </div>
-    <button @click="previewing = !previewing" class="btn-primary btn-large btn-viewer ms-2">
+    <!-- <button @click="previewing = !previewing" class="btn-primary btn-large btn-viewer ms-2">
       P
-    </button>
+    </button> -->
     <button title="Duplicate selected annotation" class="btn-primary btn-large btn-viewer ms-2" 
         :disabled="should_disable() || read_only" disabled="disabled" 
         @click="viewer.annotation_manager.duplicateSelectedAnnotation();"><i class="fa-solid fa-copy"></i>
@@ -305,21 +305,30 @@
     </div>     
   </div>
 
-  <!-- MIP viewer -->
+  <!-- auxiliary viewer -->
   <div id="aux-container-outer" class="grid-container" style="grid-area: d; background-color: black;"> 
     <div id="aux-container" class="grid-fill"></div>
     <div x-cloak x-show="viewer && viewer.mip_details === null" class="grid-fill z-index-1"> 
       <div style="display: flex;justify-content: center;align-items: center; height:100%; cursor: pointer;">Loading error</div></div>
-    <div x-cloak x-show="true" class="viewport-overlay grid-fill p-2 no-pointer-events z-index-1">
-      <button
-      title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer"
-         :disabled="should_disable() || read_only" disabled="disabled"
-         @click="job_loading = true; viewer.storeFinding(viewer.aux_manager.viewport); job_loading = false;"><i class="fa-solid fa-camera"></i>
-       </button><button
+    <div x-cloak x-show="true" class="viewport-overlay grid-fill no-pointer-events z-index-1">
+      <template x-if="!viewer || viewer.aux_manager.type != 'MIP'">
+      <div style="display:inline-block; margin: 0">
+        <button title="Add ROI annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
+         :disabled="should_disable() || read_only || viewer.rotate_mode || viewer.aux_manager.viewport.type == 'stack'" disabled="disabled" 
+         @click="viewer.annotation_manager.addAnnotationToViewport('EllipticalROI','aux');"><i class="fa-regular fa-circle"></i>
+      </button><button
        title="Add probe annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2" 
           :disabled="should_disable() || read_only || viewer.rotate_mode || viewer.aux_manager.viewport.type == 'stack'" disabled="disabled" 
           @click="viewer.annotation_manager.addAnnotationToViewport('Probe','aux');"><i class="fa-solid fa-plus"></i>
-      </button>
+      </button></div></template><button
+      title="Reset viewer" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
+         :disabled="should_disable" disabled="disabled" 
+          @click="viewer.aux_manager.viewport.setZoom(1); viewer.aux_manager.viewport.setPan([0,0]); viewer.aux_manager.viewport.render()"><i class="fa-solid fa-magnifying-glass-minus"></i>
+     </button><button
+      title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2"
+         :disabled="should_disable() || read_only" disabled="disabled"
+         @click="job_loading = true; viewer.storeFinding(viewer.aux_manager.viewport); job_loading = false;"><i class="fa-solid fa-camera"></i>
+       </button>
     </div>
   </div>
 
