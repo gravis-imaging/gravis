@@ -15,6 +15,7 @@ class AuxManager {
         this.previewing = false;
         this.ori_dicom_set = this.viewer.studies_data.volumes.find(x=>x.type=="ORI").dicom_set;
     }
+
     async init(graspVolumeInfo, selected_index) {
     }
     async switch(index, preview, targetImageIdIndex=null) {}
@@ -22,16 +23,36 @@ class AuxManager {
     async startPreview(idx) {}
     async setPreview(idx) {}
     async stopPreview() {}
-    async selectStack(type) {
-        try {
-            const  urls = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/processed_results/${type}`,null, "GET")).urls;
+
+    async loadVolume(type, urls) {
+        const volumeId = `cornerstoneStreamingImageVolume:${type}`;
+        const volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, { imageIds:urls });
+        volume.imageData.setDirection(volume.direction.map(Math.round))
+        volume.load();
+        await cornerstone.setVolumesForViewports( 
+            this.viewer.renderingEngine,
+            [{volumeId},],
+            [this.viewport.id]
+        );      
+        this.viewport.render();
+        return volume;
+    }
+    async loadStack(urls) {
             const native_vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0])
             const index = native_vp._getImageIdIndex() || this.viewer.auxViewport.getCurrentImageIdIndex() || 0
             await this.viewport.setStack(urls, index);
-        } catch (e) {
-            console.error(e);
-            errorToast(`Error displaying ${type}.`)
+        this.viewport.render();
         }
+    async showImages(type, urls) {
+        if (this.viewport.type == "stack") {
+            return await this.loadStack(urls);
+        } else {
+            return await this.loadVolume(type, urls);
+        }
+    }
+    async selectStack(type) {
+        const urls = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/processed_results/${type}`,null, "GET")).urls;
+        await this.showImages(type,urls)
     }
 }
 
