@@ -166,7 +166,7 @@ class GraspViewer {
             this.previewViewportIds = previewViewportIds;
             this.viewports = this.viewportIds.map((c)=>this.renderingEngine.getViewport(c));
 
-            await this.aux_manager.createViewport()
+            await this.aux_manager.createViewport();
             this.auxViewport = this.aux_manager.viewport;
             this.viewportIds.push(this.aux_manager.viewport.id)
             this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c));
@@ -311,10 +311,10 @@ class GraspViewer {
             customTextLines: (data) => [ data.label ]
         }));
 
-        toolGroupMain.addTool(EllipticalROITool.toolName, {
+        [toolGroupMain, toolGroupAux].map(x=>x.addTool(EllipticalROITool.toolName, {
             centerPointRadius: 1,
             customTextLines: (data) => [ data.label ]
-        });
+        }));
         
         var styles = cornerstone.tools.annotation.config.style.getDefaultToolStyles()
         styles.global.lineWidth = "1"
@@ -366,13 +366,13 @@ class GraspViewer {
             });
         });
 
-        toolGroupMain.setToolPassive(Tools.EllipticalROITool.toolName, {
+        [toolGroupMain, toolGroupAux].map(x=>x.setToolPassive(Tools.EllipticalROITool.toolName, {
             bindings: [
                 {
                     mouseButton: Enums.MouseBindings.Primary,
                 },
             ],
-        });
+        }));
 
         [toolGroupMain, toolGroupAux].map(x=>x.setToolPassive(Tools.ProbeTool.toolName, {
             bindings: [

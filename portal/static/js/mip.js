@@ -32,13 +32,27 @@ class AuxManager {
     async init(graspVolumeInfo, selected_index) {
     }
     async switch(index, preview, targetImageIdIndex=null) {}
-    async cache() {}
     async startPreview(idx) {}
     async setPreview(idx) {}
     async stopPreview() {}
 
-    installEventHandlers(el) {
-        
+    installEventHandlers() {
+        const el = this.viewport.element;
+        el.ondblclick = e => {
+            //const el = auxViewport.element;
+            const el = document.getElementById("aux-container-outer");
+            if (el.getAttribute("fullscreen") != "true") {
+                el.setAttribute("fullscreen", "true");
+                el.style.gridArea = "e / e / f / f";
+                el.style.zIndex = 1;
+            } else {
+                el.removeAttribute("fullscreen");
+                el.style.gridArea = "d";
+                el.style.zIndex = 0;
+            }
+            this.viewer.renderingEngine.resize(true, true);
+        }
+        el.oncontextmenu = e=>e.preventDefault();
     }
     stackAuxScroll(evt) {           
         const vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0])     
@@ -62,62 +76,38 @@ class AuxManager {
     }
     
     volumeMainScroll(evt) {
-        // if (this.viewer.getNativeViewports().indexOf(vp.id) == -1) return;
-        // if (!this.viewport.getCurrentImageId()) return;
         const vp = this.viewer.viewports.find(v=>v.element==evt.target);
+        if (this.viewer.getNativeViewports().indexOf(vp.id) == -1) return;
+        // if (!this.viewport.getCurrentImageId()) return;
         scrollViewportToPoint(this.viewport,vp.getCamera().focalPoint, true); 
     }
     
     async createViewport(){
-        await this.switchViewportType('orthographic')
-
-        const el = this.viewport.element;
-        el.ondblclick = e => {
-            //const el = auxViewport.element;
-            const el = document.getElementById("aux-container-outer");
-            if (el.getAttribute("fullscreen") != "true") {
-                el.setAttribute("fullscreen", "true");
-                el.style.gridArea = "e / e / f / f";
-                el.style.zIndex = 1;
-            } else {
-                el.removeAttribute("fullscreen");
-                el.style.gridArea = "d";
-                el.style.zIndex = 0;
-            }
-            this.viewer.renderingEngine.resize(true, true);
-        }
-        el.oncontextmenu = e=>e.preventDefault();
-        
-        el.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(500, async (evt) => {                
-            try {
-                await this.cache();
-            } catch (e) {
-                console.warn(e);
-            }
-        }));
+        // await this.switchViewportType('stack')
+        await this.switchViewportType()
+        this.installEventHandlers()
     }
     async switchViewportType(type) {
-        const ORIENTATION = cornerstone.CONSTANTS.MPR_CAMERA_VALUES;
         var orient = null;
-        if (type != 'stack') {
-            orient = ORIENTATION.axial
+        if (type != "stack") {
+            orient = cornerstone.CONSTANTS.MPR_CAMERA_VALUES.axial
         }
-        const auxViewportInput = this.viewer.genViewportDescription("AUX", orient, document.getElementById("aux-container"), "VIEW")
+        const viewInput = this.viewer.genViewportDescription("AUX", orient, document.getElementById("aux-container"), "VIEW")
         if (this.viewport) {
-            this.removeCameraSyncEvents(this.viewport.element);
+            this.removeCameraSyncHandlers(this.viewport.element);
         }
-        this.viewer.renderingEngine.enableElement(auxViewportInput)
-        this.viewport = this.viewer.renderingEngine.getViewport(auxViewportInput.viewportId);
-        if (type == 'stack'  && this.viewer.case_data.case_type == "GRASP Onco") {
+        this.viewer.renderingEngine.enableElement(viewInput)
+        this.viewport = this.viewer.renderingEngine.getViewport(viewInput.viewportId);
+        if (type == "stack" && this.viewer.case_data.case_type == "GRASP Onco") {
             this.viewport.setProperties( { "RGBTransferFunction": transferFunction})
         }
-        this.addCameraSyncEvents(this.viewport.element);
+        this.addCameraSyncHandlers(this.viewport.element);
         const tool_group = cornerstone.tools.ToolGroupManager.getToolGroup(`STACK_TOOL_GROUP_AUX`);
         if (tool_group) {
             tool_group.addViewport(this.viewport.id, this.viewer.renderingEngine.id);
         }
     }
-    removeCameraSyncEvents(el) {
+    removeCameraSyncHandlers(el) {
         if (this.viewport.type != 'stack') {
             el.removeEventListener("CORNERSTONE_CAMERA_MODIFIED",this.volumeAuxScroll);
             for (const vp of this.viewer.viewports.slice(0,3)) {
@@ -130,7 +120,7 @@ class AuxManager {
             }
         }
     }
-    addCameraSyncEvents(el) {
+    addCameraSyncHandlers(el) {
         if (this.viewport.type == 'stack' && this.viewer.case_data.case_type == "GRASP Onco") {
             el.addEventListener("CORNERSTONE_STACK_VIEWPORT_SCROLL",this.stackAuxScroll);
             for (const vp of this.viewer.viewports.slice(0,3)) {
@@ -193,7 +183,6 @@ class AuxManager {
             scrollViewportToPoint(this.viewport,fp, true);
             scrollViewportToPoint(native_vp,fp, true);
         }
-        // this.viewport.resetCamera();
         this.viewport.render();
     }
 }
@@ -201,8 +190,26 @@ class AuxManager {
 class MIPManager extends AuxManager{
     type = "MIP"
 
+    installEventHandlers() {
+        super.installEventHandlers()
+        this.viewport.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", debounce(500, async (evt) => {                
+            try {
+                await this.prefetchSliceOverTime();
+            } catch (e) {
+                console.warn(e);
+            }
+        }));
+    }
+    async createViewport(){
+        await this.switchViewportType('stack')
+        this.installEventHandlers()
+    }
+
     async selectStack(type) {
         // Do nothing; MIP manager juggles stacks itself.
+    }
+    addCameraSyncHandlers(el) {
+        // Do nothing; do not sync with main viewports
     }
 
     async init(graspVolumeInfo, selected_index) {
@@ -247,7 +254,7 @@ class MIPManager extends AuxManager{
         }
     }
 
-    async cache() {
+    async prefetchSliceOverTime() {
         console.log("cache")
         const viewport = this.viewport;
         
