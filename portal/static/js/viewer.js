@@ -738,15 +738,13 @@ class GraspViewer {
     }
 
     async goToFinding(finding) {
-        if (finding.data.viewportId != "VIEW_AUX") {
-            for (const v of this.viewports) {
-                const view_cam = v.getCamera();
-                if (Vector.eq(view_cam.viewPlaneNormal, finding.data.cam.viewPlaneNormal)) {
-                    scrollViewportToPoint(v, finding.data.cam.focalPoint);
-                    cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,this.viewportIds) 
-                    this.renderingEngine.renderViewports(this.viewportIds);
-                    break;
-                }
+        for (const v of this.viewports.slice(0,3)) {
+            const view_cam = v.getCamera();
+            if (Vector.eq(view_cam.viewPlaneNormal, finding.data.cam.viewPlaneNormal)) {
+                scrollViewportToPoint(v, finding.data.cam.focalPoint);
+                cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,this.viewportIds) 
+                this.renderingEngine.renderViewports(this.viewportIds);
+                break;
             }
         }
         let new_selected_time;
@@ -781,11 +779,7 @@ class GraspViewer {
             await Promise.all([
                 this.aux_manager.switch(new_selected_index, false, finding.data.imageIdIndex),
                 this.switchToIndex(new_selected_index)])
-        } else {
-            if (finding.data.viewportId == "VIEW_AUX") {
-                await this.aux_manager.viewport.setImageIdIndex(finding.data.imageIdIndex);
-            }
-        }
+        } 
     }
 
     async showFinding(finding) {
