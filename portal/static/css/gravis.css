@@ -320,7 +320,7 @@ button:focus:not(:focus-visible) {
     background: none;
 }
 
-input::selection {
+input::selection, .selectable::selection {
     color: #FFF;
     background-color: #1266f1;
 }

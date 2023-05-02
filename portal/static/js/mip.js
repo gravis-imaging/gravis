@@ -37,7 +37,7 @@ class AuxManager {
     async stopPreview() {}
 
     getStats() {
-        const annotations = cornerstone.tools.annotation.state.getAnnotations(this.viewport.element,"EllipticalROI") || [];
+        const annotations = this.viewer.annotation_manager.getAllAnnotations(this.viewport)
         const stats = annotations.map(a=>{return {label: a.data.label, stats:a.data.cachedStats[`volumeId:cornerstoneStreamingImageVolume:${this.current_set_type}`]}})
         return stats;
     }

@@ -335,10 +335,9 @@
   <!-- Chart -->
   <div style="grid-area: f; background-color: black; display: flex;">
     <div x-show="case_data.case_type == 'GRASP Onco'" id="aux_stats" style="width:100px;">
-      <div x-data="{'stats':[]}" x-on:stats-update.window="stats = $event.detail.items;">
+      <div class="selectable" x-data="{'stats':[]}" x-on:stats-update.window="stats = $event.detail.items;">
       <template x-for="a of stats || []"  :key="a.label">
-        <p class="mb-0">
-          <span x-text="a.label"></span>: <span x-text="a.stats? (Math.round(a.stats.mean*100)/100) : '?'"></span>
+        <p class="mb-0 selectable" x-text="`${a.label}: ${a.stats? (Math.round((a.stats.mean || a.stats.value)*100)/100) : '?'}`">
         </p>
       </template>
     </div>
@@ -347,9 +346,9 @@
     <div id="chart" style="background-color: black; color: white;"></div>
     </div>
   </div>
-  <div style="grid-area: f;">
+  <div class="no-pointer-events" style="grid-area: f;">
     <template x-if="viewer">
-      <div style="text-align:right; position:relative;">
+      <div class="all-pointer-events" style="margin-left: auto; position: relative; width: max-content;">
         <select class="curve-settings-select" x-model="viewer.chart_options['adjust']" @change="viewer.annotation_manager.updateChart()">
           <option value="standard" autocomplete="off" selected>standard</option>
           <option value="zeroed">zeroed</option>
