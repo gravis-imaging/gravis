@@ -224,6 +224,13 @@ async function viewportToImage(viewport) {
 
     return await encodeSVG(svgAsXML, element.clientWidth*2, element.clientHeight*2)
 }
+function viewportInVolume(viewport) {
+    const imageData = viewport.getDefaultImageData();
+    return cornerstone.utilities.indexWithinDimensions(
+        cornerstone.utilities.transformWorldToIndex(imageData,
+            viewport.getCamera().focalPoint),imageData.getDimensions()
+    )
+}
 
 function fixUpCrosshairs(toolGroup="STACK_TOOL_GROUP_MAIN") {
     // Sometimes the crosshairs gets out of sync with the actual cameras. 
@@ -357,7 +364,7 @@ class Vector {
 }
 
 
-const scrollViewportToPoint = (viewport, centerPoint, noEvent=false) => {
+const scrollViewportToPoint = (viewport, centerPoint, noEvent=false, fixCrosshairs=true) => {
     let cam = viewport.getCamera();
     const moveAmount = Vector.dot(cam.viewPlaneNormal, centerPoint) - Vector.dot(cam.viewPlaneNormal, cam.focalPoint)
     const delta = Vector.mul(cam.viewPlaneNormal, moveAmount);    
@@ -378,7 +385,9 @@ const scrollViewportToPoint = (viewport, centerPoint, noEvent=false) => {
     } else {
         viewport.setCamera(cam);
     }
-    fixUpCrosshairs();
+    if (fixCrosshairs) {
+        fixUpCrosshairs();
+    }
     viewport.render()
 }
 
@@ -500,4 +509,4 @@ async function successToast(title) {
         title: title,
     });
 }
-export { debounce, setCookie, getCookie, HSLToRGB, doJob, doFetch, loadVolumeWithRetry, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, fixUpCrosshairs, Vector, chartToImage, decacheVolumes, confirmPrompt, inputPrompt, errorPrompt, errorToast, successPrompt,infoPrompt, successToast };
+export { debounce, setCookie, getCookie, HSLToRGB, doJob, doFetch, viewportInVolume, loadVolumeWithRetry, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, fixUpCrosshairs, Vector, chartToImage, decacheVolumes, confirmPrompt, inputPrompt, errorPrompt, errorToast, successPrompt,infoPrompt, successToast };

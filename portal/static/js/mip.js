@@ -1,4 +1,4 @@
-import { confirmPrompt, scrollViewportToPoint, doFetch, errorPrompt, errorToast, debounce, loadVolumeWithRetry, Vector, fixUpCrosshairs } from "./utils.js";
+import { confirmPrompt, scrollViewportToPoint, doFetch, errorPrompt, errorToast, debounce, loadVolumeWithRetry, Vector, fixUpCrosshairs, viewportInVolume } from "./utils.js";
 const transferFunction = ({lower, upper}) => {
     const cfun = vtk.Rendering.Core.vtkColorTransferFunction.newInstance();
     const presetToUse = vtk.Rendering.Core.vtkColorTransferFunction.vtkColorMaps.getPresetByName('jet');
@@ -63,8 +63,7 @@ class AuxManager {
     auxScroll(evt) {           
         // const vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0])
         if (!this.synced_viewport) return;
-        this.synced_viewport.setCameraNoEvent({focalPoint:this.viewport.getCamera().focalPoint})
-        this.synced_viewport.render();
+        scrollViewportToPoint(this.synced_viewport, this.viewport.getCamera().focalPoint, true)      
     }
     
     stackMainScroll(evt) {    
@@ -82,13 +81,13 @@ class AuxManager {
         if (!this.synced_viewport) return;
         const vp = this.viewer.viewports.find(v=>v.element==evt.target);
         if (vp != this.synced_viewport) return;
+        if (!viewportInVolume(vp)) return;
         if (!this.viewport.getCurrentImageId()) return;
-        this.viewport.setCameraNoEvent({focalPoint:vp.getCamera().focalPoint})
-        this.viewport.render();
-        if (evt.explicitOriginalTarget == evt.target) { 
-            // True if the event came from scrolling, false if from manually moving crosshairs in a different viewport
-            fixUpCrosshairs(); // Only might need to fix this on scroll; if I'm manually moving the crosshairs things are fine.
-        }
+
+        // True if the event came from scrolling, false if from manually moving crosshairs in a different viewport
+        // Only might need to fix this on scroll; if I'm manually moving the crosshairs things are fine.
+        const needsFixCrosshairs = evt.explicitOriginalTarget == evt.target; 
+        scrollViewportToPoint(this.viewport,vp.getCamera().focalPoint, true, needsFixCrosshairs)
         // scrollViewportToPoint(this.viewport,vp.getCamera().focalPoint, true); 
     }
     

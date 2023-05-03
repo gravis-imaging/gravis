@@ -1,7 +1,7 @@
 import { AnnotationManager } from "./annotations.js"
 import { StateManager } from "./state.js"
 import { MIPManager, AuxManager } from "./mip.js"
-import { debounce, doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch, loadVolumeWithRetry, chartToImage, successToast, fixUpCrosshairs,decacheVolumes, errorPrompt, errorToast } from "./utils.js"
+import { debounce, doJob, viewportToImage, Vector, scrollViewportToPoint, doFetch, loadVolumeWithRetry, chartToImage, successToast, fixUpCrosshairs,decacheVolumes, errorPrompt, errorToast, viewportInVolume } from "./utils.js"
 
 
 const SOP_INSTANCE_UID = '00080018';
@@ -599,6 +599,7 @@ class GraspViewer {
 
     async setPreviewStackForViewport(n, dest_viewport) {
         const viewport = this.viewports[n];
+        if (! viewportInVolume(viewport)) { return; }
         const cam = viewport.getCamera();
     
         const volumeId = viewport.getActors()[0].uid;
@@ -607,6 +608,9 @@ class GraspViewer {
         const index = cornerstone.utilities.transformWorldToIndex(volume.imageData, cam.focalPoint);
 
         const view = ["SAG", "COR", "AX"][cam.viewPlaneNormal.findIndex(x=>Math.abs(x)==1)];
+        if (!view) {
+            throw Error("Volume does not seem to be aligned with axes")
+        }
         const cine_urls = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/preview/${view}/${index.join()}`, {}, "GET")
         // console.log("Preview info:", info)
         // dest_viewport = dest_viewport? dest_viewport : this.viewports[3]
