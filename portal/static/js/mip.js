@@ -1,4 +1,4 @@
-import { confirmPrompt, scrollViewportToPoint, doFetch, errorPrompt, errorToast, debounce, loadVolumeWithRetry } from "./utils.js";
+import { confirmPrompt, scrollViewportToPoint, doFetch, errorPrompt, errorToast, debounce, loadVolumeWithRetry, Vector } from "./utils.js";
 const transferFunction = ({lower, upper}) => {
     const cfun = vtk.Rendering.Core.vtkColorTransferFunction.newInstance();
     const presetToUse = vtk.Rendering.Core.vtkColorTransferFunction.vtkColorMaps.getPresetByName('jet');
@@ -17,15 +17,16 @@ class AuxManager {
     is_switching = false;
     ori_dicom_set;
     current_set_type;
+    volume; 
+    synced_viewport;
 
     constructor( viewer ) {
         this.viewer = viewer;
         this.previewing = false;
         this.ori_dicom_set = this.viewer.studies_data.volumes.find(x=>x.type=="ORI").dicom_set;
-        this.stackAuxScroll = this.stackAuxScroll.bind(this)
+        this.auxScroll = this.auxScroll.bind(this)
         
         this.stackMainScroll = this.stackMainScroll.bind(this)
-        this.volumeAuxScroll = this.volumeAuxScroll.bind(this)
         this.volumeMainScroll = this.volumeMainScroll.bind(this)
     }
 
@@ -59,14 +60,16 @@ class AuxManager {
         }
         el.oncontextmenu = e=>e.preventDefault();
     }
-    stackAuxScroll(evt) {           
-        const vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0])     
-        scrollViewportToPoint(vp,this.viewport.getCamera().focalPoint, true); 
+    auxScroll(evt) {           
+        // const vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0])
+        if (!this.synced_viewport) return;
+        scrollViewportToPoint(this.synced_viewport,this.viewport.getCamera().focalPoint, true); 
     }
     
     stackMainScroll(evt) {    
+        if (!this.synced_viewport) return;
         const vp = this.viewer.viewports.find(v=>v.element==evt.target);
-        if (this.viewer.getNativeViewports().indexOf(vp.id) == -1) return;
+        if (vp != this.synced_viewport) return;
         if (this.viewport.getImageIds().length == 0) return;
         this.viewport.suppressEvents = true;
         this.viewport.setImageIdIndex(vp._getImageIdIndex());
@@ -74,21 +77,15 @@ class AuxManager {
         this.viewport.targetImageIdIndex = this.viewport.getCurrentImageIdIndex();
     }
     
-    volumeAuxScroll(evt) {           
-        const vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0])
-        if (!vp) return;
-        scrollViewportToPoint(vp,this.viewport.getCamera().focalPoint, true); 
-    }
-    
     volumeMainScroll(evt) {
+        if (!this.synced_viewport) return;
         const vp = this.viewer.viewports.find(v=>v.element==evt.target);
-        if (this.viewer.getNativeViewports().indexOf(vp.id) == -1) return;
+        if (vp != this.synced_viewport) return;
         // if (!this.viewport.getCurrentImageId()) return;
         scrollViewportToPoint(this.viewport,vp.getCamera().focalPoint, true); 
     }
     
     async createViewport(){
-        // await this.switchViewportType('stack')
         await this.switchViewportType()
         this.installEventHandlers()
     }
@@ -114,12 +111,12 @@ class AuxManager {
     }
     removeCameraSyncHandlers(el) {
         if (this.viewport.type != 'stack') {
-            el.removeEventListener("CORNERSTONE_CAMERA_MODIFIED",this.volumeAuxScroll);
+            el.removeEventListener("CORNERSTONE_CAMERA_MODIFIED",this.auxScroll);
             for (const vp of this.viewer.viewports.slice(0,3)) {
                 vp.element.removeEventListener("CORNERSTONE_CAMERA_MODIFIED", this.volumeMainScroll)
             }
         } else {
-            el.removeEventListener("CORNERSTONE_STACK_VIEWPORT_SCROLL",this.stackAuxScroll);
+            el.removeEventListener("CORNERSTONE_STACK_VIEWPORT_SCROLL",this.auxScroll);
             for (const vp of this.viewer.viewports.slice(0,3)) {
                 vp.element.removeEventListener("CORNERSTONE_CAMERA_MODIFIED", this.stackMainScroll)
             }
@@ -127,12 +124,12 @@ class AuxManager {
     }
     addCameraSyncHandlers(el) {
         if (this.viewport.type == 'stack' && this.viewer.case_data.case_type == "GRASP Onco") {
-            el.addEventListener("CORNERSTONE_STACK_VIEWPORT_SCROLL",this.stackAuxScroll);
+            el.addEventListener("CORNERSTONE_STACK_VIEWPORT_SCROLL",this.auxScroll);
             for (const vp of this.viewer.viewports.slice(0,3)) {
                 vp.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", this.stackMainScroll)
             }
         } else {
-            el.addEventListener("CORNERSTONE_CAMERA_MODIFIED", this.volumeAuxScroll);
+            el.addEventListener("CORNERSTONE_CAMERA_MODIFIED", this.auxScroll);
             for (const vp of this.viewer.viewports.slice(0,3)) {
                 vp.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", this.volumeMainScroll)
             }
@@ -143,11 +140,32 @@ class AuxManager {
         const volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, { imageIds:urls });
 
         volume.imageData.setDirection(volume.direction.map(Math.round))
+        
+        this.volume = volume;
+        
+        // Use the orientation showing the native image plane
+        for (var [k,v] of Object.entries(cornerstone.CONSTANTS.MPR_CAMERA_VALUES)){
+            if (Vector.dot(v.viewPlaneNormal,volume.imageData.getDirection().slice(-3)) != 0) {
+                this.viewport.setCamera(v);
+                break;
+            }
+        }
         await cornerstone.setVolumesForViewports( 
             this.viewer.renderingEngine,
             [{volumeId},],
             [this.viewport.id]
         );
+
+        
+        for (var viewport of this.viewer.viewports.slice(0,3)){
+            if (Vector.eq(viewport.getCamera().viewPlaneNormal,v.viewPlaneNormal) 
+                && this.viewport.getFrameOfReferenceUID() == viewport.getFrameOfReferenceUID()) {
+                    this.synced_viewport = viewport;
+                    break;
+            }
+        }
+
+
         const actor = this.viewport.getDefaultActor().actor;
         const [ lower, upper ] = actor.getProperty().getRGBTransferFunction(0).getRange(); // Not totally sure about this
         actor.getProperty().setRGBTransferFunction(0, transferFunction({lower, upper}));
@@ -168,6 +186,7 @@ class AuxManager {
             }
             return await this.loadVolume(type, urls);
         } catch (e) {
+            console.warn(e);
             this.switchViewportType("stack");
             return await this.loadStack(urls);
         }

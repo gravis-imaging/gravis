@@ -617,10 +617,12 @@ class GraspViewer {
         // cornerstone.tools.utilities.stackPrefetch.enable(dest_viewport.element);
     }
 
-    getNativeViewports() {
+    getNativeViewports(imageData=null) {
         let native_viewports = [];
+        if (!imageData) {
+            imageData = this.viewports[0].getDefaultImageData()
+        }
         for (var v of viewer.viewports) {
-            let imageData = v.getDefaultImageData()
             if (!imageData) { continue; };
             let direction = imageData.getDirection().slice(-3);
             let normal = v.getCamera().viewPlaneNormal;
