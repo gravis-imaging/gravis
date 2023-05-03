@@ -1,7 +1,7 @@
 import { confirmPrompt, scrollViewportToPoint, doFetch, errorPrompt, errorToast, debounce, loadVolumeWithRetry, Vector, fixUpCrosshairs, viewportInVolume } from "./utils.js";
 const transferFunction = ({lower, upper}) => {
     const cfun = vtk.Rendering.Core.vtkColorTransferFunction.newInstance();
-    const presetToUse = vtk.Rendering.Core.vtkColorTransferFunction.vtkColorMaps.getPresetByName('jet');
+    const presetToUse = vtk.Rendering.Core.vtkColorTransferFunction.vtkColorMaps.getPresetByName("Rainbow Blended Black");
     cfun.applyColorMap(presetToUse);
     cfun.setMappingRange(lower, upper);
     return cfun;
