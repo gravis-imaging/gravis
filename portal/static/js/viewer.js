@@ -530,7 +530,7 @@ class GraspViewer {
             cornerstone.tools.utilities.scroll(viewer.viewports[i],{delta:0,volumeId:viewer.viewports[i].getDefaultActor().uid})
             viewer.viewports[i].render();
         }
-        fixUpCrosshairs()
+        fixUpCrosshairs();
     }
     fixShift() {
         for ( var i=0; i<3; i++) {
@@ -542,7 +542,7 @@ class GraspViewer {
             this.viewports[i].render();
         }
         this.renderingEngine.resize(true, true); // Not sure why this is suddenly necessary, the preview viewports are messed up otherwise
-        fixUpCrosshairs()
+        fixUpCrosshairs();
     }
     async switchStudy(study_uid, dicom_set, case_id, keepCamera=true) {       
         this.study_uid = study_uid;
