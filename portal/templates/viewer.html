@@ -335,9 +335,19 @@
          :disabled="should_disable() || read_only" disabled="disabled"
          @click="job_loading = true; viewer.storeFinding(viewer.aux_manager.viewport); job_loading = false;"><i class="fa-solid fa-camera"></i>
        </button>
+       
     </div>
   </div>
-
+  <div style="grid-area: d; position:relative; display:grid;" class="no-pointer-events p-2">
+    <div x-cloak x-show="viewer && viewer.aux_manager.viewport.type != 'stack'" style="align-self:end;justify-self:end;">
+      <span x-text="viewer && viewer.aux_manager.current_MPR"></span>
+      <button
+       title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2"
+          :disabled="should_disable() || read_only" disabled="disabled"
+          @click="job_loading = true; viewer.aux_manager.cycleCamera(); job_loading = false;"><i class="fas fa-exchange-alt"></i>
+        </button>
+    </div>
+  </div>
   <!-- Chart -->
   <div style="grid-area: f; background-color: black; display: flex;">
     <div x-show="case_data.case_type == 'GRASP Onco'" id="aux_stats" style="min-width: 70px; width: 15%; max-width: 110px;">
@@ -379,9 +389,8 @@
         :disabled="should_disable() || read_only" disabled="disabled"
         @click="await viewer.storeChartFinding()"><i class="fa-solid fa-camera"></i>
      </button>
-  </div>
-
     </div>
+  </div>
    
   <!-- Findings -->
   <div x-ref="findings" id="findings" class="findings" :class="open && 'open'" x-data="{open: false, toggle() { this.open = ! this.open }}">
@@ -392,8 +401,8 @@
       <template x-for="finding in viewer? viewer.findings : []" :key="finding.id">
       <div class="mb-2 img-thumbnail" style="background-color: #000; box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%);  ">
         <div style="float:right;">       
-          <button title="Go to finding" class="btn-dark btn-large btn-viewer me-2 my-2"
-          :disabled="should_disable" disabled="disabled"
+          <button title="Go to finding" x-show="finding.data" class="btn-dark btn-large btn-viewer me-2 my-2"
+          :disabled="should_disable()" disabled="disabled"
           @click="loading = true; await viewer.goToFinding(finding); loading = false;"><i class="fa-solid fa-map-marker-alt"></i>
           </button>
           <button title="Rename" class="btn-dark btn-large btn-viewer me-2 my-2"

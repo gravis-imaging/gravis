@@ -65,7 +65,25 @@ class AuxManager {
         if (!this.synced_viewport) return;
         scrollViewportToPoint(this.synced_viewport, this.viewport.getCamera().focalPoint, true)      
     }
-    
+    cycleCamera() {
+        const vals = []
+        var this_MPR = 0;
+        let n = 0;
+        for (var [k,v] of Object.entries(cornerstone.CONSTANTS.MPR_CAMERA_VALUES)) {
+            vals.push([k,v]);
+            if (k == this.current_MPR) {
+                this_MPR = n;
+            }
+            n++;
+        }
+        var next_MPR = (this_MPR+1) % vals.length;
+        this.viewport.setCameraNoEvent(vals[next_MPR][1]);
+        this.viewport.resetCameraNoEvent();
+        this.setSyncedViewport();
+        this.volumeMainScroll({target:this.synced_viewport.element, explicitOriginalTarget:this.synced_viewport.element})
+        this.viewport.render();
+        this.current_MPR = vals[next_MPR][0];
+    }
     stackMainScroll(evt) {    
         if (!this.synced_viewport) return;
         const vp = this.viewer.viewports.find(v=>v.element==evt.target);
@@ -141,6 +159,15 @@ class AuxManager {
             }
         }
     }
+    setSyncedViewport() {
+        for (var viewport of this.viewer.viewports.slice(0,3)){
+            if (Vector.eq(viewport.getCamera().viewPlaneNormal,this.viewport.getCamera().viewPlaneNormal) 
+                && this.viewport.getFrameOfReferenceUID() == viewport.getFrameOfReferenceUID()) {
+                    this.synced_viewport = viewport;
+                    break;
+            }
+        }
+    }
     async loadVolume(type, urls) {
         const volumeId = `cornerstoneStreamingImageVolume:${type}`;
         const volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, { imageIds:urls });
@@ -153,6 +180,7 @@ class AuxManager {
         for (var [k,v] of Object.entries(cornerstone.CONSTANTS.MPR_CAMERA_VALUES)){
             if (Vector.dot(v.viewPlaneNormal,volume.imageData.getDirection().slice(-3)) != 0) {
                 this.viewport.setCamera(v);
+                this.current_MPR = k;
                 break;
             }
         }
@@ -163,14 +191,7 @@ class AuxManager {
         );
 
         
-        for (var viewport of this.viewer.viewports.slice(0,3)){
-            if (Vector.eq(viewport.getCamera().viewPlaneNormal,v.viewPlaneNormal) 
-                && this.viewport.getFrameOfReferenceUID() == viewport.getFrameOfReferenceUID()) {
-                    this.synced_viewport = viewport;
-                    break;
-            }
-        }
-
+        this.setSyncedViewport();
 
         const actor = this.viewport.getDefaultActor().actor;
         const [ lower, upper ] = actor.getProperty().getRGBTransferFunction(0).getRange(); // Not totally sure about this
