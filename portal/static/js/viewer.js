@@ -541,6 +541,7 @@ class GraspViewer {
             this.viewports[i].setPan(shift,true);
             this.viewports[i].render();
         }
+        this.renderingEngine.resize(true, true); // Not sure why this is suddenly necessary, the preview viewports are messed up otherwise
         fixUpCrosshairs()
     }
     async switchStudy(study_uid, dicom_set, case_id, keepCamera=true) {       
