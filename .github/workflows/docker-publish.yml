@@ -21,11 +21,6 @@ env:
   # USERNAME: ${{ github.actor }}
   # TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-
-  REGISTRY: ghcr.io
-  REPO: ${{ github.repository_owner }}
-  USERNAME: ${{ github.actor }}
-  TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
   build-base-image:
     runs-on: ubuntu-latest
