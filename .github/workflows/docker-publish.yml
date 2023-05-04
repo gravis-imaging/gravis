@@ -55,7 +55,7 @@ jobs:
         id: meta-base
         uses: docker/metadata-action@v4
         with:
-          images: ${{ env.REGISTRY }}/${{ env.REPO }}/gravis
+          images: ${{ env.REGISTRY }}/${{ env.REPO }}/gravis-processing-mra
 
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
