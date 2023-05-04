@@ -7,15 +7,19 @@ name: Docker
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 env:
   # Use docker.io for Docker Hub if empty
   # github.repository as <account>/<repo>
-  # REGISTRY: docker.io
-  # REPO: mercureimaging
-  # USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  # TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+  REGISTRY: docker.io
+  REPO: mercureimaging
+  USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+  # REGISTRY: ghcr.io
+  # REPO: ${{ github.repository_owner }}
+  # USERNAME: ${{ github.actor }}
+  # TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
   REGISTRY: ghcr.io
