@@ -639,3 +639,7 @@ textarea.select2-search__field {
 .form-outline .form-control:disabled~.form-label {
     color: hsla(0,0%,100%,.25);
 }
+
+.bootstrap-select.show-tick .dropdown-menu .selected span.check-mark {
+    top: 10px !important;
+}
