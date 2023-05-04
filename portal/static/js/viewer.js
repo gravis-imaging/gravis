@@ -95,7 +95,7 @@ class GraspViewer {
     mip_details = [];
 
     findings;
-    
+    _ignore_camera_modified = false;
     rotate_mode = false;
 
     constructor( ...inp ) {
@@ -208,6 +208,7 @@ class GraspViewer {
                 v.element.addEventListener(cornerstone.Enums.Events.CAMERA_MODIFIED, debounce(250, async (evt) => {
                     if (! v.getDefaultActor() ) return;
                     if ( this.rotate_mode ) return;
+                    if ( this._ignore_camera_modified ) return;
                     try {
                         await this.updatePreview(n)
                         this.previewViewports[n].setZoom(v.getZoom());
@@ -417,13 +418,12 @@ class GraspViewer {
         this.volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, { imageIds });
         // this is meant to "snap" the direction onto the nearest axes
         this.volume.imageData.setDirection(this.volume.direction.map(Math.round))
-
         await cornerstone.setVolumesForViewports( 
             this.renderingEngine,
             [{volumeId},],
             this.viewportIds.slice(0,3)
-        );      
-
+        );
+        
         if ( keepCamera ) {
             for (var c of cams) {
                 if (!c.cam.focalPoint.every( k => k==0)) { // focalPoint is [0,0,0] before any volumes are loaded
@@ -459,11 +459,20 @@ class GraspViewer {
         await this.setVolumeByImageIds(imageIds, series_uid, true);
     }    
     
-    startPreview(idx) {
+    alignPreview(i) {
+        console.warn("aligning preview");
+        const diff = this.diffPreview(i);
+        this.previewViewports[i].setPan(Vector.sub(this.previewViewports[i].getPan(), diff));
+        this.previewViewports[i].render();
+    }
+    async startPreview(idx) {
         this.previewViewports.slice(0,3).map((v, n) => {
             v.element.getElementsByTagName('svg')[0].innerHTML = this.viewports[n].element.getElementsByTagName('svg')[0].innerHTML
         });
-        this.snapToSlice();
+        for ( var i=0; i<3; i++) {
+            this.alignPreview(i);
+        }
+        // this.snapToSlice();
     }
 
     async setPreview(idx) {
@@ -502,7 +511,7 @@ class GraspViewer {
             // console.log("Volume VOI", upper,lower)
             this.previewViewports[n].setVOI({lower, upper});
             try {
-                await this.setPreviewStackForViewport(n, this.previewViewports[n]) 
+                await this.setPreviewStackForViewport(n, this.previewViewports[n])
             } catch (e) {
                 console.error(e);
                 await errorToast("Failed to set preview stack.");
@@ -514,8 +523,10 @@ class GraspViewer {
     async switchSeries(series_uid) {
         this.chart.renderGraph_();
         await this.setVolumeBySeries(series_uid);
+        this._ignore_camera_modified = true; // don't want to update the preview alignment while loading
         const volume_result = await loadVolumeWithRetry(this.volume);
-        this.fixShift();
+        this._ignore_camera_modified = false;
+        fixUpCrosshairs();
     }    
 
     async switchToIndex(index) {
@@ -532,17 +543,27 @@ class GraspViewer {
         }
         fixUpCrosshairs();
     }
+
+    diffPreview(i) {
+        let center_a = this.viewports[i].worldToCanvas(this.viewports[i].getDefaultActor().actor.getCenter());
+        let center_b = this.previewViewports[i].worldToCanvas(this.previewViewports[i].getDefaultActor().actor.getCenter());
+        return Vector.sub(center_b, center_a);
+    }
     fixShift() {
-        for ( var i=0; i<3; i++) {
-            // This tries to align the centers of the viewports and the preview viewports.
-            let center_a = this.viewports[i].worldToCanvas(this.viewports[i].getDefaultActor().actor.getCenter());
-            let center_b = this.previewViewports[i].worldToCanvas(this.previewViewports[i].getDefaultActor().actor.getCenter());
-            let shift = Vector.sub(center_b, center_a);
-            this.viewports[i].setPan(shift,true);
-            this.viewports[i].render();
-        }
-        this.renderingEngine.resize(true, true); // Not sure why this is suddenly necessary, the preview viewports are messed up otherwise
-        fixUpCrosshairs();
+        // for ( var i=0; i<3; i++) {
+        //     // This tries to align the centers of the viewports and the preview viewports.
+        //     this.previewViewports[i].setPan(this.viewports[i].getPan());
+        //     let center_a = this.viewports[i].worldToCanvas(this.viewports[i].getDefaultActor().actor.getCenter());
+        //     let center_b = this.previewViewports[i].worldToCanvas(this.previewViewports[i].getDefaultActor().actor.getCenter());
+        //     let shift = Vector.sub(center_b, center_a);
+        //     let old_pan = this.viewports[i].getPan();
+
+        //     this.viewports[i].setPan(shift,true);
+        //     this.viewports[i].setPan(old_pan);
+        //     this.viewports[i].render();
+        // }
+        // this.renderingEngine.resize(true, true); // Not sure why this is suddenly necessary, the preview viewports are messed up otherwise
+        // fixUpCrosshairs();
     }
     async switchStudy(study_uid, dicom_set, case_id, keepCamera=true) {       
         this.study_uid = study_uid;
@@ -590,7 +611,7 @@ class GraspViewer {
         } catch (e) {
             console.error(e);
         }
-        this.fixShift();
+        fixUpCrosshairs();
         
         console.log("Study switched");
 
