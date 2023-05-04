@@ -375,10 +375,14 @@ input::selection, .selectable::selection {
   font-size: 1rem;
   line-height: 1.0!important;
   background-color: #555!important;
+  border: 0.125rem solid #fff !important;
+  box-shadow: none !important;
+  padding: 0.625rem 1.5625rem 0.5625rem !important;
 }
 
 .btn-viewer-toolbar:hover {
     background-color: #1266f1!important;
+    border-color: #fff !important;
 }
 
 .ripple-wave {
