@@ -213,6 +213,7 @@ class GraspViewer {
                         await this.updatePreview(n)
                         this.previewViewports[n].setZoom(v.getZoom());
                         this.previewViewports[n].setPan(v.getPan());
+                        this.previewViewports[n].setCamera({parallelScale:v.getCamera().parallelScale });
                         this.previewViewports[n].render();
                     } catch (e) {
                         console.error(e);
@@ -464,6 +465,7 @@ class GraspViewer {
         const diff = this.diffPreview(i);
         this.previewViewports[i].setPan(Vector.sub(this.previewViewports[i].getPan(), diff));
         this.previewViewports[i].setZoom(this.viewports[i].getZoom());
+        this.previewViewports[i].setCamera({parallelScale:this.viewports[i].getCamera().parallelScale });
 
         // this.previewViewports[n].setPan(v.getPan());
         this.previewViewports[i].render();
