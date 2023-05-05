@@ -549,22 +549,7 @@ class GraspViewer {
         let center_b = this.previewViewports[i].worldToCanvas(this.previewViewports[i].getDefaultActor().actor.getCenter());
         return Vector.sub(center_b, center_a);
     }
-    fixShift() {
-        // for ( var i=0; i<3; i++) {
-        //     // This tries to align the centers of the viewports and the preview viewports.
-        //     this.previewViewports[i].setPan(this.viewports[i].getPan());
-        //     let center_a = this.viewports[i].worldToCanvas(this.viewports[i].getDefaultActor().actor.getCenter());
-        //     let center_b = this.previewViewports[i].worldToCanvas(this.previewViewports[i].getDefaultActor().actor.getCenter());
-        //     let shift = Vector.sub(center_b, center_a);
-        //     let old_pan = this.viewports[i].getPan();
 
-        //     this.viewports[i].setPan(shift,true);
-        //     this.viewports[i].setPan(old_pan);
-        //     this.viewports[i].render();
-        // }
-        // this.renderingEngine.resize(true, true); // Not sure why this is suddenly necessary, the preview viewports are messed up otherwise
-        // fixUpCrosshairs();
-    }
     async switchStudy(study_uid, dicom_set, case_id, keepCamera=true) {       
         this.study_uid = study_uid;
         this.dicom_set = dicom_set;

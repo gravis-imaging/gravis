@@ -77,22 +77,24 @@ def do_docker_job(job):
             detach=True,
         )
 
-        docker_result = container.wait()
-        logger.info("DOCKER RESULTS: ", docker_result)
         logger.info(
             "=== MODULE OUTPUT - BEGIN ========================================"
         )
-        if container.logs() is not None:
-            logs = container.logs().decode("utf-8")
-            logger.info(logs)
+        for line in container.logs(stream=True):
+            print(line.decode("utf-8").strip())
+
         logger.info(
             "=== MODULE OUTPUT - END =========================================="
         )
-
-        # Check if the processing was successful (i.e., container returned exit code 0)
+        docker_result = container.wait()
+        print("DOCKER RESULTS: ", docker_result)
         exit_code = docker_result.get("StatusCode")
         if exit_code != 0:
-            raise ReportedException(f"Error while running container {docker_tag} - exit code {exit_code}. Value {DockerReturnCodes(exit_code).name}.")
+            try:
+                err = f"Error while running container {docker_tag} - exit code {exit_code}, {DockerReturnCodes(exit_code).name}."
+            except ValueError:
+                err = f"Error while running container {docker_tag} - exit code {exit_code}."
+            raise ReportedException(err)
     except ReportedException:
         raise
     except docker.errors.APIError as e:
