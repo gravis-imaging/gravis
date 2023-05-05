@@ -18,8 +18,8 @@ class AuxManager {
     ori_dicom_set;
     current_set_type;
     volume; 
-    synced_viewport;
-
+    synced_viewport = null;
+    _no_sync = false;
     constructor( viewer ) {
         this.viewer = viewer;
         this.previewing = false;
@@ -63,7 +63,8 @@ class AuxManager {
     auxScroll(evt) {           
         // const vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0])
         if (!this.synced_viewport) return;
-        scrollViewportToPoint(this.synced_viewport, this.viewport.getCamera().focalPoint, true)      
+        if (this._no_sync) return;
+        scrollViewportToPoint(this.synced_viewport, this.viewport.getCamera().focalPoint, false)      
     }
     cycleCamera() {
         const vals = []
@@ -86,6 +87,7 @@ class AuxManager {
     }
     stackMainScroll(evt) {    
         if (!this.synced_viewport) return;
+        if (this._no_sync) return;
         const vp = this.viewer.viewports.find(v=>v.element==evt.target);
         if (vp != this.synced_viewport) return;
         if (this.viewport.getImageIds().length == 0) return;
@@ -97,6 +99,7 @@ class AuxManager {
     
     volumeMainScroll(evt) {
         if (!this.synced_viewport) return;
+        if (this._no_sync) return;
         const vp = this.viewer.viewports.find(v=>v.element==evt.target);
         if (vp != this.synced_viewport) return;
         if (!viewportInVolume(vp)) return;
@@ -222,17 +225,21 @@ class AuxManager {
         this.current_set_type = type;
         const urls = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/processed_results/${type}`,null, "GET")).urls;
         const [ zoom, pan ] = [this.viewport.getZoom(), this.viewport.getPan()]
-        const fp = this.viewport.getCamera().focalPoint
-        const native_vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0]);
+        // const fp = this.synced_viewport.getCamera().focalPoint;
+        // const native_vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0]);
 
+        this._no_sync = true;
         await this.showImages(type,urls)
 
         this.viewport.setZoom(zoom);
         this.viewport.setPan(pan);    
-
+        this._no_sync = false;
         if (this.viewport.type != 'stack') {
-            scrollViewportToPoint(this.viewport,fp, true);
-            scrollViewportToPoint(native_vp,fp, true);
+            // for (var vp of this.viewer.viewports.slice(0,3)){
+            //     this.volumeMainScroll({explicitOriginalTarget:vp,target:vp})
+            // }
+            scrollViewportToPoint(this.viewport,this.synced_viewport.getCamera().focalPoint, true);
+            // scrollViewportToPoint(native_vp,fp, true);
         }
         this.viewport.render();
     }

@@ -22,7 +22,7 @@ env:
   # TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
-  build-base-image:
+  build-mra-image:
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -463,6 +463,9 @@ class GraspViewer {
         console.warn("aligning preview");
         const diff = this.diffPreview(i);
         this.previewViewports[i].setPan(Vector.sub(this.previewViewports[i].getPan(), diff));
+        this.previewViewports[i].setZoom(this.viewports[i].getZoom());
+
+        // this.previewViewports[n].setPan(v.getPan());
         this.previewViewports[i].render();
     }
     async startPreview(idx) {
@@ -589,7 +592,9 @@ class GraspViewer {
          
         this.aux_manager.init(graspVolumeInfo, selected_index);
 
+        // this._ignore_camera_modified = true;
         const volume_result = await loadVolumeWithRetry(this.volume);
+        // this._ignore_camera_modified = false; 
         
         try {
             await this.updatePreview();
@@ -605,12 +610,11 @@ class GraspViewer {
 
     async setPreviewStackForViewport(n, dest_viewport) {
         const viewport = this.viewports[n];
-        if (! viewportInVolume(viewport)) { return; }
+        if (! viewportInVolume(viewport)) { console.error("Viewport not in volume."); return; }
         const cam = viewport.getCamera();
     
         const volumeId = viewport.getActors()[0].uid;
         const volume = cornerstone.cache.getVolume(volumeId);
-        // const info = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/processed_json/CINE`);
         const index = cornerstone.utilities.transformWorldToIndex(volume.imageData, cam.focalPoint);
 
         const view = ["SAG", "COR", "AX"][cam.viewPlaneNormal.findIndex(x=>Math.abs(x)==1)];
