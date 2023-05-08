@@ -98,13 +98,9 @@ class AuxManager {
     }
     
     volumeMainScroll(evt) {
-        if (!this.synced_viewport) return;
-        if (this._no_sync) return;
+        if (!this.synced_viewport || this._no_sync || !this.viewport.getDefaultActor()) return;
         const vp = this.viewer.viewports.find(v=>v.element==evt.target);
-        if (vp != this.synced_viewport) return;
-        if (!viewportInVolume(vp)) return;
-        if (!this.viewport.getCurrentImageId()) return;
-
+        if (vp != this.synced_viewport || !viewportInVolume(vp)) return;
         // True if the event came from scrolling, false if from manually moving crosshairs in a different viewport
         // Only might need to fix this on scroll; if I'm manually moving the crosshairs things are fine.
         const needsFixCrosshairs = evt.explicitOriginalTarget == evt.target; 
@@ -229,11 +225,14 @@ class AuxManager {
         // const native_vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0]);
 
         this._no_sync = true;
-        await this.showImages(type,urls)
+        try {
+            await this.showImages(type,urls)
 
-        this.viewport.setZoom(zoom);
-        this.viewport.setPan(pan);    
-        this._no_sync = false;
+            this.viewport.setZoom(zoom);
+            this.viewport.setPan(pan);    
+        } finally {
+            this._no_sync = false;
+        }
         if (this.viewport.type != 'stack') {
             // for (var vp of this.viewer.viewports.slice(0,3)){
             //     this.volumeMainScroll({explicitOriginalTarget:vp,target:vp})

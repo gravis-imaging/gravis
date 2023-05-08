@@ -612,7 +612,7 @@ class GraspViewer {
 
     async setPreviewStackForViewport(n, dest_viewport) {
         const viewport = this.viewports[n];
-        if (! viewportInVolume(viewport)) { console.error("Viewport not in volume."); return; }
+        if (! viewportInVolume(viewport)) return;
         const cam = viewport.getCamera();
     
         const volumeId = viewport.getActors()[0].uid;
