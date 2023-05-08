@@ -340,10 +340,10 @@
   </div>
   <div style="grid-area: d; position:relative; display:grid;" class="no-pointer-events p-2">
     <div x-cloak x-show="viewer && viewer.aux_manager.viewport.type != 'stack'" style="align-self:end;justify-self:end;">
-      <span x-text="viewer && viewer.aux_manager.current_MPR"></span>
+      <span x-show="!viewer || !viewer.rotate_mode" x-text="viewer && viewer.aux_manager.current_MPR"></span>
       <button
        title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2"
-          :disabled="should_disable() || read_only" disabled="disabled"
+          :disabled="should_disable() || read_only || (viewer && viewer.rotate_mode)" disabled="disabled"
           @click="job_loading = true; viewer.aux_manager.cycleCamera(); job_loading = false;"><i class="fas fa-exchange-alt"></i>
         </button>
     </div>

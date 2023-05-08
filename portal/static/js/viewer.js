@@ -675,6 +675,7 @@ class GraspViewer {
             v.setPan(pan);
             v.render();
         }
+        this.aux_manager.endRotateMode();
         fixUpCrosshairs()
         cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.renderingEngine,this.viewportIds);
     }

@@ -60,13 +60,15 @@ class AuxManager {
         }
         el.oncontextmenu = e=>e.preventDefault();
     }
-    auxScroll(evt) {           
-        // const vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0])
+    auxScroll(evt) {   
+        // Event handler for scrolling the aux viewport. 
         if (!this.synced_viewport) return;
         if (this._no_sync) return;
+        // Scroll the synced viewport to the same slice as the aux viewport.
         scrollViewportToPoint(this.synced_viewport, this.viewport.getCamera().focalPoint, false)      
     }
     cycleCamera() {
+        // Swap the aux view between sagittal, coronal, axial views.
         const vals = []
         var this_MPR = 0;
         let n = 0;
@@ -85,12 +87,13 @@ class AuxManager {
         this.viewport.render();
         this.current_MPR = vals[next_MPR][0];
     }
-    stackMainScroll(evt) {    
-        if (!this.synced_viewport) return;
-        if (this._no_sync) return;
+    stackMainScroll(evt) {
+        // Event handler on the main viewports when the aux viewer is a StackViewport
+        if (!this.synced_viewport || this._no_sync) return;
         const vp = this.viewer.viewports.find(v=>v.element==evt.target);
         if (vp != this.synced_viewport) return;
         if (this.viewport.getImageIds().length == 0) return;
+        if (this.viewer.rotate_mode) return;
         this.viewport.suppressEvents = true;
         this.viewport.setImageIdIndex(vp._getImageIdIndex());
         this.viewport.suppressEvents = false;
@@ -98,16 +101,48 @@ class AuxManager {
     }
     
     volumeMainScroll(evt) {
+        // Event handler on the main viewports when the aux viewer is a VolumeViewport
         if (!this.synced_viewport || this._no_sync || !this.viewport.getDefaultActor()) return;
         const vp = this.viewer.viewports.find(v=>v.element==evt.target);
         if (vp != this.synced_viewport || !viewportInVolume(vp)) return;
         // True if the event came from scrolling, false if from manually moving crosshairs in a different viewport
         // Only might need to fix this on scroll; if I'm manually moving the crosshairs things are fine.
         const needsFixCrosshairs = evt.explicitOriginalTarget == evt.target; 
-        scrollViewportToPoint(this.viewport,vp.getCamera().focalPoint, true, needsFixCrosshairs)
+        
+        if (this.viewer.rotate_mode) {
+            const pan = this.viewport.getPan();
+            const zoom = this.viewport.getZoom();
+            this.viewport.setCameraNoEvent(vp.getCamera());
+            this.viewport.suppressEvents = true;
+            try {
+                this.viewport.setZoom(zoom);
+                this.viewport.setPan(pan);
+            } finally {
+                this.viewport.suppressEvents = false;
+            }   
+            this.viewport.render();
+        } else {
+            scrollViewportToPoint(this.viewport,vp.getCamera().focalPoint, true, needsFixCrosshairs)
+        }
+
         // scrollViewportToPoint(this.viewport,vp.getCamera().focalPoint, true); 
     }
-    
+    endRotateMode() {
+        if (this.synced_viewport) {
+            const pan = this.viewport.getPan();
+            const zoom = this.viewport.getZoom();
+            this.viewport.setCameraNoEvent(this.synced_viewport.getCamera());
+            this.viewport.suppressEvents = true;
+            try {
+                this.viewport.setZoom(zoom);
+                this.viewport.setPan(pan);
+            } finally {
+                this.viewport.suppressEvents = false;
+            }   
+            this.viewport.render();
+        }
+    }
+
     async createViewport(){
         await this.switchViewportType()
         this.installEventHandlers()
@@ -246,6 +281,7 @@ class AuxManager {
 
 class MIPManager extends AuxManager{
     type = "MIP"
+    current_set_type = "stack";
 
     installEventHandlers() {
         super.installEventHandlers()
