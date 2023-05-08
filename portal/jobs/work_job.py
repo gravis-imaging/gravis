@@ -91,6 +91,8 @@ class WorkJobView(View):
         if job.case:
             log_id = logger.add(Path(job.case.case_location) / "logs" / f"{job.id}_{cls.type}.log")
         try:
+            if job.case and job.case.status == Case.CaseStatus.ERROR:
+                raise Exception("Job already in an error state, aborting.")
             if job.dicom_set is None and "source_type" in job.parameters:
                 job.dicom_set = DICOMSet.objects.get(type=job.parameters["source_type"], processing_job__id = job.parameters["source_job"])
             
