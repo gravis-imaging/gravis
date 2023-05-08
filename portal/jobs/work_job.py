@@ -13,6 +13,8 @@ from portal.jobs.utils import send_failure_notification
 
 def do_job(View,id):
     View._do_job(id)
+class JobAlreadyInErrorState(Exception):
+    pass
 
 def report_failure(job, connection, type, value, traceback):
     job = ProcessingJob.objects.get(id=job.args[1])
@@ -23,8 +25,10 @@ def report_failure(job, connection, type, value, traceback):
     if job.case is not None and job.case.status == Case.CaseStatus.PROCESSING:
         job.case.status = Case.CaseStatus.ERROR
         job.case.save()
+        send_failure_notification(job)
     job.save()
-    send_failure_notification(job)
+    if job.case is None:
+        send_failure_notification(job)
 
 @method_decorator(login_required, name='dispatch')
 class WorkJobView(View):
@@ -92,7 +96,7 @@ class WorkJobView(View):
             log_id = logger.add(Path(job.case.case_location) / "logs" / f"{job.id}_{cls.type}.log")
         try:
             if job.case and job.case.status == Case.CaseStatus.ERROR:
-                raise Exception("Job already in an error state, aborting.")
+                raise JobAlreadyInErrorState("Job already in an error state, aborting.")
             if job.dicom_set is None and "source_type" in job.parameters:
                 job.dicom_set = DICOMSet.objects.get(type=job.parameters["source_type"], processing_job__id = job.parameters["source_job"])
             
