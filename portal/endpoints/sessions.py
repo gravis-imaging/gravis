@@ -26,8 +26,8 @@ def handle_session(request, case, session_id=None):
 @login_required
 @transaction.atomic
 def new_session(request,case):
-    if not user_opened_case(request, case):
-        return HttpResponseForbidden()
+    # if not user_opened_case(request, case):
+    #     return HttpResponseForbidden()
     session = SessionInfo(case=Case.objects.get(id=case), cameras=[], voi={}, annotations=[], user=request.user)
     session.save()
     return JsonResponse(session.to_dict())

@@ -241,11 +241,11 @@
     } );
 
     function openCase(case_id, status, last_read_by_id) {
-        if (canModifyCaseStatus(status, last_read_by_id, "open")) {
+        if (status=="Ready" || status=="Complete" || status=="Viewing") {
             const link = '/viewer/'+case_id;
             window.open(link, "_self");
         } else {
-            infoPrompt("Case is not ready for viewing or has been opened by another user.", "Locked");
+            infoPrompt("Case is not ready for viewing.", "Locked");
         }  
     }
 

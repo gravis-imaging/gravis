@@ -43,6 +43,7 @@ class AuxManager {
         return stats;
     }
     installEventHandlers() {
+        // Install the basic event handlers
         const el = this.viewport.element;
         el.ondblclick = e => {
             //const el = auxViewport.element;
@@ -194,15 +195,17 @@ class AuxManager {
         }
     }
     setSyncedViewport() {
+        // Work out which viewport to sync with the aux viewer.
         for (var viewport of this.viewer.viewports.slice(0,3)){
             if (Vector.eq(viewport.getCamera().viewPlaneNormal,this.viewport.getCamera().viewPlaneNormal) 
-                && this.viewport.getFrameOfReferenceUID() == viewport.getFrameOfReferenceUID()) {
+                && this.viewport.getFrameOfReferenceUID() == viewport.getFrameOfReferenceUID()) { // If the frame of reference doesn't match, don't sync
                     this.synced_viewport = viewport;
                     break;
             }
         }
     }
     async loadVolume(type, urls) {
+        // Load a volume into the aux viewer.
         const volumeId = `cornerstoneStreamingImageVolume:${type}`;
         const volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, { imageIds:urls });
 
@@ -230,10 +233,12 @@ class AuxManager {
         const actor = this.viewport.getDefaultActor().actor;
         const [ lower, upper ] = actor.getProperty().getRGBTransferFunction(0).getRange(); // Not totally sure about this
         actor.getProperty().setRGBTransferFunction(0, transferFunction({lower, upper}));
-        loadVolumeWithRetry(volume);
+        loadVolumeWithRetry(volume); // don't await, just return the volume
         return volume;
     }
     async loadStack(urls) {
+        // Load a stack into the aux viewer. 
+        // Assume it's in the native image orientation. Probably could check this with the frame of reference
         const native_vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0]);
         const index = native_vp._getImageIdIndex() || this.viewport.getCurrentImageIdIndex() || 0;
         await this.viewport.setStack(urls, index);
@@ -241,14 +246,16 @@ class AuxManager {
         
     }
     async showImages(type, urls) {
-        try {
+        try { // Try to treat this as a volume. If it throws, try it as a stack.
             if (this.viewport.type == "stack") {
                 this.switchViewportType("volume");
             }
             return await this.loadVolume(type, urls);
         } catch (e) {
             console.warn(e);
-            this.switchViewportType("stack");
+            if (this.viewport.type != "stack") {
+                this.switchViewportType("stack");
+            }
             return await this.loadStack(urls);
         }
     }
@@ -262,18 +269,13 @@ class AuxManager {
         this._no_sync = true;
         try {
             await this.showImages(type,urls)
-
             this.viewport.setZoom(zoom);
             this.viewport.setPan(pan);    
         } finally {
             this._no_sync = false;
         }
         if (this.viewport.type != 'stack') {
-            // for (var vp of this.viewer.viewports.slice(0,3)){
-            //     this.volumeMainScroll({explicitOriginalTarget:vp,target:vp})
-            // }
             scrollViewportToPoint(this.viewport,this.synced_viewport.getCamera().focalPoint, true);
-            // scrollViewportToPoint(native_vp,fp, true);
         }
         this.viewport.render();
     }

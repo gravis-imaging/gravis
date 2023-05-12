@@ -343,7 +343,7 @@
       <span x-show="!viewer || !viewer.rotate_mode" x-text="viewer && viewer.aux_manager.current_MPR"></span>
       <button
        title="Store Finding" class="all-pointer-events btn-primary btn-large btn-viewer ms-2"
-          :disabled="should_disable() || read_only || (viewer && viewer.rotate_mode)" disabled="disabled"
+          :disabled="should_disable() || (viewer && viewer.rotate_mode)" disabled="disabled"
           @click="job_loading = true; viewer.aux_manager.cycleCamera(); job_loading = false;"><i class="fas fa-exchange-alt"></i>
         </button>
     </div>
