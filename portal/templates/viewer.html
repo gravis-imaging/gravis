@@ -74,8 +74,11 @@
           },
           async ['@input']() {
             const v = this.$event.target.value; 
-            if (! this.previewing ) this.viewer.startPreview(v);
+            if (! this.previewing ) { 
+              this.viewer.startPreview(v);
+              await this.viewer.aux_manager.startPreview(v); 
             this.previewing = true;
+            }
             this.viewer.selected_time = this.viewer.current_study[v].acquisition_seconds;
             this.viewer.setPreview(v);
             this.viewer.aux_manager.setPreview(v);
@@ -93,6 +96,25 @@
           },
           ['@keyup.left']:"",
           ['@keyup.right']:"",
+          [':init']() { 
+            const dispatch = debounce(1000, (function() {this.$el.dispatchEvent(new Event('change'))}).bind(this));
+            document.addEventListener("keydown", (function(event) {
+              if (this.disabled) return;  
+                switch (event.key) {
+                    case "ArrowLeft":
+                        this.value--;
+                        dispatch()
+                        break;
+                    case "ArrowRight":
+                        this.value++;
+                        dispatch()
+                        break;
+                    default:
+                      return;
+                }
+                this.dispatchEvent(new Event('input'))
+            }).bind(this.$el));
+          },
         }
     }))});
 </script>

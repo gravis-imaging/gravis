@@ -131,6 +131,7 @@
                     extend: "selectedSingle",
                     text: '<i class="fas fa-folder-open"></i>',
                     titleAttr: 'Open case',
+                    key: "\r",
                     action: function (e, dt, node, config) {
                         const selected_row = case_data_table.row({selected: true}).data();
                         openCase(selected_row.case_id, selected_row.status, selected_row.last_read_by_id); 
