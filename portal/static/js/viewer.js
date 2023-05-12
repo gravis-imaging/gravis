@@ -314,12 +314,11 @@ class GraspViewer {
         }));
 
         [toolGroupMain, toolGroupAux].map(x=>x.addTool(EllipticalROITool.toolName, {
-            centerPointRadius: 1,
             customTextLines: (data) => [ data.label ]
         }));
         
         var styles = cornerstone.tools.annotation.config.style.getDefaultToolStyles()
-        styles.global.lineWidth = "1"
+        styles.global.lineWidth = "1.5"
         cornerstone.tools.annotation.config.style.setDefaultToolStyles(styles)
         toolGroupMain.addTool(CrosshairsTool.toolName, {
             getReferenceLineColor: (id) => { return ({"VIEW_AX": "rgb(255, 255, 100)",
