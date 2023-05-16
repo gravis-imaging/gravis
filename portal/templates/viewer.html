@@ -501,6 +501,8 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
 
 <script defer type="module">
   import { GraspViewer, doJob } from "/static/js/viewer.js"
+  import { debounce } from "/static/js/utils.js"
+  window.debounce = debounce;
   window.GraspViewer = GraspViewer;
   window.doJob = doJob;
 </script>
