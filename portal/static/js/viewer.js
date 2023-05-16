@@ -314,6 +314,7 @@ class GraspViewer {
         }));
 
         [toolGroupMain, toolGroupAux].map(x=>x.addTool(EllipticalROITool.toolName, {
+            centerPointRadius: 1,
             customTextLines: (data) => [ data.label ]
         }));
         
