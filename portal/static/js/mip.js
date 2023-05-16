@@ -274,7 +274,7 @@ class AuxManager {
         } finally {
             this._no_sync = false;
         }
-        if (this.viewport.type != 'stack') {
+        if (this.viewport.type != 'stack' && this.synced_viewport) {
             scrollViewportToPoint(this.viewport,this.synced_viewport.getCamera().focalPoint, true);
         }
         this.viewport.render();
