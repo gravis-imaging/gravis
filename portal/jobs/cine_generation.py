@@ -6,6 +6,7 @@ from pathlib import Path
 from django.urls import path
 import numpy as np
 import numpy.typing as npt
+from portal.endpoints.common import get_im_orientation_mat
 import pydicom
 
 from portal.models import Case, DICOMInstance, DICOMSet, ProcessingJob
@@ -136,7 +137,7 @@ class GeneratePreviewsJob(WorkJobView):
                     print(volume.shape)
                 volume[i,j,:,:] = array
         assert volume is not None
-        orient = np.rint(np.vstack((im_orientation_patient,[cross(*im_orientation_patient)])))
+        orient = get_im_orientation_mat(first_instance_metadata)
         rotations = cls.mat_to_rotations(orient)
         for k,axes in rotations:
             volume = np.rot90(volume,k=k, axes=[a+1 for a in axes])

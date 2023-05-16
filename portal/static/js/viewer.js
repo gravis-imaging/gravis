@@ -417,7 +417,8 @@ class GraspViewer {
         decacheVolumes();
         this.volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, { imageIds });
         // this is meant to "snap" the direction onto the nearest axes
-        this.volume.imageData.setDirection(this.volume.direction.map(Math.round))
+        snap_image_direction(this.volume.imageData)
+
         await cornerstone.setVolumesForViewports( 
             this.renderingEngine,
             [{volumeId},],

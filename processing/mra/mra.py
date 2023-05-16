@@ -331,7 +331,7 @@ class MRA:
             # if self.full_rotation_flag:
             #     max_angle = 2 * np.pi
             #     max_angle_degree = 360.0
-            image.SetDirection( tuple([round(i) for i in image.GetDirection()]) )
+            image.SetDirection( tuple([round(i) for i in image.GetDirection()]) ) # TODO: snap
             rotation_center = image.TransformContinuousIndexToPhysicalPoint(
                 [(index - 1) / 2.0 for index in image.GetSize()]
             )
