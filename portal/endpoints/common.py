@@ -50,7 +50,7 @@ def rotationMatrixToEulerAngles(R):
     return [x, y, z]
 
 def roundPi(x):
-  return math.round( 2 * x / math.PI ) / 2 * math.PI
+  return round( 2 * x / math.pi ) / 2 * math.pi
 
 def snap_rotation_matrix(arr):
     angles = list(map(roundPi,rotationMatrixToEulerAngles(arr)))
