@@ -169,6 +169,8 @@ class GraspViewer {
             await this.aux_manager.createViewport();
             this.auxViewport = this.aux_manager.viewport;
             this.viewportIds.push(this.aux_manager.viewport.id)
+            this.viewports.push(this.aux_manager.viewport);
+
             this.previewViewports = previewViewportIds.map((c)=>this.renderingEngine.getViewport(c));
             this.annotation_manager = new AnnotationManager(this);
             this.state_manager = new StateManager(this);
@@ -593,7 +595,7 @@ class GraspViewer {
         
         this.current_study = graspVolumeInfo;
          
-        this.aux_manager.init(graspVolumeInfo, selected_index);
+        await this.aux_manager.init(graspVolumeInfo, selected_index);
 
         // this._ignore_camera_modified = true;
         const volume_result = await loadVolumeWithRetry(this.volume);

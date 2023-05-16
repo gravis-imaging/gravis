@@ -206,7 +206,7 @@ class AuxManager {
     }
     async loadVolume(type, urls) {
         // Load a volume into the aux viewer.
-        const volumeId = `cornerstoneStreamingImageVolume:${type}`;
+        const volumeId = `cornerstoneStreamingImageVolume:${type}_AUXVOLUME`;
         const volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, { imageIds:urls });
 
         volume.imageData.setDirection(volume.direction.map(Math.round))
@@ -323,7 +323,7 @@ class MIPManager extends AuxManager{
         }
     }
     async switch(index, preview, targetImageIdIndex=null) {
-        console.log("switch", index, preview, targetImageIdIndex)
+        // console.log("switch", index, preview, targetImageIdIndex)
         this.is_switching = true;
         try {
             const current_info = this.viewer.current_study[index];
@@ -337,7 +337,7 @@ class MIPManager extends AuxManager{
             const query = ( preview? `slice_location=${slice_location}`: `acquisition_number=${current_info.acquisition_number}`)
 
             mip_urls = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/processed_results/MIP?`+ query,null, "GET")).urls;
-            console.log("mip_urls", mip_urls);
+            // console.log("mip_urls", mip_urls);
             if ( mip_urls.length > 0 ) {
                 await viewport.setStack(mip_urls, targetImageIdIndex || viewport.targetImageIdIndex);
                 cornerstone.tools.utilities.stackPrefetch.enable(viewport.element);
@@ -350,7 +350,7 @@ class MIPManager extends AuxManager{
     }
 
     async prefetchSliceOverTime() {
-        console.log("cache")
+        // console.log("cache")
         const viewport = this.viewport;
         
         let slice_location = 0.0;
@@ -407,7 +407,7 @@ class MIPManager extends AuxManager{
         if (this.is_switching) {
             return;
         }
-        console.log("setPreview",idx)
+        // console.log("setPreview",idx)
 
         try {
             // Update MIP Viewport
