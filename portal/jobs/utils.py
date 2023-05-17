@@ -8,8 +8,10 @@ from textwrap import dedent
 from portal.models import ProcessingJob
 import pydicom
 
+
 def dicom_kw_to_json(keyword):
         return pydicom.datadict.tag_for_keyword(keyword)[2:]
+
 
 def send_notification(detail):
     if settings.WEBEX_TOKEN is None:
@@ -17,13 +19,15 @@ def send_notification(detail):
     requests.post(f"https://api.ciscospark.com/v1/webhooks/incoming/{settings.WEBEX_TOKEN}",
                   json=dict(markdown=detail))
 
+
 def send_success_notification(job: ProcessingJob):
     message = dedent(f"""
     ### GRAVIS case ready for viewing
     Patient: {job.case.patient_name}
     ACC: {job.case.acc}
-    [Open case](https://localhost:4443/viewer/{job.case.id})""")
+    [Open case]({settings.SERVER_URL}/viewer/{job.case.id})""")
     send_notification(message)
+
 
 def send_failure_notification(job: ProcessingJob):
     message = f"### GRAVIS: case processing failure\n"
@@ -52,6 +56,7 @@ def report_failure(job, connection, type, value, traceback):
         f"FAILURE job = {job}; traceback = {traceback}; type = {type}; value = {value}"
     )
     # TODO: Store in db
+
 
 def start_processing_job(function, category, case=None, dicom_set=None, *, args, docker_image):
 

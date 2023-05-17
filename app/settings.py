@@ -16,7 +16,8 @@ import environ
 env = environ.Env(
     DEBUG=(bool, False),
     GRAVIS_VERSION=(str, "DEV"),
-    APPLIANCE_NAME=(str, "master"),
+    SERVER_NAME=(str, "Default"),
+    SERVER_URL=(str, "http://localhost:8000"),
     DATA_FOLDER=(str, "/opt/gravis/data"),
     INCOMING_FOLDER=(str, "/opt/gravis/data/incoming"),
     CASES_FOLDER=(str, "/opt/gravis/data/cases"),
@@ -43,7 +44,8 @@ WEBEX_TOKEN = env("WEBEX_TOKEN",default=None)
 
 DEBUG = env("DEBUG")
 GRAVIS_VERSION=env("GRAVIS_VERSION")
-APPLIANCE_NAME = env("APPLIANCE_NAME")
+SERVER_NAME = env("SERVER_NAME")
+SERVER_URL = env("SERVER_URL")
 DATA_FOLDER = env("DATA_FOLDER")
 INCOMING_FOLDER = env("INCOMING_FOLDER")
 CASES_FOLDER = env("CASES_FOLDER")
@@ -217,3 +219,4 @@ LOGGING = {
 }
 
 BROWSER_BASE_DIRS = []
+#BROWSER_BASE_DIRS = [{'name': 'vargant', 'location': '/vagrant'}]

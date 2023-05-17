@@ -124,7 +124,9 @@ def config(request):
     tags.sort(key=lambda a: a[1])
     context = {
         "tags": tags,
-        "disk_usage":calc_disk_usage()
+        "disk_usage":calc_disk_usage(),
+        "build_version": settings.GRAVIS_VERSION,
+        "server_name": settings.SERVER_NAME,
     }
     return render(request, "config.html", context)
 

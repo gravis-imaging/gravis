@@ -13,10 +13,10 @@
         </div>
     </div>
     <div>
-        <div class="row mt-2">
+        <div class="row mt-2" style="margin-bottom: 3rem;">
             <div class="col">
                 <div id="tablewrapper" style="display: none;">
-                    <table id="casetable" class="table table-dark table-bordered" style="width:100%">
+                    <table id="casetable" class="table table-dark table-bordered" style="width:100%;">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -226,6 +226,7 @@
                     }
                 },                
             ],
+            order: [[0, 'desc']],
             initComplete: () => {             
                 $("#tablewrapper").show();
             }

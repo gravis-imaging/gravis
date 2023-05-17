@@ -35,7 +35,7 @@
         <div class="tab-pane show active" id="v-pills-status" role="tabpanel" aria-labelledby="v-pills-status-tab">
           <h4 style="margin-bottom: 2.5rem;"><i class="fas fa-power-off" style="color: #1266f1;"></i>&nbsp;&nbsp;System Status</h4>
 
-          <h5>Disk Utilization</h5>
+          <h5><i class="fa-solid fa-database" style="color: #1266f1;"></i>&nbsp;&nbsp;Disk Utilization</h5>
           <div class="ms-auto me-4" style="vertical-align: text-top;">
             <div class="progress align-middle" style="height: 1.5em; border-radius:1em; display:inline-block; width: 12rem; background-color: #424242;">
                 <div class="progress-bar {{disk_usage.warn}} " role="progressbar" style="width: {{disk_usage.percent}}%;" aria-valuenow="{{disk_usage.percent}}" aria-valuemin="0" aria-valuemax="100">{{disk_usage.percent|floatformat}}%</div>
@@ -49,7 +49,16 @@
         </div>
 
         <div class="tab-pane" id="v-pills-home" role="tabpanel" aria-labelledby="v-pills-home-tab">
-          <h4><i class="fas fa-cog" style="color: #1266f1;"></i>&nbsp;&nbsp;General Settings</h4>
+          <h4 style="margin-bottom: 2.5rem;"><i class="fas fa-cog" style="color: #1266f1;"></i>&nbsp;&nbsp;General Settings</h4>
+          <h5><i class="fa-solid fa-paperclip" style="color: #1266f1;"></i>&nbsp;&nbsp;Information</h5>
+          <table style="margin-top: 1rem;">
+            <tr><td>Server Name:</td><td style="padding-left: 2rem;">{{server_name}}</td></tr>
+            <tr><td>GRAVIS Version:</td><td style="padding-left: 2rem;">{{build_version}}</td></tr>
+          </table>
+          <div class="mt-3">
+          © {% now 'Y' %} Center for Biomedical Imaging<br>
+          © {% now 'Y' %} <a href="https://cai2r.net" target="_blank">Center for Advanced Imaging Innovation and Research</a> (CAI<sup>2</sup>R)
+          </div>
         </div>
 
         <div class="tab-pane" id="v-pills-accounts" role="tabpanel" aria-labelledby="v-pills-accounts-tab">
