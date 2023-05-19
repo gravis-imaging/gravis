@@ -665,7 +665,7 @@ class GraspViewer {
         const mainTools = cornerstone.tools.ToolGroupManager.getToolGroup("STACK_TOOL_GROUP_MAIN");
         const toolCenter = mainTools.getToolInstance(cornerstone.tools.CrosshairsTool.toolName).toolCenter;
 
-        for (var v of this.viewports) {
+        for (var v of this.viewports.slice(0,3)) {
             const new_camera = JSON.parse(JSON.stringify(v.getCamera()));
             new_camera.focalPoint = toolCenter;
             let orientation = orientations[v.id];
