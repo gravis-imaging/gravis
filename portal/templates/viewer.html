@@ -40,6 +40,7 @@
         switching: false, 
         loading: false, 
         job_loading: null, 
+        previews_loading: 0,
         aux_loading: false,
         studies_data: parse_json_element("studies_data"),
         case_data: parse_json_element("case_data"),
@@ -69,15 +70,17 @@
           },
           async ['@mousedown']() {
             const v = this.$event.target.value;
+            if (this.viewer.previews_loading > 0 ) { return }
             await this.viewer.aux_manager.startPreview(v); 
             this.viewer.aux_manager.setPreview(v);
           },
           async ['@input']() {
             const v = this.$event.target.value; 
+            if (this.viewer.previews_loading > 0 ) { return }
             if (! this.previewing ) { 
               this.viewer.startPreview(v);
               await this.viewer.aux_manager.startPreview(v); 
-            this.previewing = true;
+              this.previewing = true;
             }
             this.viewer.selected_time = this.viewer.current_study[v].acquisition_seconds;
             this.viewer.setPreview(v);
@@ -92,7 +95,15 @@
             }
           },
           [':disabled']() { 
-            return this.should_disable() || this.viewer.rotate_mode;
+            return this.should_disable() || this.viewer.rotate_mode || this.previews_loading>0;
+          },
+          ['x-on:previews-update.window']() {
+            if (this.$event.detail.val) {
+              this.previews_loading += 1;
+            } else {
+              this.previews_loading -= 1;
+            }
+            if (this.previews_loading < 0) this.previews_loading = 0;
           },
           ['@keyup.left']:"",
           ['@keyup.right']:"",
@@ -162,7 +173,7 @@
 
     <!-- volume picker -->
     <!-- x-model="value" x-ref="input" x-on:focus="() => { $refs.input.focus() }"  -->
-    <input id='volume-picker' tabindex='1' class="timeslider flex-sm-grow-1" :class="should_disable() && 'timeslider-loading'" title="Displayed time point"
+    <input id='volume-picker' tabindex='1' class="timeslider flex-sm-grow-1" :class="(should_disable() || viewer.previews_loading) && 'timeslider-loading'" title="Displayed time point"
          type='range' value=0 step="1" autocomplete="off"
         x-bind="volume_picker" disabled="disabled">
     </input>

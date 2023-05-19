@@ -97,7 +97,7 @@ class GraspViewer {
     findings;
     _ignore_camera_modified = false;
     rotate_mode = false;
-
+    previews_loading = false; 
     constructor( ...inp ) {
         return (async () => {
             await this.initialize(...inp);
@@ -211,7 +211,16 @@ class GraspViewer {
                     if (! v.getDefaultActor() ) return;
                     if ( this.rotate_mode ) return;
                     if ( this._ignore_camera_modified ) return;
+                    const evt_id = Math.random()+1;
                     try {
+                        this.previews_loading = true;
+                        let event = new CustomEvent("previews-update", {
+                            detail: {
+                                val: true,
+                                id: evt_id
+                            }
+                          });
+                        window.dispatchEvent(event);
                         await this.updatePreview(n)
                         this.previewViewports[n].setZoom(v.getZoom());
                         this.previewViewports[n].setPan(v.getPan());
@@ -219,9 +228,18 @@ class GraspViewer {
                         this.previewViewports[n].render();
                     } catch (e) {
                         console.error(e);
+                    } finally {
+                        this.previews_loading = false;
+                        let event = new CustomEvent("previews-update", {
+                            detail: {
+                              val: false,
+                              id: evt_id
+                            }
+                          });
+                        window.dispatchEvent(event);
                     }
                 }));
-            });         
+            });
         }
         
     createViewportGrid(n=4) {
@@ -596,7 +614,7 @@ class GraspViewer {
         this.current_study = graspVolumeInfo;
          
         await this.aux_manager.init(graspVolumeInfo, selected_index);
-
+        
         // this._ignore_camera_modified = true;
         const volume_result = await loadVolumeWithRetry(this.volume);
         // this._ignore_camera_modified = false; 
