@@ -447,6 +447,8 @@ input::selection, .selectable::selection {
 
 .timeslider-loading::-webkit-slider-thumb, .timeslider-loading::-webkit-slider-thumb:hover {
     background-color: #777 !important; 
+    transition-property: background-color;
+    transition-delay: 0.5s;
 }
   
 .timeslider::-moz-range-thumb, .timeslider::-moz-range-thumb:hover {
@@ -464,9 +466,11 @@ input::selection, .selectable::selection {
   box-shadow: 0 2px 5px 0 rgb(0 0 0 / 20%), 0 2px 10px 0 rgb(0 0 0 / 10%);
 }
 
-.timeslider:disabled::-moz-range-thumb {
+.timeslider:disabled::-moz-range-thumb{
     cursor: default;
     background-color: #777 !important; 
+    transition-property: background-color;
+    transition-delay: 0.5s;
 }
 
 .timeslider::-webkit-slider-runnable-track {
