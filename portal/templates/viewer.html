@@ -95,7 +95,7 @@
             }
           },
           [':disabled']() { 
-            return this.should_disable() || this.viewer.rotate_mode || this.previews_loading>0;
+            return this.should_disable() || this.viewer.rotate_mode || ( this.previews_loading > 0);
           },
           ['x-on:previews-update.window']() {
             if (this.$event.detail.val) {
@@ -104,6 +104,11 @@
               this.previews_loading -= 1;
             }
             if (this.previews_loading < 0) this.previews_loading = 0;
+          },
+          [':class']() { 
+            if (this.should_disable() || this.previews_loading){
+              return "timeslider-loading"
+            } 
           },
           ['@keyup.left']:"",
           ['@keyup.right']:"",
@@ -173,7 +178,7 @@
 
     <!-- volume picker -->
     <!-- x-model="value" x-ref="input" x-on:focus="() => { $refs.input.focus() }"  -->
-    <input id='volume-picker' tabindex='1' class="timeslider flex-sm-grow-1" :class="(should_disable() || viewer.previews_loading) && 'timeslider-loading'" title="Displayed time point"
+    <input id='volume-picker' tabindex='1' class="timeslider flex-sm-grow-1" title="Displayed time point"
          type='range' value=0 step="1" autocomplete="off"
         x-bind="volume_picker" disabled="disabled">
     </input>
