@@ -1,4 +1,4 @@
-import { doFetch, HSLToRGB, Vector, scrollViewportToPoint, confirmPrompt, errorToast, inputPrompt } from "./utils.js"
+import { doFetch, HSLToRGB, Vector, scrollViewportToPoint, confirmPrompt, errorToast, inputPrompt, download } from "./utils.js"
 
 class AnnotationManager {
     viewer;
@@ -14,18 +14,6 @@ class AnnotationManager {
         );
     }
       
-    download(file) {
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(file);
-        
-        link.href = url;
-        link.download = file.name;
-        document.body.appendChild(link);
-        link.click();
-        
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-    }
     exportChart(acc) {
         const name = ["gravis",
                         acc,
@@ -41,8 +29,33 @@ class AnnotationManager {
             type: 'text/csv',
         });
         successToast("Export initiated.");
-        this.download(file);
+        download(file);
+    }
 
+    exportAuxStats(acc) {
+        const name = ["gravis",
+                        acc,
+                        this.viewer.case_data.case_type,
+                        "stats",
+                        new Date().toLocaleString('sv').replace(' ','T').replaceAll(':','')
+                    ].join("_")
+        const stats = this.viewer.aux_manager.current_stats
+        let rois = Object.keys(stats);
+        let columns = Object.keys(stats[rois[0]])
+        let table = [["",...columns]]
+        for (let roi of rois) {
+            let row = [roi,]
+            for (let column of columns) {
+                row.push(stats[roi][column])
+            }
+            table.push(row)
+        }
+        const csv = table.map(x=>x.join(",")).join("\r\n");
+        const file = new File([csv], `${name}.csv`, {
+            type: 'text/csv',
+        });
+        successToast("Export initiated.");
+        download(file);
     }
     getAnnotationsQuery(annotations) {
         var labels = ["time",]
@@ -174,6 +187,7 @@ class AnnotationManager {
             delete this.annotations[a.annotationUID];
         }
         this.updateChart();
+        this.viewer.aux_manager.updateAnnotationStats();
     }
     
     async deleteAllAnnotations() {
@@ -191,6 +205,7 @@ class AnnotationManager {
             delete this.annotations[a.annotationUID];
         }
         this.updateChart();
+        this.viewer.aux_manager.updateAnnotationStats();
         cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,this.viewer.viewportIds)
     }
 

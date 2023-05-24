@@ -19,6 +19,7 @@ class AuxManager {
     current_set_type;
     volume; 
     synced_viewport = null;
+    current_stats = null;
     _no_sync = false;
     constructor( viewer ) {
         this.viewer = viewer;
@@ -166,6 +167,7 @@ class AuxManager {
         let event = new CustomEvent("stats-update", {
             detail: results
             });
+        this.current_stats = results;
         window.dispatchEvent(event);
     }
     async switchViewportType(type) {

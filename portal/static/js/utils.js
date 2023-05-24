@@ -411,6 +411,18 @@ function decacheVolumes() {
         });
     }
 }
+function download(file) {
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(file);
+    
+    link.href = url;
+    link.download = file.name;
+    document.body.appendChild(link);
+    link.click();
+    
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+}
 
 const CommonSwal = Swal.mixin({
     showClass: {
@@ -509,4 +521,4 @@ async function successToast(title) {
         title: title,
     });
 }
-export { debounce, setCookie, getCookie, HSLToRGB, doJob, doFetch, viewportInVolume, loadVolumeWithRetry, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, fixUpCrosshairs, Vector, chartToImage, decacheVolumes, confirmPrompt, inputPrompt, errorPrompt, errorToast, successPrompt,infoPrompt, successToast };
+export { debounce, setCookie, download, getCookie, HSLToRGB, doJob, doFetch, viewportInVolume, loadVolumeWithRetry, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, fixUpCrosshairs, Vector, chartToImage, decacheVolumes, confirmPrompt, inputPrompt, errorPrompt, errorToast, successPrompt,infoPrompt, successToast };

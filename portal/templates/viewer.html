@@ -424,6 +424,13 @@
       </div>    
     </template>
   </div>
+  <div x-cloak style="grid-area: f; display:grid;" class="no-pointer-events">
+    <button x-show="case_data.case_type == 'GRASP Onco'" title="Export to CSV" class="all-pointer-events btn-primary btn-large btn-viewer m-2" style="align-self:end;justify-self:start;"
+    x-on:stats-update.window="console.warn($event.detail); Object.keys($event.detail).length? $el.removeAttribute('disabled') : $el.setAttribute('disabled','1')"
+    disabled
+    @click="await viewer.annotation_manager.exportAuxStats(case_data.acc)"><i class="fa-solid fa-download"></i>
+   </button>
+  </div>
   <div style="grid-area: f; position:relative; display:grid;" class="no-pointer-events p-2">
     <div style="align-self:end;justify-self:end;">
       <button title="Export to CSV" class="all-pointer-events btn-primary btn-large btn-viewer"
