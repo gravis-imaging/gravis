@@ -224,10 +224,14 @@ class AuxManager {
         volume.imageData.setDirection(volume.direction.map(Math.round))
         
         this.volume = volume;
-        
         // Use the orientation showing the native image plane
         for (var [k,v] of Object.entries(cornerstone.CONSTANTS.MPR_CAMERA_VALUES)){
-            if (Vector.dot(v.viewPlaneNormal,volume.imageData.getDirection().slice(-3)) != 0) {
+            if (this.current_MPR) {
+                if (this.current_MPR == k) {
+                    this.viewport.setCamera(v);
+                    break;
+                }
+            } else if (Vector.dot(v.viewPlaneNormal,volume.imageData.getDirection().slice(-3)) != 0) {
                 this.viewport.setCamera(v);
                 this.current_MPR = k;
                 break;
