@@ -39,7 +39,7 @@ class AuxManager {
 
     getStats() {
         const annotations = this.viewer.annotation_manager.getAllAnnotations(this.viewport)
-        const stats = annotations.map(a=>{return {label: a.data.label, stats:a.data.cachedStats[`volumeId:cornerstoneStreamingImageVolume:${this.current_set_type}`]}})
+        const stats = annotations.map(a=>{return {label: a.data.label, stats:a.data.cachedStats[`volumeId:cornerstoneStreamingImageVolume:${this.current_set_type}_AUXVOLUME`]}})
         return stats;
     }
     installEventHandlers() {
@@ -147,7 +147,19 @@ class AuxManager {
     async createViewport(){
         await this.switchViewportType()
         this.installEventHandlers()
-    }
+
+        cornerstone.eventTarget.addEventListener(cornerstone.tools.Enums.Events.ANNOTATION_MODIFIED,debounce(250, async (evt) => {
+            // this.viewer.annotation_manager.updateChart();
+            const annotations = this.viewer.annotation_manager.getAllAnnotations(this.viewport);
+            const data = this.viewer.annotation_manager.getAnnotationsQuery(annotations).data;
+            const results = await doFetch(`/api/case/${this.viewer.case_id}/volume_stats`,{"annotations":data, "frame_of_reference": this.viewport.getFrameOfReferenceUID()});
+            // console.log(results)
+            let event = new CustomEvent("stats-update", {
+                detail: results
+              });
+            window.dispatchEvent(event);
+        }));    
+    }s
     async switchViewportType(type) {
         var orient = null;
         if (type != "stack") {

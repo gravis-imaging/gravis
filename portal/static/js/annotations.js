@@ -44,27 +44,11 @@ class AnnotationManager {
         this.download(file);
 
     }
-    async updateChart() {
-        if (!this.viewer.volume || !this.viewer.volume.imageData ) {
-            return;
-        }
-        let annotations = this.getAllAnnotations();
-        if (! annotations ) {
-            if (this.viewer.chart.file_.length > 0 )
-                this.viewer.chart.updateOptions( {file: [] });
-            return;
-        }
-        var data = []
+    getAnnotationsQuery(annotations) {
         var labels = ["time",]
-        if (this.viewer.aux_manager.getStats) {
-            let event = new CustomEvent("stats-update", {
-                detail: {
-                  items: this.viewer.aux_manager.getStats()
-                }
-              });
-              window.dispatchEvent(event);
-        }
+        var data = []
         var seriesOptions = {}
+
         for (var annotation of annotations){
             let handles_indexes = annotation.data.handles.points.map( pt=>cornerstone.utilities.transformWorldToIndex(this.viewer.volume.imageData, pt))
             let out_of_bounds = false;
@@ -82,12 +66,33 @@ class AnnotationManager {
                 bounds: this.viewer.volume.imageData.getBounds(),
                 handles: annotation.data.handles.points,
                 handles_indexes: handles_indexes,
-                tool: annotation.metadata.toolName
+                tool: annotation.metadata.toolName,
+                label: annotation.data.label
             })
             labels.push(annotation.data.label)
             seriesOptions[annotation.data.label] = { color: annotation.chartColor }
         }
-
+        return { data, labels, seriesOptions }
+    }
+    async updateChart() {
+        if (!this.viewer.volume || !this.viewer.volume.imageData ) {
+            return;
+        }
+        let annotations = this.getAllAnnotations();
+        if (! annotations ) {
+            if (this.viewer.chart.file_.length > 0 )
+                this.viewer.chart.updateOptions( {file: [] });
+            return;
+        }
+        // if (this.viewer.aux_manager.getStats) {
+        //     let event = new CustomEvent("stats-update", {
+        //         detail: {
+        //           items: this.viewer.aux_manager.getStats()
+        //         }
+        //       });
+        //       window.dispatchEvent(event);
+        // }
+        let { data, labels, seriesOptions } = this.getAnnotationsQuery(annotations);
         try {
             const timeseries = await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.viewer.dicom_set}/timeseries`, {annotations: data, chart_options: this.viewer.chart_options})
             const options = { 'file':  timeseries["data"], labels: labels, series: seriesOptions} 

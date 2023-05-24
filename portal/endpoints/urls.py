@@ -6,7 +6,7 @@ def path(url, *args):
     return url_path("api/case/<str:case>/"+url, *args)
 
 urls = [
-    path("dicom_set/<str:set>/volume_stats",volume_stats.volume_data),
+    path("volume_stats",volume_stats.volume_data),
     path("dicom_set/<str:source_set>/timeseries",timeseries.timeseries_data),
     path("dicom_set/<str:source_set>/preview/<str:view>/<str:location>", case_data.preview_urls),
     path("dicom_set/<str:source_set>/processed_results/<path:case_type>", case_data.processed_results_urls),
