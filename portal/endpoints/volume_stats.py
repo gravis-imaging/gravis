@@ -20,11 +20,14 @@ class WrongFrameOfReference(SkipDicomSet):
 
 @login_required
 @require_http_methods(["GET","POST"])
-def volume_data(request, case):
+def volume_data(request, case, set):
     data = json_load_body(request)
     # dicom_set = DICOMSet.objects.get(id=set)
 
-    sets = DICOMSet.objects.filter(case=case).exclude(type__in=("ORI", "SUB", "CINE/AX","CINE/COR", "CINE/SAG")).order_by("type").distinct("type")
+    if data.get('frame_of_reference') is None:
+        sets = [DICOMSet.objects.get(id=set)]
+    else:
+        sets = DICOMSet.objects.filter(case=case).exclude(type__in=("ORI", "SUB", "CINE/AX","CINE/COR", "CINE/SAG")).order_by("type").distinct("type")
 
     result = {}
     for s in sets:
@@ -51,7 +54,7 @@ def get_stats(annotations, dicom_set, frame_of_reference=None):
     instances = dicom_set.instances
     example_instance = instances.first()
     metadata = json.loads(example_instance.json_metadata)
-    print(dicom_set.type, frame_of_reference, metadata.get("00200052",{}).get("Value"))
+    # print(dicom_set.type, frame_of_reference, metadata.get("00200052",{}).get("Value"))
     if frame_of_reference:
         if metadata.get("00200052",{}).get("Value",[None])[0] != frame_of_reference:
             raise WrongFrameOfReference()
@@ -83,7 +86,7 @@ def get_stats(annotations, dicom_set, frame_of_reference=None):
     for i, annotation in enumerate(annotations):
         idx = np.abs(annotation['normal']).argmax()
         orientation = ['SAG','COR','AX'][idx]
-        print(orientation)
+        # print(orientation)
         # print(im_orientation_mat)
         handles_transformed = [ (np.linalg.inv(im_orientation_mat) @ handle_location).tolist() for handle_location in annotation["handles_indexes"] ]
 

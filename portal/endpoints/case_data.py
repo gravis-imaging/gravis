@@ -142,18 +142,18 @@ def processed_results_urls(request, case, case_type, source_set):
     fields = ["series_number", "slice_location", "acquisition_number", "acquisition_seconds"]
     case = Case.objects.get(id=int(case))
     slices_lookup = {k: request.GET.get(k) for k in fields if k in request.GET}
-    dicom_set = DICOMSet.processed_success.filter(case=case,type=case_type, processing_job__dicom_set=source_set)
-    instances = dicom_set.latest('processing_job__created_at').instances.filter(**slices_lookup).order_by("acquisition_seconds", "slice_location","instance_location","series_number") # or "instance_number"
+    dicom_set = DICOMSet.processed_success.filter(case=case,type=case_type, processing_job__dicom_set=source_set).latest('processing_job__created_at')
+    instances = dicom_set.instances.filter(**slices_lookup).order_by("acquisition_seconds", "slice_location","instance_location","series_number") # or "instance_number"
 
     urls = []
     for instance in instances:
-        location = (Path(instance.dicom_set.set_location) / instance.instance_location).relative_to(settings.DATA_FOLDER)
+        location = (Path(dicom_set.set_location) / instance.instance_location).relative_to(settings.DATA_FOLDER)
         wado_uri = "wadouri:"+str(Path(settings.MEDIA_URL) / location)
         if (instance.num_frames or 1) > 1:
             urls.extend( [ wado_uri +f"?frame={n}" for n in range(instance.num_frames)])
         else:
             urls.append(wado_uri)
-    return JsonResponse(dict(urls=urls))
+    return JsonResponse(dict(urls=urls, set_id = dicom_set.id))
 
 
 @login_required
@@ -167,5 +167,5 @@ def mip_metadata(request, case, source_set):
 
     details = []
     for instance in instances:
-        details.append(dict(slice_location=instance.slice_location))
+        details.append(dict(slice_location=instance.slice_location, id=instance.id))
     return JsonResponse(dict(details=details))

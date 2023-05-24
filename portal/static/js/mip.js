@@ -84,7 +84,8 @@ class AuxManager {
         this.viewport.setCameraNoEvent(vals[next_MPR][1]);
         this.viewport.resetCameraNoEvent();
         this.setSyncedViewport();
-        this.volumeMainScroll({target:this.synced_viewport.element, explicitOriginalTarget:this.synced_viewport.element})
+        if (this.synced_viewport)
+            this.volumeMainScroll({target:this.synced_viewport.element, explicitOriginalTarget:this.synced_viewport.element})
         this.viewport.render();
         this.current_MPR = vals[next_MPR][0];
     }
@@ -149,17 +150,24 @@ class AuxManager {
         this.installEventHandlers()
 
         cornerstone.eventTarget.addEventListener(cornerstone.tools.Enums.Events.ANNOTATION_MODIFIED,debounce(250, async (evt) => {
-            // this.viewer.annotation_manager.updateChart();
-            const annotations = this.viewer.annotation_manager.getAllAnnotations(this.viewport);
-            const data = this.viewer.annotation_manager.getAnnotationsQuery(annotations).data;
-            const results = await doFetch(`/api/case/${this.viewer.case_id}/volume_stats`,{"annotations":data, "frame_of_reference": this.viewport.getFrameOfReferenceUID()});
-            // console.log(results)
-            let event = new CustomEvent("stats-update", {
-                detail: results
-              });
-            window.dispatchEvent(event);
-        }));    
-    }s
+            await this.updateAnnotationStats()
+        }));
+    }
+
+    async updateAnnotationStats() {
+        // this.viewer.annotation_manager.updateChart();
+        const annotations = this.viewer.annotation_manager.getAllAnnotations(this.viewport);
+        const data = this.viewer.annotation_manager.getAnnotationsQuery(annotations).data;
+        if (!this.current_set_id) { 
+            return
+        }
+        const results = await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.current_set_id}/volume_stats`,{"annotations":data, "frame_of_reference": this.viewport.getFrameOfReferenceUID()});
+        // console.log(results)
+        let event = new CustomEvent("stats-update", {
+            detail: results
+            });
+        window.dispatchEvent(event);
+    }
     async switchViewportType(type) {
         var orient = null;
         if (type != "stack") {
@@ -208,6 +216,10 @@ class AuxManager {
     }
     setSyncedViewport() {
         // Work out which viewport to sync with the aux viewer.
+        this.synced_viewport = null;
+        if (!this.viewport.getFrameOfReferenceUID()) {
+            return;
+        }
         for (var viewport of this.viewer.viewports.slice(0,3)){
             if (Vector.eq(viewport.getCamera().viewPlaneNormal,this.viewport.getCamera().viewPlaneNormal) 
                 && this.viewport.getFrameOfReferenceUID() == viewport.getFrameOfReferenceUID()) { // If the frame of reference doesn't match, don't sync
@@ -220,7 +232,6 @@ class AuxManager {
         // Load a volume into the aux viewer.
         const volumeId = `cornerstoneStreamingImageVolume:${type}_AUXVOLUME`;
         const volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, { imageIds:urls });
-
         volume.imageData.setDirection(volume.direction.map(Math.round))
         
         this.volume = volume;
@@ -243,13 +254,14 @@ class AuxManager {
             [this.viewport.id]
         );
 
-        
         this.setSyncedViewport();
 
         const actor = this.viewport.getDefaultActor().actor;
         const [ lower, upper ] = actor.getProperty().getRGBTransferFunction(0).getRange(); // Not totally sure about this
         actor.getProperty().setRGBTransferFunction(0, transferFunction({lower, upper}));
+        window.requestAnimationFrame(async() => await this.updateAnnotationStats())
         loadVolumeWithRetry(volume); // don't await, just return the volume
+        
         return volume;
     }
     async loadStack(urls) {
@@ -277,7 +289,8 @@ class AuxManager {
     }
     async selectStack(type) {
         this.current_set_type = type;
-        const urls = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/processed_results/${type}`,null, "GET")).urls;
+        const { urls, set_id } = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/processed_results/${type}`,null, "GET"));
+        this.current_set_id = set_id;
         const [ zoom, pan ] = [this.viewport.getZoom(), this.viewport.getPan()]
         // const fp = this.synced_viewport.getCamera().focalPoint;
         // const native_vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0]);
@@ -322,15 +335,17 @@ class MIPManager extends AuxManager{
     addCameraSyncHandlers(el) {
         // Do nothing; do not sync with main viewports
     }
-
+    async updateAnnotationStats() {
+        // do nothing
+    }
     async init(graspVolumeInfo, selected_index) {
-        console.log("mip init", graspVolumeInfo, selected_index)
+        // console.log("mip init", graspVolumeInfo, selected_index)
         // Get MIP metadata info, currently only need slice_locations
         const current_info = graspVolumeInfo[selected_index];
         console.warn(current_info)
         try {
             this.mip_details = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/mip_metadata?acquisition_number=${current_info.acquisition_number}`,null, "GET")).details;
-            console.log("mip details", this.mip_details)
+            // console.log("mip details", this.mip_details)
             // Set Initial MIP Image         
             await this.switch(selected_index, false);
             await this.setPreview(selected_index);
