@@ -88,10 +88,15 @@ def handle_finding(request, case, source_set, finding_id=None):
         im_frame = Image.open(io.BytesIO(image_data))
         im_array = np.array(im_frame.getdata(),dtype=np.uint8)[:,:3]
         im_array = im_array.reshape([*im_frame.size[::-1],3])
+        # Just tries to get an arbitrary instance. 
+        # This seemed to be slow for some reason, not sure why, replacing with raw sql for now
+        # TODO: pick the "first" instance?
+        # related_instance = dicom_set.instances.representative() # This should do the same thing. 
         c = connection.cursor()
         c.execute("select instance_location from gravis_dicom_instance where dicom_set_id = %s limit 1",[int(source_set)])
         instance_location = c.fetchone()[0]
-        # related_instance = dicom_set.instances.representative() # TODO: pick which instance?
+        c.close()
+
         related_ds = pydicom.dcmread(Path(dicom_set.set_location) / instance_location,stop_before_pixels=True)
         if "^" not in related_ds.PatientName:
             related_ds.PatientName = str(related_ds.PatientName) + "^"
