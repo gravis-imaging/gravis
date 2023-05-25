@@ -12,6 +12,8 @@ from django.http import HttpResponseBadRequest, HttpResponseForbidden, HttpRespo
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.db import transaction
+from django.conf import settings
+from django.db import connection
 
 from PIL import Image
 import highdicom as hd
@@ -86,9 +88,11 @@ def handle_finding(request, case, source_set, finding_id=None):
         im_frame = Image.open(io.BytesIO(image_data))
         im_array = np.array(im_frame.getdata(),dtype=np.uint8)[:,:3]
         im_array = im_array.reshape([*im_frame.size[::-1],3])
-    
-        related_instance = dicom_set.instances.first() # TODO: pick which instance?
-        related_ds = pydicom.dcmread(Path(dicom_set.set_location) / related_instance.instance_location,stop_before_pixels=True)
+        c = connection.cursor()
+        c.execute("select instance_location from gravis_dicom_instance where dicom_set_id = %s limit 1",[int(source_set)])
+        instance_location = c.fetchone()[0]
+        # related_instance = dicom_set.instances.representative() # TODO: pick which instance?
+        related_ds = pydicom.dcmread(Path(dicom_set.set_location) / instance_location,stop_before_pixels=True)
         if "^" not in related_ds.PatientName:
             related_ds.PatientName = str(related_ds.PatientName) + "^"
         sc = sc_from_ref(related_ds,im_array)
