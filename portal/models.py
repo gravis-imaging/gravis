@@ -278,7 +278,7 @@ class SessionInfo(models.Model):
 
 class DICOMInstanceManager(models.Manager):
     def representative(self):
-        return self.get_queryset().all()[:1]
+        return self.get_queryset().all()[:1].get()
 
 class DICOMInstance(models.Model):
     """
@@ -302,10 +302,8 @@ class DICOMInstance(models.Model):
     dicom_set = models.ForeignKey(
         DICOMSet, on_delete=models.CASCADE, related_name="instances"
     )
-    special_manager = DICOMInstanceManager()
+    objects = DICOMInstanceManager()
 
-    class Meta:
-        base_manager_name = 'special_manager'
 
     def __str__(self):
         return "; ".join([f"{x}: {getattr(self,x)}" for x in "series_number slice_location acquisition_seconds acquisition_number num_frames".split()])
