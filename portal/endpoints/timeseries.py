@@ -31,7 +31,7 @@ def timeseries_data(request, case, source_set):
     ax_preview_set =  DICOMSet.processed_success.filter(case=case,type=f"CINE/AX",processing_job__dicom_set=source_set).latest('processing_job__created_at')
 
     ax_instances = ax_preview_set.instances
-    example_instance = ax_instances.first()
+    example_instance = ax_instances.representative()
     metadata = json.loads(example_instance.json_metadata)
     # im_orientation_patient = np.asarray(metadata["00200037"]["Value"]).reshape((2,3))
     im_orientation_mat = get_im_orientation_mat(metadata) #np.rint(np.vstack((im_orientation_patient,[cross(*im_orientation_patient)])))
@@ -44,7 +44,7 @@ def timeseries_data(request, case, source_set):
         orientation = ['SAG','COR','AX'][idx]
         dicom_set = DICOMSet.processed_success.filter(case=case,type=f"CINE/{orientation}",processing_job__dicom_set=source_set).latest('processing_job__created_at')
         instances = dicom_set.instances
-        example_instance = instances.first()
+        example_instance = instances.representative()
         handles_transformed = [ (np.linalg.inv(im_orientation_mat) @ handle_location).tolist() for handle_location in annotation["handles_indexes"] ]
 
         # This does not actually work:

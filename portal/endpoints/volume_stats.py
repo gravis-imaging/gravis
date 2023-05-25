@@ -52,7 +52,7 @@ def show_array(a):
 def get_stats(annotations, dicom_set, frame_of_reference=None):
     # print(dicom_set.type)
     instances = dicom_set.instances
-    example_instance = instances.first()
+    example_instance = instances.representative()
     metadata = json.loads(example_instance.json_metadata)
     # print(dicom_set.type, frame_of_reference, metadata.get("00200052",{}).get("Value"))
     if frame_of_reference:

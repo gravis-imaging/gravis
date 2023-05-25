@@ -276,13 +276,16 @@ class SessionInfo(models.Model):
     class Meta:
         db_table = "gravis_session"
 
+class DICOMInstanceManager(models.Manager):
+    def representative(self):
+        return self.get_queryset().all()[:1]
 
 class DICOMInstance(models.Model):
     """
     A model to represent a single DICOM slice.
     Located in /opt/gravis/cases/[UID]/input/slice.000.000.dcm
     """
-
+    
     instance_location = models.CharField(
         max_length=10000, null=False
     )  # relative to cases/[UID]/<foo> folder
@@ -299,6 +302,10 @@ class DICOMInstance(models.Model):
     dicom_set = models.ForeignKey(
         DICOMSet, on_delete=models.CASCADE, related_name="instances"
     )
+    special_manager = DICOMInstanceManager()
+
+    class Meta:
+        base_manager_name = 'special_manager'
 
     def __str__(self):
         return "; ".join([f"{x}: {getattr(self,x)}" for x in "series_number slice_location acquisition_seconds acquisition_number num_frames".split()])
