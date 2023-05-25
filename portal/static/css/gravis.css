@@ -445,12 +445,20 @@ input::selection, .selectable::selection {
   background-color: #DEDEDE;
 }
 
-.timeslider-loading::-webkit-slider-thumb, .timeslider-loading::-webkit-slider-thumb:hover {
-    background-color: #777 !important; 
+.timeslider-loading::-webkit-slider-thumb {
+    background-color: #FFF !important; 
+}
+
+.timeslider-loading::-webkit-slider-thumb:hover {
+    background-color: #4f4f4f !important; 
 }
   
-.timeslider::-moz-range-thumb, .timeslider::-moz-range-thumb:hover {
-    background-color: #ffffff  !important;  
+.timeslider::-moz-range-thumb {
+    background-color: #FFF !important;  
+}
+
+.timeslider::-moz-range-thumb:hover {
+    background-color: #DEDEDE  !important;  
 }
 
 .timeslider::-moz-range-thumb {
@@ -466,7 +474,12 @@ input::selection, .selectable::selection {
 
 .timeslider:disabled::-moz-range-thumb {
     cursor: default;
-    background-color: #777 !important; 
+    background-color: #FFF !important; 
+}
+
+.timeslider:disabled::-moz-range-thumb:hover {
+    cursor: default;
+    background-color: #4f4f4f !important; 
 }
 
 .timeslider::-webkit-slider-runnable-track {

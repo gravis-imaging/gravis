@@ -59,6 +59,11 @@
                             <h5 class="navbar_patient_info nav-link mb-0">{{ current_case.patient_name }} {% if current_case.num_spokes != "" %}({{ current_case.num_spokes}} spokes){% endif %}</h5>                         
                         </a>
                     </li>
+                    {% if read_only == "true" %}
+                    <li class="nav-item menuitems-top ps-0">                                             
+                        <h5 class="nav-link mb-0 ps-0"><span class="badge bg-danger rounded-pill" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="Read-Only Mode"><i class="fa-solid fa-key px-2"></i></span></h5>
+                    </li>
+                    {% endif %} 
                 </ul>
                 {% endif %}  
                 <!-- User Settings and Configuration -->
