@@ -92,6 +92,11 @@ def handle_finding(request, case, source_set, finding_id=None):
         # This seemed to be slow for some reason, not sure why, replacing with raw sql for now
         # TODO: pick the "first" instance?
         # related_instance = dicom_set.instances.representative() # This should do the same thing. 
+        # These are faster but not as fast.
+        # instance = DICOMInstance.objects.raw("select id, instance_location from gravis_dicom_instance where dicom_set_id = %s limit 1", [int(source_set)])[0]
+        # instance = dicom_set.instances.only("instance_location")[:1].get() # TODO: pick which instance?
+        # instance_location = instance.instance_location
+        # Alternatively, dicom_set.instances.all()[:1].values("instance_location")[0]['instance_location']
         c = connection.cursor()
         c.execute("select instance_location from gravis_dicom_instance where dicom_set_id = %s limit 1",[int(source_set)])
         instance_location = c.fetchone()[0]

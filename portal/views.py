@@ -151,9 +151,9 @@ def viewer(request, case_id):
             case.status = Case.CaseStatus.VIEWING
             case.save()
 
-    instances = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set__type__in=("ORI", "SUB")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")
+    instances = DICOMInstance.objects.defer("json_metadata").filter(dicom_set__case=case, dicom_set__type__in=("ORI", "SUB")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")
     
-    other_instances = DICOMInstance.objects.filter(dicom_set__case=case).exclude(dicom_set__type__in=("ORI", "SUB", "CINE/AX","CINE/COR", "CINE/SAG")).order_by("dicom_set__type").distinct("dicom_set__type")
+    other_instances = DICOMInstance.objects.defer("json_metadata").filter(dicom_set__case=case).exclude(dicom_set__type__in=("ORI", "SUB", "CINE/AX","CINE/COR", "CINE/SAG")).order_by("dicom_set__type").distinct("dicom_set__type")
     #.distinct("study_uid","dicom_set")
     def i_to_dict(k):
         return dict(uid=k.study_uid,dicom_set=k.dicom_set.id, type=k.dicom_set.type)
