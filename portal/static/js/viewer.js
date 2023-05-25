@@ -712,7 +712,7 @@ class GraspViewer {
         const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`, {image_data: image, info: info});
         this.findings.push(result);        
     }
-    async storeFinding(viewport){
+    async storeFinding(viewport, profile=false){
         // const viewport = this.viewports[n];
         const image = await viewportToImage(viewport);
 
@@ -724,8 +724,15 @@ class GraspViewer {
             // center_index: cornerstone.utilities.transformWorldToIndex(viewport.getDefaultImageData(), viewport.getCamera().focalPoint),
         }
         try {
-            const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`, {image_data: image, data: info});
-            this.findings.push(result);
+            if (profile) {
+                const text = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding?prof&count=100&sort=cumtime`, {image_data: image, data: info}, "POST", true);
+                const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`,{},"GET");
+                this.findings = result.findings;
+                console.log(text)        
+            } else {
+                const result = await doFetch(`/api/case/${this.case_id}/dicom_set/${this.dicom_set}/finding`, {image_data: image, data: info});
+                this.findings.push(result);
+            }
         } catch(e) { 
             errorPrompt("Failed to create finding.")
         }

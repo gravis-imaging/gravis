@@ -84,3 +84,4 @@ websocket-client==1.4.1
     # via docker
 wrapt==1.14.1
     # via deprecated
+django-cprofile-middleware==1.0.5

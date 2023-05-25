@@ -71,7 +71,7 @@ async function doJob(type, case_, params, force=false) {
 }
 
 
-async function doFetch(url, body={}, method="POST") {
+async function doFetch(url, body={}, method="POST", raw_text=false) {
     const response = await fetch(url, {
         method: method, 
         credentials: 'same-origin',        
@@ -89,6 +89,9 @@ async function doFetch(url, body={}, method="POST") {
     const text = await response.text();
     if (text.length == 0) {
         return text
+    }
+    if (raw_text) {
+        return text;
     }
     try {
         return JSON.parse(text)

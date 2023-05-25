@@ -97,6 +97,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_cprofile_middleware.middleware.ProfilerMiddleware",
 ]
 
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
@@ -218,5 +219,5 @@ LOGGING = {
     },
 }
 
-BROWSER_BASE_DIRS = []
-#BROWSER_BASE_DIRS = [{'name': 'vargant', 'location': '/vagrant'}]
+# BROWSER_BASE_DIRS = []
+BROWSER_BASE_DIRS = [{'name': 'vargant', 'location': '/vagrant'}]
