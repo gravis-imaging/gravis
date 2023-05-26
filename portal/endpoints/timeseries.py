@@ -8,7 +8,6 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
-
 from .common import get_im_orientation_mat, json_load_body
 from portal.models import *
 
@@ -25,27 +24,34 @@ def timeseries_data(request, case, source_set):
     summary_method = dict(mean=np.ma.mean,
                 median=np.ma.median,
                 ptp=np.ma.ptp)[mode]
-
-    acquisition_seconds = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set=source_set).values("acquisition_seconds").distinct("acquisition_seconds")
-    acquisition_timepoints = sorted(list((k['acquisition_seconds'] for k in acquisition_seconds)))
-    ax_preview_set =  DICOMSet.processed_success.filter(case=case,type=f"CINE/AX",processing_job__dicom_set=source_set).latest('processing_job__created_at')
-
+    
+    acquisition_seconds = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set=source_set).values("acquisition_seconds").distinct("acquisition_seconds").order_by("acquisition_seconds")
+    acquisition_timepoints = [k['acquisition_seconds'] for k in acquisition_seconds]
+    ax_preview_set =  DICOMSet.processed_success.only("id").filter(case=case,type=f"CINE/AX",processing_job__dicom_set=source_set).latest('processing_job__created_at')
     ax_instances = ax_preview_set.instances
     example_instance = ax_instances.representative()
+
+
     metadata = json.loads(example_instance.json_metadata)
     # im_orientation_patient = np.asarray(metadata["00200037"]["Value"]).reshape((2,3))
     im_orientation_mat = get_im_orientation_mat(metadata) #np.rint(np.vstack((im_orientation_patient,[cross(*im_orientation_patient)])))
+    im_orientation_mat_inv = np.linalg.inv(im_orientation_mat)
 
-    size = [ int(metadata["00280011"]["Value"][0]), int(metadata["00280010"]["Value"][0]), ax_instances.count() ]
-
+    dicom_sets_by_orientation = {}
     # TODO: Calculate out-of-bounds properly. It's checked on the client, but still...
-    for i, annotation in enumerate(data['annotations']):
+    for annotation in data['annotations']:
         idx = np.abs(annotation['normal']).argmax()
-        orientation = ['SAG','COR','AX'][idx]
-        dicom_set = DICOMSet.processed_success.filter(case=case,type=f"CINE/{orientation}",processing_job__dicom_set=source_set).latest('processing_job__created_at')
-        instances = dicom_set.instances
-        example_instance = instances.representative()
-        handles_transformed = [ (np.linalg.inv(im_orientation_mat) @ handle_location).tolist() for handle_location in annotation["handles_indexes"] ]
+        o = ['SAG','COR','AX'][idx]
+        annotation['orientation'] = o
+        if o not in dicom_sets_by_orientation:
+            dicom_sets_by_orientation[o] = DICOMSet.processed_success.filter(case=case,type=f"CINE/{o}",processing_job__dicom_set=source_set).only("id").latest('processing_job__created_at')
+    slice_cache = {}
+
+    for annotation in data['annotations']:
+        idx = np.abs(annotation['normal']).argmax()
+        orientation = annotation['orientation']
+        dicom_set = dicom_sets_by_orientation[orientation]
+        handles_transformed = [ (im_orientation_mat_inv @ handle_location).tolist() for handle_location in annotation["handles_indexes"] ]
 
         # This does not actually work:
         # out_of_bounds = False
@@ -76,10 +82,14 @@ def timeseries_data(request, case, source_set):
         for h in range(len(handles_transformed)):
             handles_transformed[h] = handles_transformed[h][:idx]  + handles_transformed[h][idx+1:]
         # print(slice_number)
-
-        instance = list(instances.order_by('slice_location').all())[slice_number]
-        ds = pydicom.dcmread( Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location )
-        pixel_array = ds.pixel_array
+        if (key:=(orientation, slice_number)) in slice_cache:
+            pixel_array = slice_cache[key]
+        else:
+            instance = dicom_set.instances.only("slice_location","instance_location","dicom_set__set_location").select_related("dicom_set").order_by("slice_location").all()[slice_number]
+            ds = pydicom.dcmread( Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location )
+            pixel_array = ds.pixel_array
+            slice_cache[(orientation, slice_number)] = ds.pixel_array
+            
         if len(pixel_array.shape) == 2:
             pixel_array = pixel_array[np.newaxis,:,:]
         if annotation["tool"] == "EllipticalROI":
