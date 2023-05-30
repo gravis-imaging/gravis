@@ -85,7 +85,11 @@ def timeseries_data(request, case, source_set):
         if (key:=(orientation, slice_number)) in slice_cache:
             pixel_array = slice_cache[key]
         else:
-            instance = dicom_set.instances.only("slice_location","instance_location","dicom_set__set_location").select_related("dicom_set").order_by("slice_location").all()[slice_number]
+            qs = dicom_set.instances.only("slice_location","instance_location","dicom_set__set_location").order_by('slice_location')
+            if slice_number < 0:
+                count = qs.all().count()
+                slice_number = count + slice_number
+            instance = qs[slice_number]
             ds = pydicom.dcmread( Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location )
             pixel_array = ds.pixel_array
             slice_cache[(orientation, slice_number)] = ds.pixel_array
