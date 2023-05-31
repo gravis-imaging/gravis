@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST, require_GET
 from django.shortcuts import get_object_or_404
 from portal.jobs.load_dicoms_job import CopyDicomsJob
 from portal.models import *
-from .common import get_im_orientation_mat, user_opened_case
+from .common import get_im_orientation_mat, user_opened_case, debug_sql
 from django.db import transaction
 
 @login_required
@@ -106,32 +106,31 @@ def case_metadata(request, case, dicom_set, study=None):
 @require_GET
 def processed_results_json(request, case, category, source_set):
     # fields = ["series_number", "slice_location", "acquisition_number"]
-    case = Case.objects.get(id=int(case))
     # slices_lookup = {k: request.GET.get(k) for k in fields if k in request.GET}
-    job = ProcessingJob.successful.filter(case=case, dicom_set=source_set, category=category).latest("created_at")
+    job = ProcessingJob.successful.filter(case_id=int(case), dicom_set=source_set, category=category).latest("created_at")
     return JsonResponse(dict(result = job.json_result))
 
 
 @login_required
 @require_GET
 def preview_urls(request, case, source_set, view, location):
-    case = Case.objects.get(id=int(case))
-    dicom_set = DICOMSet.processed_success.filter(case=case,type=f"CINE/{view}").filter(processing_job__dicom_set=source_set)
+    dicom_set = DICOMSet.processed_success.filter(case_id=int(case),type=f"CINE/{view}").filter(processing_job__dicom_set=source_set).latest('processing_job__created_at')
 
     location = np.asarray(list(map(int, location.split(","))))
-
-    instances = dicom_set.latest('processing_job__created_at').instances.order_by("slice_location").all()
-    im_orientation_mat = get_im_orientation_mat(json.loads(instances[0].json_metadata))
+    representative_instance = dicom_set.instances.representative()
+    im_orientation_mat = get_im_orientation_mat(json.loads(representative_instance.json_metadata))
 
     # print(location)
     transformed_location = (np.linalg.inv(im_orientation_mat) @ location)
     # print(transformed_location)
     slice_number = int(transformed_location[ [ "SAG", "COR", "AX"].index(view) ])
+    qs = dicom_set.instances.only("slice_location","instance_location","num_frames","dicom_set_id").order_by('slice_location')
     if slice_number < 0:
-        slice_number -= 1
-    instance = list(instances)[slice_number]
+        slice_number = -slice_number # would expect this to be 1 - slice_number but there's an off-by-one issue somewhere
+        qs = qs.reverse()
+    instance = qs[slice_number]
 
-    location = (Path(instance.dicom_set.set_location) / instance.instance_location).relative_to(settings.DATA_FOLDER)
+    location = (Path(dicom_set.set_location) / instance.instance_location).relative_to(settings.DATA_FOLDER)
     wado_uri = "wadouri:"+str(Path(settings.MEDIA_URL) / location)
     return JsonResponse(dict(urls=[ wado_uri +f"?frame={n}" for n in range(instance.num_frames)]))
 
@@ -140,10 +139,9 @@ def preview_urls(request, case, source_set, view, location):
 @require_GET
 def processed_results_urls(request, case, case_type, source_set):
     fields = ["series_number", "slice_location", "acquisition_number", "acquisition_seconds"]
-    case = Case.objects.get(id=int(case))
     slices_lookup = {k: request.GET.get(k) for k in fields if k in request.GET}
-    dicom_set = DICOMSet.processed_success.filter(case=case,type=case_type, processing_job__dicom_set=source_set).latest('processing_job__created_at')
-    instances = dicom_set.instances.filter(**slices_lookup).order_by("acquisition_seconds", "slice_location","instance_location","series_number") # or "instance_number"
+    dicom_set = DICOMSet.processed_success.filter(case_id=int(case),type=case_type, processing_job__dicom_set=source_set).latest('processing_job__created_at')
+    instances = dicom_set.instances.filter(**slices_lookup).only("instance_location","num_frames","dicom_set_id").order_by("acquisition_seconds", "slice_location","instance_location","series_number") # or "instance_number"
 
     urls = []
     for instance in instances:
@@ -160,10 +158,9 @@ def processed_results_urls(request, case, case_type, source_set):
 @require_GET
 def mip_metadata(request, case, source_set):
     fields = ["series_number", "slice_location", "acquisition_number", "acquisition_seconds"]
-    case = Case.objects.get(id=int(case))
     slices_lookup = {k: request.GET.get(k) for k in fields if k in request.GET}
-    dicom_sets = DICOMSet.processed_success.filter(case=case,type="MIP", processing_job__dicom_set=source_set)
-    instances = dicom_sets.latest('processing_job__created_at').instances.filter(**slices_lookup).order_by("acquisition_seconds", "slice_location","instance_location","series_number") # or "instance_number"
+    dicom_sets = DICOMSet.processed_success.filter(case_id=int(case),type="MIP", processing_job__dicom_set=source_set)
+    instances = dicom_sets.latest('processing_job__created_at').instances.filter(**slices_lookup).only("slice_location","dicom_set_id").order_by("acquisition_seconds", "slice_location","instance_location","series_number") # or "instance_number"
 
     details = []
     for instance in instances:

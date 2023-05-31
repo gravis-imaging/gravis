@@ -74,7 +74,7 @@ def trigger_queued_cases():
 
 def delete_cases():
     try:
-        cases = Case.objects.filter(status="DEL")
+        cases = Case.objects.filter(status="DEL").only("case_location")
         for case in cases:
             if Path(case.case_location).exists():
                 print(f"Deleting {case.id} {case.case_location}")

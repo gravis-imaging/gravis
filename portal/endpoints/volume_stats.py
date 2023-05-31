@@ -59,7 +59,7 @@ def get_stats(annotations, dicom_set, frame_of_reference=None):
         if metadata.get("00200052",{}).get("Value",[None])[0] != frame_of_reference:
             raise WrongFrameOfReference()
     im_orientation_mat = get_im_orientation_mat(metadata)
-    
+    im_orientation_mat_inv = np.linalg.inv(im_orientation_mat)
     def get_position(instance):
         return np.asarray(json.loads(instance.json_metadata)["00200032"]["Value"])
 
@@ -88,7 +88,7 @@ def get_stats(annotations, dicom_set, frame_of_reference=None):
         orientation = ['SAG','COR','AX'][idx]
         # print(orientation)
         # print(im_orientation_mat)
-        handles_transformed = [ (np.linalg.inv(im_orientation_mat) @ handle_location).tolist() for handle_location in annotation["handles_indexes"] ]
+        handles_transformed = [ (im_orientation_mat_inv @ handle_location).tolist() for handle_location in annotation["handles_indexes"] ]
 
         for h in handles_transformed:
             if orientation in ("SAG", "COR"):

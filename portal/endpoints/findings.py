@@ -17,7 +17,7 @@ from django.db import connection
 
 from PIL import Image
 import highdicom as hd
-
+from .common import debug_sql
 from portal.models import DICOMSet, Finding
 
 from .common import json_load_body, user_opened_case
@@ -46,29 +46,29 @@ def sc_from_ref(reference_dataset, pixel_array):
 
 @login_required
 def handle_finding(request, case, source_set, finding_id=None):
-    dicom_set = DICOMSet.objects.get(id=int(source_set))
+    dicom_set = DICOMSet.objects.only("set_location","case__id","case__case_location","case__status","case__viewed_by_id").select_related("case").get(id=int(source_set))
+    case = dicom_set.case
     if request.method == 'GET':
-        results = []
-        for set_ in dicom_set.case.dicom_sets.all():
-            results += [f.to_dict() for f in set_.findings.all() if f.file_location]
+        results = [f.to_dict() for f in case.findings.all()]
         return JsonResponse(dict(findings=results))
     elif not user_opened_case(request,case):
         return HttpResponseForbidden()
     elif request.method == "DELETE":
         with transaction.atomic():
-            finding = Finding.objects.get(id=finding_id)
-            shutil.rmtree((Path(dicom_set.case.case_location) / finding.file_location).parent)
+            finding = Finding.objects.only("file_location").get(id=finding_id)
+            shutil.rmtree((Path(case.case_location) / finding.file_location).parent)
             finding.delete()
         return JsonResponse({})
     elif request.method == "PATCH":
         data = json_load_body(request)
         with transaction.atomic():
-            finding = Finding.objects.get(id=finding_id)
+            finding = Finding.objects.filter(id=finding_id)
+            values = {}
             if name := data.get("name",None):
-                finding.name = name
+                values['name'] = name
             if data := data.get("data",None):
-                finding.data = data
-            finding.save()
+                values['data'] = data
+            finding.update(**values)
         return JsonResponse({})
     elif request.method == "POST":
         request_data = json_load_body(request)
@@ -77,7 +77,7 @@ def handle_finding(request, case, source_set, finding_id=None):
         
         with urlopen(request_data["image_data"]) as response:
             image_data = response.read()
-        directory = Path(dicom_set.case.case_location) / "findings" / str(uuid.uuid4())
+        directory = Path(case.case_location) / "findings" / str(uuid.uuid4())
         directory.mkdir()
         filename = directory / f"finding.png"
         filename.touch()
@@ -111,9 +111,9 @@ def handle_finding(request, case, source_set, finding_id=None):
         finding = Finding(
                 created_by = request.user, 
                 dicom_set = dicom_set,
-                case = dicom_set.case,
-                file_location = filename.relative_to(Path(dicom_set.case.case_location)),
-                dicom_location = (directory / "finding.dcm").relative_to(Path(dicom_set.case.case_location)),
+                case = case,
+                file_location = filename.relative_to(Path(case.case_location)),
+                dicom_location = (directory / "finding.dcm").relative_to(Path(case.case_location)),
                 # name = data.get("name",None),
                 data = request_data.get("data",None)
                 )
