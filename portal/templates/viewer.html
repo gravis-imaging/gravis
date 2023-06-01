@@ -552,6 +552,7 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
           Swal.showValidationMessage("Unable to close case. Check logs.")
         }
     })}
+    {% if read_only == "false" %}
     await Swal.fire({
       title: 'Close case?',
       text: "Unsaved changes will be lost.",
@@ -568,6 +569,9 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
       preConfirm: handler(true),
       preDeny: handler(false)
     })
+    {% else %}
+    window.open("/", "_self");        
+    {% endif %}
   }
 </script>
 
