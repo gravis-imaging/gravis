@@ -162,11 +162,13 @@ class AuxManager {
         if (!this.current_set_id) { 
             return
         }
+        let updating_event = new CustomEvent("stats-updating", {});
+        window.dispatchEvent(updating_event);        
         const results = await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.current_set_id}/volume_stats`,{"annotations":data, "frame_of_reference": this.viewport.getFrameOfReferenceUID()});
         // console.log(results)
         let event = new CustomEvent("stats-update", {
             detail: results
-            });
+        });
         this.current_stats = results;
         window.dispatchEvent(event);
     }
