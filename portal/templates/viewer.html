@@ -426,7 +426,7 @@
   </div>
   <div x-cloak style="grid-area: f; display:grid;" class="no-pointer-events">
     <button x-show="case_data.case_type == 'GRASP Onco'" title="Export to CSV" class="all-pointer-events btn-primary btn-large btn-viewer m-2" style="align-self:end;justify-self:start;"
-    x-data="{'has_data': false, 'loading' = false}" 
+    x-data="{has_data: false, loading: false}" 
     x-on:stats-updating.window="loading = true;"
     x-on:stats-update.window="has_data = Object.keys($event.detail).length > 0; loading = false;"
     :disabled="!has_data || loading"
