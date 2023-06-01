@@ -660,3 +660,8 @@ textarea.select2-search__field {
 .metsresult::marker {
     color: #1266f1;
 }
+
+summary.selectable.metsresult:hover {
+    text-decoration: underline;
+}
+
