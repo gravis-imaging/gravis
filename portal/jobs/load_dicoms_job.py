@@ -1,9 +1,9 @@
 from datetime import datetime
+import gzip
+import subprocess
 from typing import Tuple
 from .work_job import WorkJobView
 from portal.models import Case, Tag
-from loguru import logger
-from pathlib import Path
 from loguru import logger
 from pathlib import Path
 import shutil
@@ -16,7 +16,6 @@ from django.conf import settings
 import portal.jobs.dicomset_utils as dicomset_utils
 from common.constants import GravisNames, GravisFolderNames
 import common.helper as helper
-
 
 class LoadDicomsJob(WorkJobView):
     type = "LoadDICOMSet"
@@ -123,12 +122,20 @@ class CopyDicomsJob(WorkJobView):
         processed_dest_folder = new_folder / GravisFolderNames.PROCESSED
         findings_dest_folder = new_folder / GravisFolderNames.FINDINGS
 
+        # Get a sample dicom. 
         try:
             example_dcm = next(incoming_folder.glob("**/*.dcm"))
+            fp = open(example_dcm,"rb")
         except StopIteration:
-            raise Exception("Directory does not contain any .dcm files.")
+            try: # the dicoms might be gzipped
+                example_dcm = next(incoming_folder.glob("**/*.dcm.gz"))
+                fp = gzip.open(example_dcm,"r")
+            except StopIteration:
+                raise Exception("Directory does not contain any .dcm files.")
         
-        new_case = case_from_payload(override_json, new_folder, example_dcm)
+        with fp:
+            new_case = case_from_payload(override_json, new_folder, fp)
+
         job.case = new_case
         job.save()
         # Create directories for further processing.
@@ -140,6 +147,11 @@ class CopyDicomsJob(WorkJobView):
 
         try:
             shutil.copytree(incoming_folder, input_dest_folder)
+            # Unzip any zipped dicoms.
+            zipped_dicoms = list(input_dest_folder.glob("*.dcm.gz"))
+            if zipped_dicoms:
+                logger.info("Unzipping dicoms.")
+                subprocess.run(["gzip", "-d", *zipped_dicoms], stdout=subprocess.PIPE, check=True)
         except: 
             raise Exception(f"Error copying files from {incoming_folder} to {input_dest_folder}")
 
