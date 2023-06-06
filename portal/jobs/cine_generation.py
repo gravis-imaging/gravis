@@ -1,7 +1,9 @@
+import gzip
 import json
 import stat
 import uuid
 from pathlib import Path
+from django.conf import settings
 
 from django.urls import path
 import numpy as np
@@ -186,8 +188,13 @@ class GeneratePreviewsJob(WorkJobView):
                 ds.SOPInstanceUID    = pydicom.uid.generate_uid()
                 ds.PixelSpacing      = pixel_spacing
 
-                p = Path(dicom_sets[axis].set_location) / f"multiframe.{i}.dcm"
-                ds.save_as(p)
+                if settings.COMPRESS_DICOMS:
+                    p = Path(dicom_sets[axis].set_location) / f"multiframe.{i}.dcm.gz"
+                    with gzip.open(p, 'w') as fp:
+                        ds.save_as(fp)
+                else:
+                    p = Path(dicom_sets[axis].set_location) / f"multiframe.{i}.dcm"
+                    ds.save_as(p)
                 p.chmod(p.stat().st_mode | stat.S_IROTH | stat.S_IXOTH) #TODO: is this necessary?
 
                 new_instance = DICOMInstance.from_dataset(ds)

@@ -7,6 +7,7 @@ from time import sleep
 import os
 
 from django.conf import settings
+from portal.jobs.compress import CompressJob
 
 from portal.jobs.load_dicoms_job import LoadDicomsJob
 from portal.models import Case
@@ -65,7 +66,9 @@ def trigger_queued_cases():
             continue
             # TODO: send case to error folder
         try:
-            pipeline(case)
+            case_ready, rq_case_ready = pipeline(case)
+            if settings.COMPRESS_DICOMS:
+                CompressJob.enqueue_work(case_ready.case, case_ready.case.dicom_sets.filter(type="ORI")[0], depends_on=rq_case_ready)
         except:
             case.status = Case.CaseStatus.ERROR
             case.save()
@@ -76,6 +79,7 @@ def delete_cases():
     try:
         cases = Case.objects.filter(status="DEL").only("case_location")
         for case in cases:
+            print(case.case_location)
             if Path(case.case_location).exists():
                 print(f"Deleting {case.id} {case.case_location}")
                 shutil.rmtree(case.case_location)

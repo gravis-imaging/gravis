@@ -3,7 +3,7 @@ import logging
 import os
 from pathlib import Path
 from time import sleep
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -18,7 +18,7 @@ import pydicom
 import numpy as np
 
 from portal.models import *
-
+from portal.views import serve_media
 
 logger = logging.getLogger(__name__)
 
@@ -30,24 +30,9 @@ def retrieve_instance(request, study, series, instance, case, frame=1):
     instance = DICOMInstance.objects.only("instance_location","dicom_set__set_location").select_related("dicom_set").get(
         study_uid=study, series_uid=series, instance_uid=instance, dicom_set__case=case
     )
-
-    file_location = Path(instance.dicom_set.set_location) / instance.instance_location
-    file_location = file_location.relative_to(settings.DATA_FOLDER)
-
-    if "localhost" in request.headers["Host"] or "127.0.0.1" in request.headers["Host"]:
-        # We're not running behind nginx so we are going to just serve the file ourselves.
-        response = static.serve(
-            request,
-            file_location,
-            document_root=settings.DATA_FOLDER,
-        )
-        return response
-
-    return HttpResponse(
-        headers={
-            "X-Accel-Redirect": str(Path("/secret") / file_location),
-        }
-    )
+    data_path = Path(instance.dicom_set.set_location) / instance.instance_location
+    file_location = data_path.relative_to(settings.DATA_FOLDER)
+    return serve_media(request,file_location)
 
 
 @login_required

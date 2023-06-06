@@ -1,5 +1,6 @@
 import logging
 import json
+from pathlib import Path
 import shutil
 from django.http import HttpResponse, HttpResponseBadRequest,HttpResponseForbidden, HttpResponseNotAllowed, JsonResponse
 from django.conf import settings
@@ -30,6 +31,23 @@ def serve_media(request, path):
     if "localhost" in request.headers["Host"] or "127.0.0.1" in request.headers["Host"]:
         if settings.DEBUG:
             # We're not running behind nginx so we are going to just serve the file ourselves.
+
+            file_location = Path(path)
+            data_path = Path(settings.DATA_FOLDER)
+            # file.gz exists, we will try to serve it
+            if (data_path / (gz_location:=file_location.with_suffix(file_location.suffix+".gz"))).exists():
+                if "gzip" in request.headers["Accept-Encoding"]: # client accepts it
+                    response = serve(
+                        request,
+                        str(gz_location),
+                        document_root=settings.MEDIA_ROOT,
+                    )
+                    response['Content-Encoding'] = 'gzip'
+                    return response
+                elif (data_path / file_location).exists(): # fall back if the uncompressed image exists (probably doesn't)
+                    return serve(request, path, settings.MEDIA_ROOT)
+                else:
+                    return HttpResponseBadRequest() # give up.
             return serve(request, path, settings.MEDIA_ROOT)
         else:
             return HttpResponse(status=500)

@@ -1,3 +1,4 @@
+import gzip
 import json
 import numpy as np
 import pydicom
@@ -90,7 +91,15 @@ def timeseries_data(request, case, source_set):
                 slice_number = 1 - slice_number
                 qs = qs.reverse()
             instance = qs[slice_number]
-            ds = pydicom.dcmread( Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location )
+
+            file_location = Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location
+            gz_location = file_location.with_suffix(file_location.suffix+".gz")
+        
+            if not file_location.exists() and gz_location.exists():
+                with gzip.open(gz_location, 'r') as fp:
+                    ds = pydicom.dcmread(fp)
+            else:
+                ds = pydicom.dcmread(file_location)
             pixel_array = ds.pixel_array
             slice_cache[(orientation, slice_number)] = ds.pixel_array
             

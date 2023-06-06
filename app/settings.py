@@ -30,7 +30,8 @@ env = environ.Env(
     DISPATCH_HOST=(str, None),
     DISPATCH_PORT=(int, 104),
     DISPATCH_AET_SOURCE=(str, None),
-    DISPATCH_AET_TARGET=(str, None)
+    DISPATCH_AET_TARGET=(str, None),
+    COMPRESS_DICOMS=(bool, True),
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -58,6 +59,7 @@ DISPATCH_PORT = env("DISPATCH_PORT")
 
 DISPATCH_AET_SOURCE = env("DISPATCH_AET_SOURCE")
 DISPATCH_AET_TARGET = env("DISPATCH_AET_TARGET")
+COMPRESS_DICOMS = env("COMPRESS_DICOMS")
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = DATA_FOLDER
@@ -217,7 +219,8 @@ LOGGING = {
         'handlers': ['console'],
         'level': 'INFO',
     },
+    
 }
 
 # BROWSER_BASE_DIRS = []
-BROWSER_BASE_DIRS = [{'name': 'vargant', 'location': '/vagrant'}]
+BROWSER_BASE_DIRS = [{'name': 'vagrant', 'location': '/vagrant'}]
