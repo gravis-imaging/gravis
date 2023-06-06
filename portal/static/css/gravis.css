@@ -656,3 +656,12 @@ textarea.select2-search__field {
 .bootstrap-select.show-tick .dropdown-menu .selected span.check-mark {
     top: 10px !important;
 }
+
+.metsresult::marker {
+    color: #1266f1;
+}
+
+summary.selectable.metsresult:hover {
+    text-decoration: underline;
+}
+
