@@ -88,8 +88,8 @@ def timeseries_data(request, case, source_set):
         else:
             qs = dicom_set.instances.only("slice_location","instance_location","dicom_set__set_location").order_by('slice_location')
             if slice_number < 0:
-                slice_number = 1 - slice_number
-                qs = qs.reverse()
+                count = qs.all().count()
+                slice_number = count + slice_number
             instance = qs[slice_number]
 
             file_location = Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location
