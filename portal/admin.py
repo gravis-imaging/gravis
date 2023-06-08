@@ -51,6 +51,7 @@ class CaseAdmin(admin.ModelAdmin):
     inlines = [
         DicomSetInline, FindingInline
     ]
+    list_display = ["id", "patient_name", "mrn", "acc", "case_type", "case_location"]
 class ProcessingJobInline(admin.TabularInline):
     model = ProcessingJob
 
@@ -60,25 +61,32 @@ class ProcessingJobAdmin(admin.ModelAdmin):
     ]
     fields = ["category","case","dicom_set","status","docker_image","parameters","json_result","rq_id"]
     readonly_fields = ["dicom_set","case","rq_id"]
-# class DICOMSetAdminForm(forms.ModelForm):
-#     class Meta:
-#         model = DICOMSet
-#         fields = "__all__"
+    
+    list_display = ["id", "category", "case_info","status"]
 
-#     def clean_image_orientation_patient(self):
-#         if self.cleaned_data["first_name"] == "Spike":
-#             raise forms.ValidationError("No Vampires")
+    @admin.display(description="Case")
+    def case_info(self,obj):
+        return f"{obj.case.id}; {obj.case.patient_name}" if obj.case else "-"
 
-#         return self.cleaned_data["first_name"]
 class FindingAdmin(admin.ModelAdmin):
     # form = DICOMSetAdminForm
     fields = ["dicom_set","case","created_by", "created_at","name", "file_location","dicom_location","data"]
     readonly_fields = ["dicom_set","case"]
+    list_display = ["id", "case_info","created_at"]
+
+    @admin.display(description="Case")
+    def case_info(self,obj):
+        return f"{obj.case.id}; {obj.case.patient_name}" if obj.case else "-"
 
 class DICOMSetAdmin(admin.ModelAdmin):
     # form = DICOMSetAdminForm
     fields = ["type", "case", "set_location", "created_at","origin", "expires_at","is_volume","frame_of_reference", "image_orientation_patient", "image_orientation_calc","image_orientation_calc_inv"]
     readonly_fields = ["case", "created_at","processing_job", "image_orientation_patient", "image_orientation_calc","image_orientation_calc_inv"]
+    list_display = ["id", "case_info", "type"]
+
+    @admin.display(description="Case")
+    def case_info(self,obj):
+        return f"{obj.case.id}; {obj.case.patient_name}"
 
 class ShadowAdmin(admin.ModelAdmin):
     inlines = [ CaseInline ]
