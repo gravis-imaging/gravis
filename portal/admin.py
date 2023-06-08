@@ -52,6 +52,11 @@ class CaseAdmin(admin.ModelAdmin):
         DicomSetInline, FindingInline
     ]
     list_display = ["id", "patient_name", "mrn", "acc", "case_type", "case_location"]
+
+    def render_delete_form(self, request, context):
+        context['deleted_objects'] = ['Object listing disabled']
+        return super().render_delete_form(request, context)
+    
 class ProcessingJobInline(admin.TabularInline):
     model = ProcessingJob
 
@@ -62,7 +67,8 @@ class ProcessingJobAdmin(admin.ModelAdmin):
     fields = ["category","case","dicom_set","status","docker_image","parameters","json_result","rq_id"]
     readonly_fields = ["dicom_set","case","rq_id"]
     
-    list_display = ["id", "category", "case_info","status"]
+    list_display = ["id", "category", "case_info","docker_image","status"]
+    list_filter = ["case__patient_name","category", "status"]
 
     @admin.display(description="Case")
     def case_info(self,obj):
@@ -84,10 +90,26 @@ class DICOMSetAdmin(admin.ModelAdmin):
     readonly_fields = ["case", "created_at","processing_job", "image_orientation_patient", "image_orientation_calc","image_orientation_calc_inv"]
     list_display = ["id", "case_info", "type"]
 
+    list_filter = ["case__patient_name","type"]
+
     @admin.display(description="Case")
     def case_info(self,obj):
         return f"{obj.case.id}; {obj.case.patient_name}"
 
+class DICOMInstanceAdmin(admin.ModelAdmin):
+    search_fields = ["dicom_set__case__patient_name"]
+    list_display = ["id", "dicom_set_type", "case_info", "slice_z_position"]
+    
+    list_filter = ["dicom_set__case__patient_name","dicom_set__type"]
+    @admin.display(description="type")
+    def dicom_set_type(self,obj):
+        return obj.dicom_set.type
+
+    @admin.display(description="Case")
+    def case_info(self,obj):
+        return f"{obj.dicom_set.case.id}; {obj.dicom_set.case.patient_name}"
+
+    
 class ShadowAdmin(admin.ModelAdmin):
     inlines = [ CaseInline ]
 admin.site.unregister(User)
@@ -95,6 +117,6 @@ admin.site.register(User, CustomUserAdmin)
 admin.site.register(Case, CaseAdmin)
 admin.site.register(ProcessingJob, ProcessingJobAdmin)
 admin.site.register(DICOMSet,DICOMSetAdmin)
-admin.site.register(DICOMInstance)
+admin.site.register(DICOMInstance, DICOMInstanceAdmin)
 admin.site.register(Finding, FindingAdmin)
 admin.site.register(ShadowCase, ShadowAdmin)
