@@ -79,7 +79,7 @@ class Case(models.Model):
     mrn = models.CharField(max_length=100, blank=True, null=True)
     acc = models.CharField(max_length=100, blank=True, null=True)
     case_type = models.CharField( # TODO: should be EnumField?
-        max_length=100, choices=CaseType.choices, blank=True, null=True
+        max_length=100, choices=CaseType.choices, null=True, default=CaseType.SVIEW
     )
     exam_time = models.DateTimeField(blank=True, null=True)
     receive_time = models.DateTimeField(default=timezone.now, blank=False)
@@ -89,7 +89,7 @@ class Case(models.Model):
     num_spokes = models.CharField(max_length=1000, default="", blank=False, null=False)
     twix_id = models.CharField(max_length=1000, blank=True, null=True)
     case_location = models.CharField(max_length=10000, blank=False, null=False)
-    settings = models.JSONField(null=True)  # use presets, smoothing, num_angles etc
+    settings = models.JSONField(null=True,blank=True)  # use presets, smoothing, num_angles etc
     incoming_payload = models.JSONField(blank=False, null=False)
     last_read_by = models.ForeignKey(
         User,
@@ -103,6 +103,7 @@ class Case(models.Model):
         on_delete=models.SET_NULL,
         default=None,
         null=True,
+        blank=True,
         related_name="viewed_by",
     )    
     tags = models.ManyToManyField(Tag,blank=True)
@@ -140,7 +141,7 @@ class Case(models.Model):
         }
 
     def __str__(self):
-        return f"{self.id} ("+"; ".join([f"{x}: {getattr(self,x)}" for x in "patient_name mrn acc status".split()])+")"
+        return f"{self.id} ("+"; ".join([f"{x}: {getattr(self,x)}" for x in "patient_name mrn acc case_type status".split()])+")"
 
     @classmethod
     def get_user_viewing(cls,user):
@@ -172,8 +173,8 @@ class ProcessingJob(models.Model):
         max_length=100, blank=True, null=True
     )  # pending, processing, success, fail, description
     error_description = models.CharField(max_length=1000, blank=True, null=True)
-    json_result = models.JSONField(null=True)
-    parameters = models.JSONField(null=True)
+    json_result = models.JSONField(null=True,blank=True)
+    parameters = models.JSONField(null=True,blank=True)
     dicom_set = models.ForeignKey("DICOMSet", on_delete=models.CASCADE, null=True, blank=True)
     case = models.ForeignKey(Case, on_delete=models.CASCADE, null=True, blank=True, related_name="processing_jobs")
     docker_image = models.CharField(max_length=100, blank=True, null=True)
@@ -182,7 +183,11 @@ class ProcessingJob(models.Model):
     objects = models.Manager() 
     successful = SuccessfulProcessingJobManager() # Only successful processing jobs.
     def __str__(self):
-        return f"{self.id} ("+ "; ".join([f"{x}: {getattr(self,x)}" for x in "category parameters docker_image status error_description".split() if getattr(self,x) is not None])+")"
+        list = [f"{x}: {getattr(self,x)}" for x in "category docker_image status error_description".split() if getattr(self,x) is not None]
+        filtered_params = {a:self.parameters[a] for a in self.parameters if a!="study_json"}
+        if filtered_params:
+            list.insert(1, f"parameters: {filtered_params}")
+        return f"{self.id} ({'; '.join(list)})"
 
     class Meta:
         db_table = "gravis_processing_job"
@@ -211,7 +216,7 @@ class DICOMSet(models.Model):
     created_at = models.DateTimeField(default=timezone.now, blank=True)
     expires_at = models.DateTimeField(blank=True, null=True)
     origin = models.CharField(
-        max_length=100, blank=False, null=False
+        max_length=100, blank=True, null=False
     )  # Incoming, Processed
     type = models.CharField(
         max_length=100, blank=True, null=True
@@ -228,11 +233,11 @@ class DICOMSet(models.Model):
     objects = models.Manager() 
     processed_success = DICOMSetSuccessfulProcessingJobManager() # Only results of successful processing jobs
 
-    is_volume = models.BooleanField(null=True)
-    frame_of_reference = models.CharField(max_length=200,null=True)
-    image_orientation_patient = ArrayField(ArrayField(models.FloatField(),size=3),size=3,null=True)
-    image_orientation_calc = ArrayField(ArrayField(models.FloatField(),size=3),size=3,null=True)
-    image_orientation_calc_inv = ArrayField(ArrayField(models.FloatField(),size=3),size=3,null=True)
+    is_volume = models.BooleanField(null=True, blank=True)
+    frame_of_reference = models.CharField(max_length=200,null=True, blank=True)
+    image_orientation_patient = ArrayField(ArrayField(models.FloatField(),size=3),size=3,null=True, blank=True)
+    image_orientation_calc = ArrayField(ArrayField(models.FloatField(),size=3),size=3,null=True, blank=True)
+    image_orientation_calc_inv = ArrayField(ArrayField(models.FloatField(),size=3),size=3,null=True, blank=True)
 
     def set_from_instance(self, instance=None):
         if instance is None:
@@ -264,7 +269,7 @@ class Finding(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(default=timezone.now, blank=True)
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100,blank=True)
     file_location = models.CharField(null=True,max_length=1000)
     dicom_location = models.CharField(null=True,max_length=1000)
 
