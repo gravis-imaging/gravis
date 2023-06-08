@@ -55,7 +55,7 @@ def serve_media(request, path):
     # Use nginx's implementation of "x-sendfile" to tell nginx to serve the actual file.
     # see: https://www.nginx.com/resources/wiki/start/topics/examples/x-accel/
     return HttpResponse(
-        headers={"X-Accel-Redirect": "/secret/" + path, "Content-Type": ""}
+        headers={"X-Accel-Redirect": Path("/secret") / path, "Content-Type": ""}
     )
 
 
