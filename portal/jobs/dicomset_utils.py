@@ -56,6 +56,8 @@ def register(set_path, case, origin, job_id=None, type=""):
             instance.instance_location = str(dcm.relative_to(set_path))
             instance.dicom_set = dicom_set
             instance.save()
+            if not dicom_set.image_orientation_calc_inv:
+                dicom_set.set_from_instance(instance)
         except:
             raise Exception(
                 f"Exception during DICOMInstance model creation. Cannot process incoming instance {str(dcm)}"

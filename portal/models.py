@@ -1,14 +1,19 @@
+import json
 from pathlib import Path
 from time import time
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.db.models import JSONField
+import numpy as np
 from pydicom import Dataset, valuerep
 from datetime import datetime
 from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
 import string
 import random
+
+from common.calculations import get_im_orientation_mat
 
 class Tag(models.Model):
     name = models.CharField(max_length=200, blank=False, null=False)
@@ -177,7 +182,7 @@ class ProcessingJob(models.Model):
     objects = models.Manager() 
     successful = SuccessfulProcessingJobManager() # Only successful processing jobs.
     def __str__(self):
-        return f"{self.id} ("+ "; ".join([f"{x}: {getattr(self,x)}" for x in "category parameters status error_description".split()])+")"
+        return f"{self.id} ("+ "; ".join([f"{x}: {getattr(self,x)}" for x in "category parameters docker_image status error_description".split() if getattr(self,x) is not None])+")"
 
     class Meta:
         db_table = "gravis_processing_job"
@@ -222,6 +227,30 @@ class DICOMSet(models.Model):
 
     objects = models.Manager() 
     processed_success = DICOMSetSuccessfulProcessingJobManager() # Only results of successful processing jobs
+
+    is_volume = models.BooleanField(null=True)
+    frame_of_reference = models.CharField(max_length=200,null=True)
+    image_orientation_patient = ArrayField(ArrayField(models.FloatField(),size=3),size=3,null=True)
+    image_orientation_calc = ArrayField(ArrayField(models.FloatField(),size=3),size=3,null=True)
+    image_orientation_calc_inv = ArrayField(ArrayField(models.FloatField(),size=3),size=3,null=True)
+
+    def set_from_instance(self, instance=None):
+        if instance is None:
+            instance = self.instances.representative()
+        if self.image_orientation_calc_inv:
+            return
+        metadata = json.loads(instance.json_metadata)
+
+        im_orientation_pt = metadata.get("00200037",{}).get("Value",None)
+        arr = np.asarray(im_orientation_pt).reshape((2,3))
+        arr2 = np.vstack((arr,[np.cross(*arr)]))
+
+        orient_calc = get_im_orientation_mat(metadata)
+        self.frame_of_reference = metadata.get("00200052",{}).get("Value",[None])[0]
+        self.image_orientation_patient = arr2.tolist()
+        self.image_orientation_calc = orient_calc.tolist()
+        self.image_orientation_calc_inv = np.linalg.inv(orient_calc).tolist()
+        self.save()
 
     def __str__(self):
         return f"{self.id} (type: {self.type}, instances: {self.instances.count()})"
@@ -304,6 +333,16 @@ class DICOMInstance(models.Model):
     )
     objects = DICOMInstanceManager()
 
+    image_position_patient = ArrayField(models.FloatField(),size=3,null=True)
+    slice_z_position = models.FloatField(null=True)
+
+    def calc_position(self):
+        if not self.dicom_set.image_orientation_patient:
+            self.dicom_set.set_from_instance(self)
+        if not self.image_position_patient or not self.slice_z_position:
+            self.image_position_patient = self.image_position_patient or json.loads(self.json_metadata).get("00200032",{}).get("Value",None)
+            self.slice_z_position = self.slice_z_position or np.dot(np.asarray(self.dicom_set.image_orientation_patient[2]), np.asarray(self.image_position_patient))    
+            self.save(update_fields=["image_position_patient", "slice_z_position"])
 
     def __str__(self):
         return "; ".join([f"{x}: {getattr(self,x)}" for x in "series_number slice_location acquisition_seconds acquisition_number num_frames".split()])
@@ -318,7 +357,8 @@ class DICOMInstance(models.Model):
             valuerep.DA(ds.StudyDate), valuerep.TM(ds.StudyTime)
         )
         delta = series_dt - study_dt
-
+        z_axis = np.cross(*np.asarray(ds.get("ImageOrientationPatient")).reshape((2,3)))
+        z_position = np.dot(z_axis, ds.get("ImagePositionPatient"))
         return DICOMInstance(
             study_uid=ds.StudyInstanceUID,
             series_uid=ds.SeriesInstanceUID,
@@ -328,6 +368,8 @@ class DICOMInstance(models.Model):
             slice_location=ds.get("SliceLocation"),
             # instance_number=ds.get("InstanceNumber"),
             num_frames=ds.get("NumberOfFrames"),
+            image_position_patient = [float(x) for x in ds.get("ImagePositionPatient")],
+            slice_z_position = z_position,
             acquisition_seconds = delta.total_seconds(),
             json_metadata=ds.to_json(bulk_data_threshold=1024, bulk_data_element_handler=lambda _: ""),
         )
@@ -343,6 +385,7 @@ class DICOMInstance(models.Model):
         indexes = [
             models.Index(fields=["series_uid", "acquisition_number"]),
             models.Index(fields=["study_uid", "series_number"]),
+            models.Index(fields=["dicom_set", "slice_z_position"])
         ]
 
 

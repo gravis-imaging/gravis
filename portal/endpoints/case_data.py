@@ -10,7 +10,8 @@ from django.views.decorators.http import require_POST, require_GET
 from django.shortcuts import get_object_or_404
 from portal.jobs.load_dicoms_job import CopyDicomsJob
 from portal.models import *
-from .common import get_im_orientation_mat, user_opened_case, debug_sql
+from common.calculations import get_im_orientation_mat
+from .common import user_opened_case, debug_sql
 from django.db import transaction
 
 @login_required
@@ -115,14 +116,10 @@ def processed_results_json(request, case, category, source_set):
 @require_GET
 def preview_urls(request, case, source_set, view, location):
     dicom_set = DICOMSet.processed_success.filter(case_id=int(case),type=f"CINE/{view}").filter(processing_job__dicom_set=source_set).latest('processing_job__created_at')
-
     location = np.asarray(list(map(int, location.split(","))))
-    representative_instance = dicom_set.instances.representative()
-    im_orientation_mat = get_im_orientation_mat(json.loads(representative_instance.json_metadata))
+    im_orientation_mat_inv = np.asarray(DICOMSet.objects.get(case_id=int(case),type=f"ORI").image_orientation_calc_inv) # get_im_orientation_mat(json.loads(representative_instance.json_metadata))
 
-    # print(location)
-    transformed_location = (np.linalg.inv(im_orientation_mat) @ location)
-    # print(transformed_location)
+    transformed_location = (im_orientation_mat_inv @ location)
     slice_number = int(transformed_location[ [ "SAG", "COR", "AX"].index(view) ])
     qs = dicom_set.instances.only("slice_location","instance_location","num_frames","dicom_set_id").order_by('slice_location')
     if slice_number < 0:

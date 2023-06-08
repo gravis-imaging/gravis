@@ -8,7 +8,7 @@ from django.conf import settings
 from django.urls import path
 import numpy as np
 import numpy.typing as npt
-from portal.endpoints.common import get_im_orientation_mat
+from common.calculations import get_im_orientation_mat
 import pydicom
 
 from portal.models import Case, DICOMInstance, DICOMSet, ProcessingJob
@@ -75,30 +75,19 @@ class GeneratePreviewsJob(WorkJobView):
 
     @classmethod
     def do_job(cls, job: ProcessingJob):
-        instances = job.dicom_set.instances.all()
-        first_instance_metadata = json.loads(instances[0].json_metadata)
-        if "00200037" not in first_instance_metadata:
-            raise Exception("ImageOrientationPatient tag missing from dataset. This may not be a volume at all.")
-        
-        im_orientation_patient = np.asarray(first_instance_metadata["00200037"]["Value"]).reshape((2,3))
-        im_orientation_mat = np.vstack((im_orientation_patient,[cross(*im_orientation_patient)]))
-        z_axis = im_orientation_mat[2]
-        # views = cls.calc_views_for_set(im_orientation_patient)
+        instances = job.dicom_set.instances.order_by("acquisition_seconds","series_uid","slice_z_position").all()
+        first_instance_metadata = json.loads(instances[0].json_metadata)     
 
-        def get_position(instance):
-            return np.asarray(json.loads(instance.json_metadata)["00200032"]["Value"])
+        series_uids = { k.series_uid:True for k in instances }
 
+        split_by_series = [ [instance for instance in instances if instance.series_uid == uid] for uid in series_uids ]
+        files_by_series = [ [ Path(i.dicom_set.set_location) / i.instance_location for i in k] for k in split_by_series ]
 
-        locations = sorted([np.dot(z_axis,get_position(k)) for k in instances if k.series_uid == instances[0].series_uid])
-        logger.info(f"z-axis {z_axis}")
-
-        average_z_spacing = (max(locations) - min(locations)) / (len(locations)-1) #TODO: really subtract 1 here? why does this work? 
-
+        average_z_spacing = (split_by_series[0][-1].slice_z_position - split_by_series[0][0].slice_z_position) / (len(files_by_series[0])-1) #TODO: really subtract 1 here? why does this work? 
         voxel_spacing = [average_z_spacing, *first_instance_metadata["00280030"]["Value"]]
         logger.info(f"====== Voxel spacing is {voxel_spacing} =====")
-        series_uids = { k.series_uid for k in instances }
-        split_by_series = [ sorted([k for k in instances if k.series_uid == uid], key = lambda x:np.dot(z_axis,get_position(x))) for uid in series_uids ]
-        files_by_series = [ [ Path(i.dicom_set.set_location) / i.instance_location for i in k] for k in sorted(split_by_series,key=lambda x:x[0].acquisition_seconds) ]
+
+        # files_by_series = [ [ Path(i.dicom_set.set_location) / i.instance_location for i in k] for k in split_by_series ]
 
         random_name = str(uuid.uuid4())
         dicom_sets = []
@@ -139,7 +128,7 @@ class GeneratePreviewsJob(WorkJobView):
                     print(volume.shape)
                 volume[i,j,:,:] = array
         assert volume is not None
-        orient = get_im_orientation_mat(first_instance_metadata)
+        orient = np.asarray(job.dicom_set.image_orientation_calc) #get_im_orientation_mat(first_instance_metadata)
         rotations = cls.mat_to_rotations(orient)
         for k,axes in rotations:
             volume = np.rot90(volume,k=k, axes=[a+1 for a in axes])

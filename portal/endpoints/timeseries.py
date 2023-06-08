@@ -9,7 +9,8 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
-from .common import get_im_orientation_mat, json_load_body
+from common.calculations import get_im_orientation_mat
+from .common import json_load_body
 from portal.models import *
 
 @login_required
@@ -28,15 +29,8 @@ def timeseries_data(request, case, source_set):
     
     acquisition_seconds = DICOMInstance.objects.filter(dicom_set__case=case, dicom_set=source_set).values("acquisition_seconds").distinct("acquisition_seconds").order_by("acquisition_seconds")
     acquisition_timepoints = [k['acquisition_seconds'] for k in acquisition_seconds]
-    ax_preview_set =  DICOMSet.processed_success.only("id").filter(case=case,type=f"CINE/AX",processing_job__dicom_set=source_set).latest('processing_job__created_at')
-    ax_instances = ax_preview_set.instances
-    example_instance = ax_instances.representative()
-
-
-    metadata = json.loads(example_instance.json_metadata)
-    # im_orientation_patient = np.asarray(metadata["00200037"]["Value"]).reshape((2,3))
-    im_orientation_mat = get_im_orientation_mat(metadata) #np.rint(np.vstack((im_orientation_patient,[cross(*im_orientation_patient)])))
-    im_orientation_mat_inv = np.linalg.inv(im_orientation_mat)
+    
+    im_orientation_mat_inv = np.asarray(DICOMSet.objects.get(type="ORI",case=case).image_orientation_calc_inv)
 
     dicom_sets_by_orientation = {}
     # TODO: Calculate out-of-bounds properly. It's checked on the client, but still...

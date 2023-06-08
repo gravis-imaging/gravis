@@ -9,8 +9,8 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
-
-from .common import get_im_orientation_mat, json_load_body
+from common.calculations import get_im_orientation_mat
+from .common import json_load_body
 from portal.models import *
 
 class SkipDicomSet(Exception):
@@ -51,29 +51,26 @@ def show_array(a):
 
 def get_stats(annotations, dicom_set, frame_of_reference=None):
     # print(dicom_set.type)
-    instances = dicom_set.instances
-    example_instance = instances.representative()
-    metadata = json.loads(example_instance.json_metadata)
-    # print(dicom_set.type, frame_of_reference, metadata.get("00200052",{}).get("Value"))
+    # example_instance = instances.representative()
+    # metadata = json.loads(example_instance.json_metadata)
+    # print(dicom_set.type, frame_of_reference, metadata.get("00200052",{}).get("Value")) 
     if frame_of_reference:
-        if metadata.get("00200052",{}).get("Value",[None])[0] != frame_of_reference:
+        if dicom_set.frame_of_reference != frame_of_reference:
             raise WrongFrameOfReference()
-    im_orientation_mat = get_im_orientation_mat(metadata)
-    im_orientation_mat_inv = np.linalg.inv(im_orientation_mat)
-    def get_position(instance):
-        return np.asarray(json.loads(instance.json_metadata)["00200032"]["Value"])
+        
+    im_orientation_mat_inv = np.asarray(dicom_set.image_orientation_calc_inv)
 
-    instances_sorted = sorted(instances.all(), key=lambda x:np.dot(im_orientation_mat[2],get_position(x)))
+    instances = dicom_set.instances.all().order_by("slice_z_position")
 
     volume = None
-    for i, instance in enumerate(instances_sorted):
+    for i, instance in enumerate(instances):
         dcm = pydicom.dcmread(Path(settings.DATA_FOLDER) / instance.dicom_set.set_location / instance.instance_location)
         array = dcm.pixel_array # [ row, column ] order
         if len(array.shape) > 2:
             raise SkipDicomSet() # Probably a color image
         
         if volume is None:
-            volume = np.empty_like(array,shape=(len(instances_sorted), *array.shape))
+            volume = np.empty_like(array,shape=(len(instances), *array.shape))
         volume[i,:,:] = array
 
     def get_index(axis,volume_slice):
