@@ -8,6 +8,6 @@ from loguru import logger
 
 def run(case):
     incoming_dicom_set = case.dicom_sets.get(origin="Incoming")
-    q = django_rq.get_queue(WorkJobView.queue)    
     _, rq_preview_job = GeneratePreviewsJob.enqueue_work(case, incoming_dicom_set)
-    return MarkCaseReadyJob.enqueue_work(case, depends_on=[rq_preview_job])
+    mets_job, rq_mets_job = DockerJob.enqueue_work(case, incoming_dicom_set, docker_image="mercureimaging/gravis-metsmaps")
+    return MarkCaseReadyJob.enqueue_work(case, depends_on=[rq_preview_job, rq_mets_job])
