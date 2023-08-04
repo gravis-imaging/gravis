@@ -81,7 +81,7 @@ def do_docker_job(job):
             "=== MODULE OUTPUT - BEGIN ========================================"
         )
         for line in container.logs(stream=True):
-            print(line.decode("utf-8").strip())
+            logger.info(line.decode("utf-8").strip())
 
         logger.info(
             "=== MODULE OUTPUT - END =========================================="
