@@ -157,8 +157,8 @@
                             return;
                         }
                         await doFetch(`/api/case/${case_id}/reprocess`);
+                        setTimeout(()=> case_data_table.ajax.reload(), 1500);
                         await successToast("The case will be reprocessed.");
-                        case_data_table.ajax.reload();
                     }
                 },
                 {
@@ -176,7 +176,7 @@
                             try {
                                 await doFetch(`/api/case/${case_id}/delete`);
                                 await successToast("The case has been deleted.");
-                                case_data_table.ajax.reload();
+                                setTimeout(()=> case_data_table.ajax.reload(), 1500);
                             } catch (e) {
                                 Swal.showValidationMessage("A problem occurred while deleting the case. Please try again.")
                             }
@@ -252,14 +252,18 @@
     }
 
     function canModifyCaseStatus(status, last_read_by_id, operation) {
-        if ((status=="Received") || (status=="Queued") || (status=="Processing")) {
-            return false;
-        }
-
         if ((status=="Ready") || (status=="Complete")) {
             return true;
         }
 
+        {% if user.is_staff %}
+        if (status=="Processing") {
+            return true
+        }
+        {% endif %}
+        if ((status=="Received") || (status=="Queued") || (status=="Processing")) {
+            return false;
+        }
         if ((status=="Viewing")) {
             if (last_read_by_id=="{{user.username}}") {
                 return true;

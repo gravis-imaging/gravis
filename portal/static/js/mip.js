@@ -272,7 +272,7 @@ class AuxManager {
         // Load a stack into the aux viewer. 
         // Assume it's in the native image orientation. Probably could check this with the frame of reference
         const native_vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0]);
-        const index = native_vp._getImageIdIndex() || this.viewport.getCurrentImageIdIndex() || 0;
+        const index = native_vp.getCurrentImageIdIndex() || this.viewport.getCurrentImageIdIndex() || 0;
         await this.viewport.setStack(urls, index);
         cornerstone.tools.utilities.stackPrefetch.enable(this.viewport.element);
         

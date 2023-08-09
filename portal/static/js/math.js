@@ -26,8 +26,8 @@ const rot_z = (angle) => [
 ];
 function mul(a,b) {
   const out = ident()
-  vtk.Common.Core.vtkMath.multiply3x3_mat3(a,b,out);
-  return out;
+  vtk.Common.Core.vtkMath.multiply3x3_mat3(flatten_array(a),flatten_array(b),out);
+  return unflatten_array(out);
 }
 function generate_array(x,y,z) {
   const out = ident()
