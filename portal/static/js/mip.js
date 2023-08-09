@@ -186,7 +186,7 @@ class AuxManager {
         }
         this.viewer.renderingEngine.enableElement(viewInput)
         this.viewport = this.viewer.renderingEngine.getViewport(viewInput.viewportId);
-        if (type == "stack" && this.viewer.case_data.case_type == "GRASP Onco") {
+        if (type == "stack" && this.viewer.case_data.case_type.indexOf("Onco") != -1) {
             this.viewport.setProperties( { "RGBTransferFunction": transferFunction})
         }
         this.addCameraSyncHandlers(this.viewport.element);
