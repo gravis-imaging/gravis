@@ -93,7 +93,7 @@ class StateManager {
             }
             for (var a of state.annotations) {
                 this.viewer.annotation_manager.annotations[a.annotationUID] = { uid: a.annotationUID, label: a.data.label, ...a.metadata }
-                annotationState.addAnnotation(this.viewer.viewports[0].element,a)
+                annotationState.addAnnotation(a, this.viewer.viewports[0].element)
             }
         }
         this.current_state = JSON.parse(JSON.stringify(state)); // deep copy for safekeeping
