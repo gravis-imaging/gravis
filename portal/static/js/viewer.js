@@ -326,8 +326,8 @@ class GraspViewer {
         
         toolGroupMain.addTool(StackScrollMouseWheelTool.toolName)
         
-        toolGroupAux.addTool(StackScrollTool.toolName, {loopScroll: true});
-        toolGroupAux.addTool(StackScrollMouseWheelTool.toolName, {loopScroll: true});
+        toolGroupAux.addTool(StackScrollTool.toolName, {loop: true});
+        toolGroupAux.addTool(StackScrollMouseWheelTool.toolName, {loop: true});
         
         [toolGroupMain, toolGroupAux].map(x=>x.addTool(ProbeTool.toolName, {
             customTextLines: (data) => [ data.label ]
