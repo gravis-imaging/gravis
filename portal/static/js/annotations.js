@@ -10,7 +10,7 @@ class AnnotationManager {
 
     getAllAnnotations(viewport) {
         return ["EllipticalROI","Probe"].flatMap(
-            type => cornerstone.tools.annotation.state.getAnnotations((viewport || this.viewer.viewports[0]).element,type) || []
+            type => cornerstone.tools.annotation.state.getAnnotations(type,(viewport || this.viewer.viewports[0]).element) || []
         );
     }
       
