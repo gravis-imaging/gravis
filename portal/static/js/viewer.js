@@ -241,7 +241,18 @@ class GraspViewer {
                 }));
             });
         }
-        
+    async switchCase(studies_data, current_case) {
+        this.studies_data = studies_data;
+        this.case_data = current_case;
+        this.case_id = current_case.id;
+        this.state_manager = new StateManager(this)
+
+        Object.keys(this.annotation_manager.annotations).forEach(key => {
+            delete this.annotation_manager.annotations[key];
+        })
+        // let event = new CustomEvent("case_change", {});
+        // window.dispatchEvent(event);
+    }
     createViewportGrid(n=4) {
         const viewportGrid = document.createElement('div');
         viewportGrid.className = 'viewer-grid';

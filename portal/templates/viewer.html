@@ -79,9 +79,28 @@
             if (this.$event.target.value == this.case_id) {
               return
             }
-            result = await doFetch(`/api/case/${this.$event.target.value}/viewable`,{},"GET");
+            let result = await doFetch(`/api/case/${this.$event.target.value}/viewable`,{},"GET");
             if (result.ok) {
-              window.location = `/viewer/${this.$event.target.value}`;
+              // window.location = `/viewer/${this.$event.target.value}`;
+              this.loading = true;
+              let info = await doFetch(`/viewer/${this.$event.target.value}/info`,{},"GET");
+              console.warn(info)
+              this.studies_data = info.studies;
+              this.case_data = info.current_case;
+              this.patient_cases = info.patient_cases;
+              this.read_only = info.read_only;
+              this.case_id = info.current_case.id;
+              await viewer.switchCase(this.studies_data, this.case_data)
+
+              await viewer.switchStudy(this.studies_data.volumes[0].uid, this.studies_data.volumes[0].dicom_set, this.case_id);
+              viewer.state_manager.load(true);
+              let event = new CustomEvent("case-update", {
+                  detail: {}
+              });
+              window.dispatchEvent(event);
+
+              this.loading = false;
+
             } else {
               errorPrompt("This case is not ready for viewing.")
             }
@@ -260,7 +279,7 @@
         <i class="fas fa-map-marker-alt"></i>
       </button>
         <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-          <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
+          <template x-on:case-update.window="" x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
             <li><a class="dropdown-item" @click="await viewer.annotation_manager.goToAnnotation(uid);" href="#" x-text="(viewer.annotation_manager.annotations[uid] || {}).label"></a></li>
           </template>               
         </ul>

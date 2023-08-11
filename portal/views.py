@@ -167,7 +167,7 @@ def case_info(request,case_id):
         "current_case": case.to_dict(request.user.profile.privacy_mode),
         "original_dicom_set_id": instances[0].dicom_set.id,
         "patient_cases": patient_cases,
-        "read_only": "true" if read_only else "false"
+        "read_only": read_only
     }
 
     return JsonResponse(context)

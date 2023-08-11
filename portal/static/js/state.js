@@ -38,40 +38,42 @@ class StateManager {
         return { cameras, voi, annotations };
     }
 
-    _applyState(state) {
-        state.cameras.slice(0,3).map((c,n)=> {
-            this.viewer.viewports[n].setCamera(c);
-        })
-        // TODO fix this workaround. If I set the aux camera with the others, it ends up zooming all the way out for some reason.
-        // this does not work if the first aux dicomset is not a volume. 
-        if (state.cameras.length > 3) {
-            const fixAuxViewport = (evt) => {
-                // Wait for the aux volume to load
-                if (evt.detail.volume.volumeId.endsWith("_AUXVOLUME")) {
-                    // Wait for the next frame...
-                    window.requestAnimationFrame( () => {
-                        // Set the camera...
-                        this.viewer.viewports[3].setCamera(state.cameras[3]);
-                        this.viewer.viewports[3].render();
-                    });
-                    cornerstone.eventTarget.removeEventListener("CORNERSTONE_VOLUME_LOADED", fixAuxViewport);
-                    // cornerstone.eventTarget.removeEventListener("CORNERSTONE_STACK_VIEWPORT_NEW_STACK", fixAuxViewportStack);
-                };
+    _applyState(state, keepCameras = false) {
+        if (!keepCameras) {
+            state.cameras.slice(0,3).map((c,n)=> {
+                this.viewer.viewports[n].setCamera(c);
+            })
+            // TODO fix this workaround. If I set the aux camera with the others, it ends up zooming all the way out for some reason.
+            // this does not work if the first aux dicomset is not a volume. 
+            if (state.cameras.length > 3) {
+                const fixAuxViewport = (evt) => {
+                    // Wait for the aux volume to load
+                    if (evt.detail.volume.volumeId.endsWith("_AUXVOLUME")) {
+                        // Wait for the next frame...
+                        window.requestAnimationFrame( () => {
+                            // Set the camera...
+                            this.viewer.viewports[3].setCamera(state.cameras[3]);
+                            this.viewer.viewports[3].render();
+                        });
+                        cornerstone.eventTarget.removeEventListener("CORNERSTONE_VOLUME_LOADED", fixAuxViewport);
+                        // cornerstone.eventTarget.removeEventListener("CORNERSTONE_STACK_VIEWPORT_NEW_STACK", fixAuxViewportStack);
+                    };
+                }
+                // this doesn't reliably work
+                // const fixAuxViewportStack = (evt) => {
+                //     if (evt.detail.viewportId = "VIEW_AUX" ) {
+                //         window.setTimeout( () => {
+                //             // Set the camera...
+                //             this.viewer.viewports[3].setCamera(state.cameras[3]);
+                //             this.viewer.viewports[3].render();
+                //         },5000);
+                //         cornerstone.eventTarget.removeEventListener("CORNERSTONE_VOLUME_LOADED", fixAuxViewport);
+                //         cornerstone.eventTarget.removeEventListener("CORNERSTONE_STACK_VIEWPORT_NEW_STACK", fixAuxViewportStack);
+                //     }
+                // }
+                cornerstone.eventTarget.addEventListener("CORNERSTONE_VOLUME_LOADED", fixAuxViewport);
+                // cornerstone.eventTarget.addEventListener("CORNERSTONE_STACK_VIEWPORT_NEW_STACK", fixAuxViewportStack);
             }
-            // this doesn't reliably work
-            // const fixAuxViewportStack = (evt) => {
-            //     if (evt.detail.viewportId = "VIEW_AUX" ) {
-            //         window.setTimeout( () => {
-            //             // Set the camera...
-            //             this.viewer.viewports[3].setCamera(state.cameras[3]);
-            //             this.viewer.viewports[3].render();
-            //         },5000);
-            //         cornerstone.eventTarget.removeEventListener("CORNERSTONE_VOLUME_LOADED", fixAuxViewport);
-            //         cornerstone.eventTarget.removeEventListener("CORNERSTONE_STACK_VIEWPORT_NEW_STACK", fixAuxViewportStack);
-            //     }
-            // }
-            cornerstone.eventTarget.addEventListener("CORNERSTONE_VOLUME_LOADED", fixAuxViewport);
-            // cornerstone.eventTarget.addEventListener("CORNERSTONE_STACK_VIEWPORT_NEW_STACK", fixAuxViewportStack);
         }
         fixUpCrosshairs();
         if ( state.voi && state.voi[this.viewer.dicom_set]) {
@@ -118,7 +120,7 @@ class StateManager {
         }
     }
 
-    async load() {
+    async load(keepCameras = false) {
         if (!this.viewer.case_id) return;
         var state;
         // var state = JSON.parse(localStorage.getItem(this.viewer.case_id));
@@ -134,7 +136,7 @@ class StateManager {
         this.session_list = (await doFetch(`/api/case/${this.viewer.case_id}/sessions`,{},"GET")).sessions
 
         console.info("Loading state");
-        this._applyState(state);
+        this._applyState(state, keepCameras);
         this.viewer.renderingEngine.renderViewports(this.viewer.viewportIds);
         this.changed = false;
         this.just_loaded = true;
