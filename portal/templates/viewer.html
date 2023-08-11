@@ -28,12 +28,6 @@
 
 
 {% block navmenu %}
-
-{% if read_only == "true" %}
-<li class="nav-item menuitems-top ps-0">                                             
-  <h5 class="nav-link mb-0 ps-0"><span class="badge bg-danger rounded-pill" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="Case Assigned to Other User (Read-Only Mode)">Read-Only</span></h5>
-</li>
-{% endif %} 
 {% endblock %}
 
 {% block content %}
@@ -181,7 +175,7 @@
         </div>
       </template>
       <template x-teleport="#navtest">
-        <div class="me-2" style="min-width: 100px;">
+        <div x-show="patient_cases.length > 1" class="me-2" style="min-width: 100px;">
           <select id="patient_case_select" name="patient_case_select" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-lg text-light btn-viewer-toolbar" data-width="200px"
           x-bind="case_select">
             <optgroup label="Exam date">
@@ -196,10 +190,15 @@
         <template x-teleport="#navtest">
         <li class="nav-item menuitems-top" >
           <a href="#" @click="showCaseInformation(case_id);">
-              <h5 class="navbar_patient_info nav-link mb-0" x-text="case_info.patient_name"></h5>
+              <h5 class="navbar_patient_info nav-link mb-0" x-text="case_data.patient_name"></h5>
           </a>
         </li></span>
         </template>
+      <template x-teleport="#navtest">
+        <li x-show="read_only"  class="nav-item menuitems-top ps-0">                                             
+          <h5 class="nav-link mb-0 ps-0"><span class="badge bg-danger rounded-pill" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="Case Assigned to Other User (Read-Only Mode)">Read-Only</span></h5>
+        </li>
+      </template>
     <template x-if="studies_data.others.length > 1">
       <select id="aux_select" name="studies" autocomplete="off" class="selectpicker show-tick all-pointer-events" value="" data-style="btn btn-lg text-light btn-viewer-toolbar" data-width="200px"
       @change="job_loading=true; aux_loading= true; await $nextTick(); await viewer.aux_manager.selectStack($event.target.value); job_loading=false; aux_loading=false; " title="Displayed series">
