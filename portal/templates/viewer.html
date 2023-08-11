@@ -54,12 +54,14 @@
         case_id: "{{current_case.id}}",
         read_only: {{read_only}},
         case_select_idx: null,
+        study_type: null,
         init: async function() {
           this.loading = true; 
           await this.$nextTick();
           viewer = await new GraspViewer(this.$refs.viewer_main, this.$refs.viewer_preview, this.studies_data, this.case_data); 
           window.viewer = viewer; 
           await viewer.switchStudy(this.studies_data.volumes[0].uid, this.studies_data.volumes[0].dicom_set, this.case_id);
+          this.study_type = this.studies_data.volumes[0].type;
           if (this.studies_data.others.length > 0 && viewer.aux_manager.type != "MIP") {
             await viewer.aux_manager.selectStack(this.studies_data.others[0].type);
           }
@@ -79,31 +81,30 @@
             if (this.$event.target.value == this.case_id) {
               return
             }
-            let result = await doFetch(`/api/case/${this.$event.target.value}/viewable`,{},"GET");
-            if (result.ok) {
-              // window.location = `/viewer/${this.$event.target.value}`;
-              this.loading = true;
-              let info = await doFetch(`/viewer/${this.$event.target.value}/info`,{},"GET");
-              console.warn(info)
-              this.studies_data = info.studies;
-              this.case_data = info.current_case;
-              this.patient_cases = info.patient_cases;
-              this.read_only = info.read_only;
-              this.case_id = info.current_case.id;
-              await viewer.switchCase(this.studies_data, this.case_data)
-
-              await viewer.switchStudy(this.studies_data.volumes[0].uid, this.studies_data.volumes[0].dicom_set, this.case_id);
-              viewer.state_manager.load(true);
-              let event = new CustomEvent("case-update", {
-                  detail: {}
-              });
-              window.dispatchEvent(event);
-
-              this.loading = false;
-
-            } else {
+            let case_id = this.$event.target.value;
+            let result = await doFetch(`/api/case/${case_id}/viewable`,{},"GET");
+            if (!result.ok) {
               errorPrompt("This case is not ready for viewing.")
-            }
+              return;
+            } 
+            // window.location = `/viewer/${this.$event.target.value}`;
+            this.loading = true;
+            let info = await doFetch(`/viewer/${case_id}/info`,{},"GET");
+            this.studies_data = info.studies;
+            this.case_data = info.current_case;
+            this.patient_cases = info.patient_cases;
+            this.read_only = info.read_only;
+            this.case_id = info.current_case.id;
+            
+            await this.viewer.switchCase(this.studies_data, this.case_data)
+            let volume = this.studies_data.volumes.find((v)=> v.type==this.study_type)
+            await this.viewer.switchStudy(volume.uid, volume.dicom_set, this.case_id);
+            
+            this.viewer.findings = await this.viewer.loadFindings();
+            this.viewer.state_manager.load(true);
+            history.replaceState({}, "", case_id);
+            this.loading = false;
+
           }
         },
         volume_picker: {
@@ -184,10 +185,10 @@
     <div class="me-2" style="min-width: 100px;">
       <template x-if="studies_data.volumes.length > 1">
         <select id="studies" name="studies" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-lg text-light btn-viewer-toolbar" data-width="100px"
-        @change="loading=true; await $nextTick(); await viewer.switchStudy(...$event.target.value.split('__'), case_id);  loading=false;" title="Displayed series">
+        @change="loading=true; await $nextTick(); { let [ study_uid, dicom_set, type ] = $event.target.value.split('__'); await viewer.switchStudy(study_uid, dicom_set, case_id); study_type = type;} loading=false;" title="Displayed series">
           <optgroup label="Displayed MPR">
             <template x-for='study in studies_data.volumes'>
-              <option :value="`${study.uid}__${study.dicom_set}`" x-text="study.type"></option>
+              <option :value="`${study.uid}__${study.dicom_set}__${study.type}`" x-text="study.type"></option>
             </template>
           </optgroup>
         </select>
@@ -279,7 +280,7 @@
         <i class="fas fa-map-marker-alt"></i>
       </button>
         <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-          <template x-on:case-update.window="" x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
+          <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
             <li><a class="dropdown-item" @click="await viewer.annotation_manager.goToAnnotation(uid);" href="#" x-text="(viewer.annotation_manager.annotations[uid] || {}).label"></a></li>
           </template>               
         </ul>

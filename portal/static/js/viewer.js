@@ -156,7 +156,7 @@ class GraspViewer {
                 }
             }
 
-            if (this.case_data.case_type == "GRASP MRA") {
+            if (this.case_data.case_type.indexOf("MRA") != -1) {
                 this.aux_manager = new MIPManager(this);
             } else {
                 this.aux_manager = new AuxManager(this);
@@ -246,10 +246,6 @@ class GraspViewer {
         this.case_data = current_case;
         this.case_id = current_case.id;
         this.state_manager = new StateManager(this)
-
-        Object.keys(this.annotation_manager.annotations).forEach(key => {
-            delete this.annotation_manager.annotations[key];
-        })
         // let event = new CustomEvent("case_change", {});
         // window.dispatchEvent(event);
     }
