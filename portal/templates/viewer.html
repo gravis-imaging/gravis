@@ -77,6 +77,14 @@
           [':init']() { 
             this.case_select_idx = this.$el.selectedIndex;
           },
+          ['x-effect']() {
+            this.should_disable();
+            if (this.viewer) {
+              // "refresh" should do this, but it ends up doubling the selection items
+              $(this.$el).selectpicker('destroy'); 
+              $(this.$el).selectpicker();
+            }
+          },
           async ['@change']() {
             if (this.$event.target.value == this.case_id) {
               return
@@ -199,6 +207,7 @@
       <template x-teleport="#navtest">
         <div class="me-2" style="min-width: 100px;" x-show="patient_cases.length > 1">
           <select id="patient_case_select" name="patient_case_select" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-lg text-light btn-viewer-toolbar" data-width="200px"
+          :disabled="should_disable" disabled="disabled" 
           x-bind="case_select">
             <optgroup label="Exam date">
               <template x-for="c in patient_cases">
