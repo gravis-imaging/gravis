@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="/static/css/external/dygraph.min.css" />
 {% endblock %}
 
+
 {% block addedscripts %}
 <script defer src="/static/js/cornerstone/bundle.js"></script>
 <script src="/static/js/external/bootstrap@5.2.1.bundle.min.js" integrity="sha384-u1OknCvxWvY5kfmNBILK2hRnQC3Pr17a+RTT6rIHI7NnikvbZlHgTPOOmMi466C8"></script>
@@ -25,9 +26,20 @@
 </li>
 {% endblock %}
 
+
+{% block navmenu %}
+
+{% if read_only == "true" %}
+<li class="nav-item menuitems-top ps-0">                                             
+  <h5 class="nav-link mb-0 ps-0"><span class="badge bg-danger rounded-pill" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="Case Assigned to Other User (Read-Only Mode)">Read-Only</span></h5>
+</li>
+{% endif %} 
+{% endblock %}
+
 {% block content %}
 {{ studies|json_script:"studies_data" }}
 {{ current_case|json_script:"case_data"  }}
+{{ patient_cases|json_script:"patient_cases"  }}
 <script type="text/javascript">
   function parse_json_element(el) {
     return JSON.parse(document.getElementById(el).textContent)
@@ -44,8 +56,10 @@
         aux_loading: false,
         studies_data: parse_json_element("studies_data"),
         case_data: parse_json_element("case_data"),
+        patient_cases: parse_json_element("patient_cases"),
         case_id: "{{current_case.id}}",
         read_only: {{read_only}},
+        case_select_idx: null,
         init: async function() {
           this.loading = true; 
           await this.$nextTick();
@@ -62,6 +76,22 @@
         },
         should_disable: function() {
           return !this.viewer || !this.viewer.current_study || this.loading || this.switching;
+        },
+        case_select: {
+          [':init']() { 
+            this.case_select_idx = this.$el.selectedIndex;
+          },
+          async ['@change']() {
+            if (this.$event.target.value == this.case_id) {
+              return
+            }
+            result = await doFetch(`/api/case/${this.$event.target.value}/viewable`,{},"GET");
+            if (result.ok) {
+              window.location = `/viewer/${this.$event.target.value}`;
+            } else {
+              errorPrompt("This case is not ready for viewing.")
+            }
+          }
         },
         volume_picker: {
           async ['@mouseup']() {
@@ -140,16 +170,36 @@
     <!-- dicom set selection -->
     <div class="me-2" style="min-width: 100px;">
       <template x-if="studies_data.volumes.length > 1">
-      <select id="studies" name="studies" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-lg text-light btn-viewer-toolbar" data-width="100px"
-      @change="loading=true; await $nextTick(); await viewer.switchStudy(...$event.target.value.split('__'), case_id);  loading=false;" title="Displayed series">
-        <optgroup label="Displayed MPR">
-          <template x-for='study in studies_data.volumes'>
-            <option :value="`${study.uid}__${study.dicom_set}`" x-text="study.type"></option>
-          </template>
-        </optgroup>
-      </select>
-    </div>
-    </template>
+        <select id="studies" name="studies" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-lg text-light btn-viewer-toolbar" data-width="100px"
+        @change="loading=true; await $nextTick(); await viewer.switchStudy(...$event.target.value.split('__'), case_id);  loading=false;" title="Displayed series">
+          <optgroup label="Displayed MPR">
+            <template x-for='study in studies_data.volumes'>
+              <option :value="`${study.uid}__${study.dicom_set}`" x-text="study.type"></option>
+            </template>
+          </optgroup>
+        </select>
+        </div>
+      </template>
+      <template x-teleport="#navtest">
+        <div class="me-2" style="min-width: 100px;">
+          <select id="patient_case_select" name="patient_case_select" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-lg text-light btn-viewer-toolbar" data-width="200px"
+          x-bind="case_select">
+            <optgroup label="Exam date">
+              <template x-for="c in patient_cases">
+                <option :value="c.id" x-text="`${c.id}: ${c.exam_time}`" :selected="c.id === case_data.id">
+              </option>
+              </template>    
+            </optgroup>
+          </select>
+        </div>
+        </template>
+        <template x-teleport="#navtest">
+        <li class="nav-item menuitems-top" >
+          <a href="#" @click="showCaseInformation(case_id);">
+              <h5 class="navbar_patient_info nav-link mb-0" x-text="case_info.patient_name"></h5>
+          </a>
+        </li></span>
+        </template>
     <template x-if="studies_data.others.length > 1">
       <select id="aux_select" name="studies" autocomplete="off" class="selectpicker show-tick all-pointer-events" value="" data-style="btn btn-lg text-light btn-viewer-toolbar" data-width="200px"
       @change="job_loading=true; aux_loading= true; await $nextTick(); await viewer.aux_manager.selectStack($event.target.value); job_loading=false; aux_loading=false; " title="Displayed series">

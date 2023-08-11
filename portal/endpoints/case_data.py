@@ -88,6 +88,15 @@ def set_case_status(request, case, new_status):
 
 @login_required
 @require_GET
+@transaction.atomic
+def get_case_viewable(request, case):
+    case_item = get_object_or_404(Case, id=case)
+    if case_item.status in (Case.CaseStatus.READY, Case.CaseStatus.COMPLETE, Case.CaseStatus.VIEWING):
+        return JsonResponse({"ok":True})
+    return JsonResponse({"ok":False})
+
+@login_required
+@require_GET
 def case_metadata(request, case, dicom_set, study=None):
     fields = ["series_uid","series_number", "slice_location", "acquisition_number", "acquisition_seconds"]
 

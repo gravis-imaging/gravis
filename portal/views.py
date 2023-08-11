@@ -172,6 +172,8 @@ def viewer(request, case_id):
     instances = DICOMInstance.objects.defer("json_metadata").filter(dicom_set__case=case, dicom_set__type__in=("ORI", "SUB")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")
     
     other_instances = DICOMInstance.objects.defer("json_metadata").filter(dicom_set__case=case).exclude(dicom_set__type__in=("ORI", "SUB", "CINE/AX","CINE/COR", "CINE/SAG")).order_by("dicom_set__type").distinct("dicom_set__type")
+
+    patient_cases = list(map(lambda x:x.to_dict(),Case.objects.filter(mrn=case.mrn,case_type=case.case_type).order_by("exam_time","id")))
     #.distinct("study_uid","dicom_set")
     def i_to_dict(k):
         return dict(uid=k.study_uid,dicom_set=k.dicom_set.id, type=k.dicom_set.type)
@@ -180,6 +182,7 @@ def viewer(request, case_id):
                     "others": [i_to_dict(k) for k in other_instances]},
         "current_case": case.to_dict(request.user.profile.privacy_mode),
         "original_dicom_set_id": instances[0].dicom_set.id,
+        "patient_cases": patient_cases,
         "read_only": "true" if read_only else "false"
     }
     return render(request, "viewer.html", context)
