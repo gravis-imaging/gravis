@@ -97,11 +97,13 @@
             this.case_id = info.current_case.id;
             
             await this.viewer.switchCase(this.studies_data, this.case_data)
+
             let volume = this.studies_data.volumes.find((v)=> v.type==this.study_type)
             await this.viewer.switchStudy(volume.uid, volume.dicom_set, this.case_id);
             
             this.viewer.findings = await this.viewer.loadFindings();
             this.viewer.state_manager.load(true);
+            this.viewer.aux_manager.viewport.scroll(0); // dunno why this is necessary
             history.replaceState({}, "", case_id);
             this.loading = false;
 
