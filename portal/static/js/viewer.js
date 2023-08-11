@@ -156,7 +156,7 @@ class GraspViewer {
                 }
             }
 
-            if (case_data.case_type == "GRASP MRA") {
+            if (this.case_data.case_type == "GRASP MRA") {
                 this.aux_manager = new MIPManager(this);
             } else {
                 this.aux_manager = new AuxManager(this);
