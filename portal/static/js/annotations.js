@@ -10,7 +10,7 @@ class AnnotationManager {
 
     getAllAnnotations(viewport) {
         return ["EllipticalROI","Probe"].flatMap(
-            type => cornerstone.tools.annotation.state.getAnnotations((viewport || this.viewer.viewports[0]).element,type) || []
+            type => cornerstone.tools.annotation.state.getAnnotations(type,(viewport || this.viewer.viewports[0]).element) || []
         );
     }
       
@@ -151,7 +151,7 @@ class AnnotationManager {
             new_a.metadata = { ...a.metadata, idx: new_a.metadata.idx };
             new_a.data.handles.points = a.data.handles.points.slice().map(p=>p.slice());
             const viewport = this.viewer.viewports.find(x => x.id == new_a.metadata.viewportId);
-            cornerstone.tools.annotation.state.addAnnotation(viewport.element,new_a)
+            cornerstone.tools.annotation.state.addAnnotation(new_a,viewport.element)
             cornerstone.tools.annotation.selection.setAnnotationSelected(a.annotationUID, false, true);
             cornerstone.tools.annotation.selection.setAnnotationSelected(new_a.annotationUID, true, true);
 
@@ -257,7 +257,7 @@ class AnnotationManager {
             FrameOfReferenceUID: viewport.getFrameOfReferenceUID()
         }
         new_annotation.data.handles.points = points;
-        cornerstone.tools.annotation.state.addAnnotation(viewport.element,new_annotation)
+        cornerstone.tools.annotation.state.addAnnotation(new_annotation, viewport.element)
         cornerstone.tools.annotation.selection.setAnnotationSelected(new_annotation.annotationUID, true, false);
 
         this.viewer.viewports.map(x=>x.render())

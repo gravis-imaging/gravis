@@ -326,8 +326,8 @@ class GraspViewer {
         
         toolGroupMain.addTool(StackScrollMouseWheelTool.toolName)
         
-        toolGroupAux.addTool(StackScrollTool.toolName, {loopScroll: true});
-        toolGroupAux.addTool(StackScrollMouseWheelTool.toolName, {loopScroll: true});
+        toolGroupAux.addTool(StackScrollTool.toolName, {loop: true});
+        toolGroupAux.addTool(StackScrollMouseWheelTool.toolName, {loop: true});
         
         [toolGroupMain, toolGroupAux].map(x=>x.addTool(ProbeTool.toolName, {
             customTextLines: (data) => [ data.label ]
@@ -509,10 +509,10 @@ class GraspViewer {
 
             await Promise.all(
                 this.previewViewports.slice(0,3).map(async (v, n) => {
-                v.setVOI({lower, upper});
                 // Get closest preview image if only fraction of preview images were generated.
                 try {
                     await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / this.current_study.length));
+                    v.setVOI({lower, upper});    
                 } catch (e) {
                     console.error(e);
                     await errorToast("Failed to show preview image.");

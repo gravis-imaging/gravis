@@ -67,7 +67,10 @@ class AuxManager {
         if (!this.synced_viewport) return;
         if (this._no_sync) return;
         // Scroll the synced viewport to the same slice as the aux viewport.
+        this.synced_viewport.suppressEvents = true;
         scrollViewportToPoint(this.synced_viewport, this.viewport.getCamera().focalPoint, false)      
+        this.synced_viewport.suppressEvents = false;
+
     }
     cycleCamera() {
         // Swap the aux view between sagittal, coronal, axial views.
@@ -98,7 +101,7 @@ class AuxManager {
         if (this.viewport.getImageIds().length == 0) return;
         if (this.viewer.rotate_mode) return;
         this.viewport.suppressEvents = true;
-        this.viewport.setImageIdIndex(vp._getImageIdIndex());
+        this.viewport.setImageIdIndex(vp.getCurrentImageIdIndex());
         this.viewport.suppressEvents = false;
         this.viewport.targetImageIdIndex = this.viewport.getCurrentImageIdIndex();
     }
@@ -183,7 +186,7 @@ class AuxManager {
         }
         this.viewer.renderingEngine.enableElement(viewInput)
         this.viewport = this.viewer.renderingEngine.getViewport(viewInput.viewportId);
-        if (type == "stack" && this.viewer.case_data.case_type == "GRASP Onco") {
+        if (type == "stack" && this.viewer.case_data.case_type.indexOf("Onco") != -1) {
             this.viewport.setProperties( { "RGBTransferFunction": transferFunction})
         }
         this.addCameraSyncHandlers(this.viewport.element);
@@ -206,7 +209,7 @@ class AuxManager {
         }
     }
     addCameraSyncHandlers(el) {
-        if (this.viewport.type == 'stack' && this.viewer.case_data.case_type == "GRASP Onco") {
+        if (this.viewport.type == 'stack' && this.viewer.case_data.case_type.indexOf("Onco") != -1) {
             el.addEventListener("CORNERSTONE_STACK_VIEWPORT_SCROLL",this.auxScroll);
             for (const vp of this.viewer.viewports.slice(0,3)) {
                 vp.element.addEventListener("CORNERSTONE_CAMERA_MODIFIED", this.stackMainScroll)
@@ -272,7 +275,7 @@ class AuxManager {
         // Load a stack into the aux viewer. 
         // Assume it's in the native image orientation. Probably could check this with the frame of reference
         const native_vp = this.viewer.renderingEngine.getViewport(this.viewer.getNativeViewports()[0]);
-        const index = native_vp._getImageIdIndex() || this.viewport.getCurrentImageIdIndex() || 0;
+        const index = native_vp.getCurrentImageIdIndex() || this.viewport.getCurrentImageIdIndex() || 0;
         await this.viewport.setStack(urls, index);
         cornerstone.tools.utilities.stackPrefetch.enable(this.viewport.element);
         
