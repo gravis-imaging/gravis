@@ -276,27 +276,37 @@
     @click="viewer.toggleRotateMode()" style="color: #fff;"><i class="fa-solid fa-lock" :class="(viewer && viewer.rotate_mode)? 'fa-solid fa-lock-open': 'fa-solid fa-lock'" ></i>
     </button> 
 
+    <div class=""  style="margin-left: 1.4rem;"></div>
     <!-- Annotations -->
-    <div class=""  style="margin-left: 1.4rem;">
-      <div class="dropdown">
-        <button
-          class="btn-primary btn-large btn-viewer"
-          :disabled="should_disable" disabled="disabled" 
-          href="#"
-          id="dropdownMenuLink"
-          data-mdb-toggle="dropdown"
-          aria-expanded="false",
-          title="Select annotation"
-        >
-        <i class="fas fa-map-marker-alt"></i>
-      </button>
-        <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-          <template x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
-            <li><a class="dropdown-item" @click="await viewer.annotation_manager.goToAnnotation(uid);" href="#" x-text="(viewer.annotation_manager.annotations[uid] || {}).label"></a></li>
-          </template>               
-        </ul>
-      </div>    
-    </div>
+
+    <button title="Add ROI annotation" class="all-pointer-events btn-large btn-viewer ms-2 my-2" 
+    :disabled="should_disable() || read_only || viewer.rotate_mode" disabled="disabled" style="color:white"
+    :class="!should_disable() && viewer.annotation_manager.current_annotation_tool=='EllipticalROI'? 'btn-success' : 'btn-primary'"
+    @click="viewer.annotation_manager.setAnnotationTool('EllipticalROI');"><i class="fa-regular fa-circle"></i>
+</button><button
+ title="Add probe annotation" class="all-pointer-events btn-large btn-viewer ms-2 my-2" 
+    :disabled="should_disable() || read_only || viewer.rotate_mode" disabled="disabled"  style="color:white"
+    :class="!should_disable() && viewer.annotation_manager.current_annotation_tool=='Probe'? 'btn-success' : 'btn-primary'"
+    @click="viewer.annotation_manager.setAnnotationTool('Probe');"><i class="fa-solid fa-plus"></i>
+</button>    
+    <div class="dropdown ms-2">
+      <button
+        class="btn-primary btn-large btn-viewer"
+        :disabled="should_disable" disabled="disabled" 
+        href="#"
+        id="dropdownMenuLink"
+        data-mdb-toggle="dropdown"
+        aria-expanded="false",
+        title="Select annotation"
+      >
+      <i class="fas fa-map-marker-alt"></i>
+    </button>
+      <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+        <template x-on:annotations-update.window="viewer.annotation_manager.annotations = {...viewer.annotation_manager.annotations }" x-show="!!viewer" x-for="uid in (viewer? Object.keys(viewer.annotation_manager.annotations) : [])" :key="uid">
+          <li><a class="dropdown-item" @click="await viewer.annotation_manager.goToAnnotation(uid);" href="#" x-text="(viewer.annotation_manager.annotations[uid] || {}).label"></a></li>
+        </template>               
+      </ul>
+    </div>    
     <!-- <button @click="previewing = !previewing" class="btn-primary btn-large btn-viewer ms-2">
       P
     </button> -->
@@ -397,14 +407,7 @@
         <template x-for="i in 3">
           <div class="viewport-overlay" :id="'viewport-overlay-'+i" :style="`grid-row: 1; grid-column: ${i}`">
             <!-- Note layout of buttons opening/closing to avoid undesired spaces between buttons -->
-            <button title="Add ROI annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
-                :disabled="should_disable() || read_only || viewer.rotate_mode" disabled="disabled" 
-                @click="viewer.annotation_manager.addAnnotationToViewport('EllipticalROI',i-1);"><i class="fa-regular fa-circle"></i>
-            </button><button
-             title="Add probe annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
-                :disabled="should_disable() || read_only || viewer.rotate_mode" disabled="disabled" 
-                @click="viewer.annotation_manager.addAnnotationToViewport('Probe',i-1);"><i class="fa-solid fa-plus"></i>
-            </button><button
+            <button
              title="Reset viewer" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
               :disabled="should_disable" disabled="disabled" 
                 @click="viewer.viewports[i-1].setZoom(1); viewer.viewports[i-1].setPan([0,0]); viewer.renderingEngine.renderViewports(viewer.viewportIds);"><i class="fa-solid fa-magnifying-glass-minus"></i>
@@ -435,16 +438,7 @@
       </div>
       
     <div x-cloak x-show="true" class="viewport-overlay grid-fill no-pointer-events z-index-1">
-      <template x-if="!viewer || viewer.aux_manager.type != 'MIP'">
-      <div style="display:inline-block; margin: 0">
-        <button title="Add ROI annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2" 
-         :disabled="should_disable() || read_only || viewer.rotate_mode || viewer.aux_manager.viewport.type == 'stack'" disabled="disabled" 
-         @click="viewer.annotation_manager.addAnnotationToViewport('EllipticalROI','aux');"><i class="fa-regular fa-circle"></i>
-      </button><button
-       title="Add probe annotation" class="all-pointer-events btn-primary btn-large btn-viewer ms-2" 
-          :disabled="should_disable() || read_only || viewer.rotate_mode || viewer.aux_manager.viewport.type == 'stack'" disabled="disabled" 
-          @click="viewer.annotation_manager.addAnnotationToViewport('Probe','aux');"><i class="fa-solid fa-plus"></i>
-      </button></div></template><button
+      <button
       title="Reset viewer" class="all-pointer-events btn-primary btn-large btn-viewer ms-2 my-2"
          :disabled="should_disable" disabled="disabled" 
           @click="viewer.aux_manager.viewport.setZoom(1); viewer.aux_manager.viewport.setPan([0,0]); viewer.aux_manager.viewport.render()"><i class="fa-solid fa-magnifying-glass-minus"></i>
@@ -505,7 +499,7 @@
     </template>
   </div>
   <div x-cloak style="grid-area: f; display:grid;" class="no-pointer-events">
-    <button x-show="case_data.case_type == 'GRASP Onco'" title="Export to CSV" class="all-pointer-events btn-primary btn-large btn-viewer m-2" style="align-self:end;justify-self:start;"
+    <button x-show="case_data.case_type.indexOf('Onco') != -1" title="Export to CSV" class="all-pointer-events btn-primary btn-large btn-viewer m-2" style="align-self:end;justify-self:start;"
     x-data="{has_data: false, loading: false}" 
     x-on:stats-updating.window="loading = true;"
     x-on:stats-update.window="has_data = Object.keys($event.detail).length > 0; loading = false;"

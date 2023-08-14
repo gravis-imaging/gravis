@@ -4,8 +4,31 @@ class AnnotationManager {
     viewer;
     annotations = {};
     aux_stats = [];
+    current_annotation_tool = null;
     constructor( viewer ) {
         this.viewer = viewer;
+
+        cornerstone.eventTarget.addEventListener("CORNERSTONE_TOOLS_ANNOTATION_ADDED",(evt) => {
+            if (evt.detail.annotation.annotationUID in this.annotations) {
+                return;
+            }
+            if (["EllipticalROI", "Probe"].indexOf(evt.detail.annotation.metadata.toolName) == -1) {
+                return;
+            }
+            var idx = Math.max(0,...Object.values(this.annotations).map(a => a.idx+1));
+            const new_annotation = cornerstone.tools.annotation.state.getAnnotation(evt.detail.annotation.annotationUID)
+            new_annotation.chartColor = `rgb(${HSLToRGB(idx*(360/1.618033988),50,50).join(",")})`;
+            new_annotation.metadata.idx = idx;
+            new_annotation.metadata.viewportId = evt.detail.viewportId;
+            new_annotation.data.label = `${{"EllipticalROI":"ROI","Probe":"Probe"}[new_annotation.metadata.toolName]} ${idx+1}`;
+            this.annotations[new_annotation.annotationUID] = { uid: new_annotation.annotationUID, label: new_annotation.data.label, ...new_annotation.metadata }
+
+            let e = new CustomEvent("annotations-update", {
+                detail: {}
+              });
+              window.dispatchEvent(e);
+        }
+    )
     }
 
     getAllAnnotations(viewport) {
@@ -171,6 +194,7 @@ class AnnotationManager {
         if ( result )  {
             a.data.label = result;
         }
+        this.annotations[a.annotationUID].label = result;
         cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,this.viewer.viewportIds);
     }
     getSelectedFilteredAnnotations() {
@@ -221,6 +245,48 @@ class AnnotationManager {
         }
     }
 
+    setAnnotationTool(tool_name) {
+        const Tools = window.cornerstone.tools;
+        const Enums = Tools.Enums;
+        const toolGroupMain = Tools.ToolGroupManager.getToolGroup(`STACK_TOOL_GROUP_MAIN`);
+        const toolGroupAux = Tools.ToolGroupManager.getToolGroup(`STACK_TOOL_GROUP_AUX`);
+        const reset = () => [toolGroupAux, toolGroupMain].map(g=>[Tools.EllipticalROITool.toolName, Tools.ProbeTool.toolName].map(x=>g.setToolPassive(x, {
+            bindings: [
+                {
+                    mouseButton: Enums.MouseBindings.Primary,
+                },
+            ],
+        })))
+        var groups = [toolGroupMain];
+        if (this.viewer.aux_manager.type != "MIP") {
+            groups = [toolGroupMain, toolGroupAux];
+        }
+        reset();
+        if (tool_name == this.current_annotation_tool) {
+            groups.map(x=>x._setCursorForViewports(x._getCursor()))
+            this.current_annotation_tool = null;
+            return;
+        }
+
+        this.current_annotation_tool = tool_name;
+        if (tool_name == "EllipticalROI" ) {
+            groups.map(x=>x.setToolActive(Tools.EllipticalROITool.toolName, {
+                bindings: [
+                    {
+                        mouseButton: Enums.MouseBindings.Primary,
+                    },
+                ],
+            }));
+        } else if ( tool_name == "Probe") {
+            groups.map(x=>x.setToolActive(Tools.ProbeTool.toolName, {
+                bindings: [
+                    {
+                        mouseButton: Enums.MouseBindings.Primary,
+                    },
+                ],
+            }));
+        }
+    }
     addAnnotationToViewport(tool_name,viewport_n) {
         if (viewport_n == 'aux') {
             var viewport = this.viewer.auxViewport;
@@ -266,8 +332,7 @@ class AnnotationManager {
 
     async deleteAnnotation(uid) {
         let annotation_info = this.annotations[uid];
-        const viewport = this.viewer.viewports.find( x => x.id == annotation_info.viewportId);
-        cornerstone.tools.annotation.state.removeAnnotation(annotation_info.uid, viewport.element)
+        cornerstone.tools.annotation.state.removeAnnotation(annotation_info.uid)
         cornerstone.tools.utilities.triggerAnnotationRenderForViewportIds(this.viewer.renderingEngine,[annotation_info.viewportId]) 
         delete this.annotations[annotation_info.uid];
         await this.updateChart()

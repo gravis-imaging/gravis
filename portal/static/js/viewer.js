@@ -247,6 +247,7 @@ class GraspViewer {
         this.case_id = current_case.id;
         this.state_manager = new StateManager(this)
         this.aux_manager.ori_dicom_set = this.studies_data.volumes.find(x=>x.type=="ORI").dicom_set;
+        this.aux_manager.viewport.render();
         // let event = new CustomEvent("case_change", {});
         // window.dispatchEvent(event);
     }
