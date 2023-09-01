@@ -689,3 +689,11 @@ summary.selectable.metsresult:hover {
     text-decoration: underline;
 }
 
+#offcanvasShortcuts table td:first-child {
+    font-weight: bold;
+}
+#offcanvasShortcuts table td:not(:first-child)::before {
+    content: '−';
+    margin-left: 1ch;
+    margin-right:1ch;
+}
