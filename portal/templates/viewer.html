@@ -55,8 +55,35 @@
         read_only: {{read_only}},
         case_select_idx: null,
         study_type: null,
+        do_case_switch: async function(case_id) {
+          let result = await doFetch(`/api/case/${case_id}/viewable`,{},"GET");
+            if (!result.ok) {
+              errorPrompt("This case is not ready for viewing.")
+              return;
+            } 
+            this.loading = true;
+            let info = await doFetch(`/viewer/${case_id}/info`,{},"GET");
+            this.studies_data = info.studies;
+            this.case_data = info.current_case;
+            this.patient_cases = info.patient_cases;
+            this.read_only = info.read_only;
+            this.case_id = info.current_case.id;
+            this.case_select_idx = this.patient_cases.findIndex((c)=>c.id == this.case_id)
+
+            await this.viewer.switchCase(this.studies_data, this.case_data)
+
+            let volume = this.studies_data.volumes.find((v)=> v.type==this.study_type)
+            await this.viewer.switchStudy(volume.uid, volume.dicom_set, this.case_id);
+            
+            this.viewer.findings = await this.viewer.loadFindings();
+            this.viewer.state_manager.load(true);
+            this.viewer.aux_manager.viewport.scroll(0); // dunno why this is necessary
+            history.replaceState({}, "", case_id);
+            this.loading = false;
+        },
         init: async function() {
           this.loading = true; 
+          this.case_select_idx = this.patient_cases.findIndex((c)=>c.id == this.case_id)
           await this.$nextTick();
           viewer = await new GraspViewer(this.$refs.viewer_main, this.$refs.viewer_preview, this.studies_data, this.case_data); 
           window.viewer = viewer; 
@@ -68,6 +95,7 @@
           this.viewer = viewer;
           this.loading = false;
           // Prompt the user if there are unsaved changes.
+
           addEventListener('beforeunload', (event) => { if (viewer.state_manager.getChanged()) { event.returnValue = "ask"; return "ask"; } });
         },
         should_disable: function() {
@@ -75,7 +103,26 @@
         },
         case_select: {
           [':init']() { 
-            this.case_select_idx = this.$el.selectedIndex;
+            document.addEventListener("keydown", (function(event) {
+              if (this.should_disable()) return;  
+              if (!event.ctrlKey) return;
+                switch (event.key) {
+                    case "ArrowLeft":
+                      if (this.case_select_idx == 0) return;
+                      var id = this.patient_cases[this.case_select_idx-1].id; 
+                      document.getElementById('patient_case_select').value = id; 
+                      this.do_case_switch(id);
+                      break;
+                    case "ArrowRight":
+                      if (this.case_select_idx == this.patient_cases.length-1) return;
+                      var id = this.patient_cases[this.case_select_idx+1].id; 
+                      document.getElementById('patient_case_select').value = id; 
+                      this.do_case_switch(id);
+                      break;
+                    default:
+                      return;
+                }
+            }).bind(this));
           },
           ['x-effect']() {
             this.should_disable();
@@ -90,31 +137,7 @@
               return
             }
             let case_id = this.$event.target.value;
-            let result = await doFetch(`/api/case/${case_id}/viewable`,{},"GET");
-            if (!result.ok) {
-              errorPrompt("This case is not ready for viewing.")
-              return;
-            } 
-            // window.location = `/viewer/${this.$event.target.value}`;
-            this.loading = true;
-            let info = await doFetch(`/viewer/${case_id}/info`,{},"GET");
-            this.studies_data = info.studies;
-            this.case_data = info.current_case;
-            this.patient_cases = info.patient_cases;
-            this.read_only = info.read_only;
-            this.case_id = info.current_case.id;
-            
-            await this.viewer.switchCase(this.studies_data, this.case_data)
-
-            let volume = this.studies_data.volumes.find((v)=> v.type==this.study_type)
-            await this.viewer.switchStudy(volume.uid, volume.dicom_set, this.case_id);
-            
-            this.viewer.findings = await this.viewer.loadFindings();
-            this.viewer.state_manager.load(true);
-            this.viewer.aux_manager.viewport.scroll(0); // dunno why this is necessary
-            history.replaceState({}, "", case_id);
-            this.loading = false;
-
+            await this.do_case_switch(case_id);
           }
         },
         volume_picker: {
@@ -170,6 +193,7 @@
             const dispatch = debounce(1000, (function() {this.$el.dispatchEvent(new Event('change'))}).bind(this));
             document.addEventListener("keydown", (function(event) {
               if (this.disabled) return;  
+              if (event.ctrlKey) return;
                 switch (event.key) {
                     case "ArrowLeft":
                         this.value--;
@@ -206,16 +230,28 @@
       </template>
       <template x-teleport="#navtest">
         <div class="me-2" style="min-width: 100px;" x-show="patient_cases.length > 1">
-          <select id="patient_case_select" name="patient_case_select" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-lg text-light btn-viewer-toolbar" data-width="200px"
-          :disabled="should_disable" disabled="disabled" 
-          x-bind="case_select">
-            <optgroup label="Exam date">
-              <template x-for="c in patient_cases">
-                <option :value="c.id" x-text="`${c.id}: ${c.exam_time}`" :selected="c.id === case_data.id">
-              </option>
-              </template>    
-            </optgroup>
-          </select>
+          <div class="btn-group shadow-0" role="group" aria-label="Basic example">
+            <button type="button" class="btn btn-lg text-light btn-viewer-toolbar" data-mdb-color="dark"
+            :disabled="should_disable() || (case_select_idx == 0)" disabled="disabled" 
+            @click="let id=patient_cases[case_select_idx-1].id; document.getElementById('patient_case_select').value = id; do_case_switch(id);">
+            <i class="fa-solid fa-chevron-left"></i></button>
+            <select id="patient_case_select" name="patient_case_select" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-lg text-light btn-viewer-toolbar" data-width="200px"
+            :disabled="should_disable" disabled="disabled" 
+            x-bind="case_select"
+            x-ref="case_select"
+            >
+              <optgroup label="Exam date">
+                <template x-for="c in patient_cases">
+                  <option :value="c.id" x-text="c.exam_time" :selected="c.id === case_data.id">
+                </option>
+                </template>    
+              </optgroup>
+            </select>
+            <button type="button" class="btn btn-lg text-light btn-viewer-toolbar" data-mdb-color="dark"
+            :disabled="should_disable() || (case_select_idx == patient_cases.length-1)"
+            @click="let id=patient_cases[case_select_idx+1].id; document.getElementById('patient_case_select').value = id; do_case_switch(id);"
+            disabled="disabled" ><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
         </div>
         </template>
         <template x-teleport="#navtest">
@@ -582,7 +618,7 @@
   </div>
 </div>
 
-<div class="offcanvas offcanvas-start " tabindex="-1" id="offcanvasShortcuts" data-mdb-scroll="true"
+<div class="offcanvas offcanvas-start animation" tabindex="-1" id="offcanvasShortcuts" data-mdb-scroll="true"
 data-mdb-backdrop="false" style="background-color: #1266f1;">
 <div class="offcanvas-header">
   <h4 class="offcanvas-title" id="offcanvasExampleLabel">Keyboard Shortcuts</h4>
@@ -593,13 +629,20 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
       <h5 class="mb-3"><strong>Viewers</strong></h5>
       <table>
         <tr><td><strong>Scrolling</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;Mouse wheel</td></tr>
-        <tr><td><strong>Windowing</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;CTRL + left button</td></tr>
-        <tr><td><strong>Panning</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;ALT + left button</td></tr>
-        <tr><td><strong>Zooming</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;ALT + right button</td></tr>
-        <tr><td><strong>Centering</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;SHIFT + left button</td></tr>
-        <tr><td><strong>Move ROI</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;SHIFT + drag</td></tr>
+        <tr><td><strong>Windowing</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;CTRL + left click/drag</td></tr>
+        <tr><td><strong>Panning</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;ALT + left click/drag</td></tr>
+        <tr><td><strong>Zooming</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;ALT + right click/drag</td></tr>
+        <tr><td><strong>Centering</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;SHIFT + left click/drag</td></tr>
+        <tr><td><strong>Move ROI</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;SHIFT + left click/drag</td></tr>
         <tr><td><strong>Fullscreen</strong></td><td>&nbsp;&nbsp;&minus;&nbsp;&nbsp;Double click</td></tr>
       </table>
+      <hr></hr>
+      <h5 class="mb-3"><strong>Other</strong></h5>
+      <table>
+        <tr><td><strong>Time</strong></td><td>&nbsp;&nbsp;&minus;&nbsp; left / right cursor keys</td></tr>
+        <tr><td><strong>Switch case</strong></td><td>&nbsp;&nbsp;&minus;&nbsp; CTRL + left / right cursor keys</td></tr>
+      </table>
+
     </div>
   </div>
 </div>

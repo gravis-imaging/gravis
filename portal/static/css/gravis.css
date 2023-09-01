@@ -378,6 +378,12 @@ input::selection, .selectable::selection {
   border: 0.125rem solid #fff !important;
   box-shadow: none !important;
   padding: 0.625rem 1.5625rem 0.5625rem !important;
+
+  -webkit-transition-duration: 0s!important;
+  transition-duration: 0s!important;
+  -webkit-animation-duration:0s!important;
+  animation-duration:0s!important
+
 }
 
 .btn-viewer-toolbar:hover {
@@ -528,7 +534,25 @@ input::selection, .selectable::selection {
 .selectpicker {
     display: none;
 }
-
+/* .btn-group > .bootstrap-select > .btn {
+    border-left: none;
+    border-right:none;
+} */
+.btn-group > .bootstrap-select:not(:last-child) > .btn {
+	border-top-right-radius: 0;
+	border-bottom-right-radius: 0;
+    /* border-right: none !important; */
+    /* border-left:none !important; */
+}
+.btn-group > .bootstrap-select:not(:first-child) {
+    margin-left: -.125rem;
+}
+.btn-group > .bootstrap-select:not(:first-child) > .btn {
+	border-top-left-radius: 0;
+	border-bottom-left-radius: 0;
+    /* border-right:none !important; */
+    /* margin-left: -.250rem; */
+}
 .select2-container--default .select2-selection--multiple {
     background-color: #424242 !important;
     min-height: 39px !important;
