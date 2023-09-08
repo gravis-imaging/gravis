@@ -157,7 +157,7 @@
                             return;
                         }
                         await doFetch(`/api/case/${case_id}/reprocess`);
-                        setTimeout(()=> case_data_table.ajax.reload(), 1500);
+                        setTimeout(()=> case_data_table.ajax.reload(null, false), 1500);
                         await successToast("The case will be reprocessed.");
                     }
                 },
@@ -176,7 +176,7 @@
                             try {
                                 await doFetch(`/api/case/${case_id}/delete`);
                                 await successToast("The case has been deleted.");
-                                setTimeout(()=> case_data_table.ajax.reload(), 1500);
+                                setTimeout(()=> case_data_table.ajax.reload(null,false), 1500);
                             } catch (e) {
                                 Swal.showValidationMessage("A problem occurred while deleting the case. Please try again.")
                             }
@@ -207,7 +207,7 @@
                     text: '<i class="fa-solid fa-sync"></i>',
                     titleAttr: 'Refresh',
                     action: function (e, dt, node, config) {
-                        case_data_table.ajax.reload();
+                        case_data_table.ajax.reload(null, false);
                     }
                 },                
                 {

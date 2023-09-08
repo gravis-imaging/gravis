@@ -79,7 +79,7 @@ async function updateCaseTags() {
     }
     try {
         await doFetch(`/api/case/${case_id}/tags/update`,({tags: tags}))
-        $('#casetable').DataTable().ajax.reload();
+        $('#casetable').DataTable().ajax.reload(null, false);
         $('#tags_selection_modal').modal('hide');
     } catch (e) {
         errorPrompt(e);
