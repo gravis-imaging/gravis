@@ -77,7 +77,9 @@
             
             this.viewer.findings = await this.viewer.loadFindings();
             this.viewer.state_manager.load(true);
-            this.viewer.aux_manager.viewport.scroll(0); // dunno why this is necessary
+            if (this.viewer.aux_manager.viewport.scroll) {
+              this.viewer.aux_manager.viewport.scroll(0); // dunno why this is necessary
+            }
             history.replaceState({}, "", case_id);
             this.loading = false;
         },
@@ -264,9 +266,13 @@
         <template x-teleport="#navtest">
           <li class="nav-item menuitems-top ps-0" x-show="read_only"> 
             <h5 class="nav-link mb-0 ps-0"><span class="badge bg-danger rounded-pill" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="Case Assigned to Other User (Read-Only Mode)">Read-Only</span></h5>
-          </li>          
+          </li>
         </template>
-    <template x-if="studies_data.others.length > 1">
+        <template x-teleport="#navtest">
+          <li class="nav-item menuitems-top ps-0" x-show="case_data.status != 'Viewing'">
+          <h5 class="nav-link mb-0 ps-0"><span class="badge bg-danger rounded-pill" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="Case Status" x-text="case_data.status"></span></h5>
+        </template>
+        <template x-if="studies_data.others.length > 1">
       <select id="aux_select" name="studies" autocomplete="off" class="selectpicker show-tick all-pointer-events" value="" data-style="btn btn-lg text-light btn-viewer-toolbar" data-width="200px"
       @change="job_loading=true; aux_loading= true; await $nextTick(); await viewer.aux_manager.selectStack($event.target.value); job_loading=false; aux_loading=false; " title="Displayed series">
         <optgroup label="Displayed Map">
