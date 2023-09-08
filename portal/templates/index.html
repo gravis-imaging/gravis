@@ -243,7 +243,7 @@
     } );
 
     function openCase(case_id, status, last_read_by_id) {
-        if (status=="Ready" || status=="Complete" || status=="Viewing") {
+        if (status=="Ready" || status=="Complete" || status=="Viewing" || {{user.is_staff|lower}}) {
             const link = '/viewer/'+case_id;
             window.open(link, "_self");
         } else {

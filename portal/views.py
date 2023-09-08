@@ -158,12 +158,15 @@ def viewer(request, case_id):
         
         # If the case is not ready for viewing
         if case.status not in ( Case.CaseStatus.READY, Case.CaseStatus.VIEWING,  Case.CaseStatus.COMPLETE):
-            return HttpResponseForbidden()
+            if request.user.is_staff:
+                read_only = True
+            else:
+                return HttpResponseForbidden()
 
         # If the case is currently being viewed, but not by this user
         if ( case.status == Case.CaseStatus.VIEWING and case.viewed_by != request.user ):
             read_only = True
-        else:
+        elif not read_only:
             case.viewed_by = request.user
             case.last_read_by = request.user
             case.status = Case.CaseStatus.VIEWING
