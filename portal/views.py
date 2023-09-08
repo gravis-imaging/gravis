@@ -154,6 +154,8 @@ def case_info(request,case_id):
     read_only = False
     if ( case.status == Case.CaseStatus.VIEWING and case.viewed_by != request.user ):
         read_only = True
+    if case.status not in ( Case.CaseStatus.READY, Case.CaseStatus.VIEWING,  Case.CaseStatus.COMPLETE ):
+        read_only = True
 
     instances = DICOMInstance.objects.defer("json_metadata").filter(dicom_set__case=case, dicom_set__type__in=("ORI", "SUB")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")    
     other_instances = DICOMInstance.objects.defer("json_metadata").filter(dicom_set__case=case).exclude(dicom_set__type__in=("ORI", "SUB", "CINE/AX","CINE/COR", "CINE/SAG")).order_by("dicom_set__type").distinct("dicom_set__type")

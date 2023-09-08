@@ -60,7 +60,11 @@
             if (!result.ok) {
               errorPrompt("This case is not ready for viewing.")
               return;
-            } 
+            }
+            result = await doFetch(`/api/case/${case_id}/set_viewing`,{},"POST");
+            if (! result.ok ) {
+              // todo
+            }
             this.loading = true;
             let info = await doFetch(`/viewer/${case_id}/info`,{},"GET");
             this.studies_data = info.studies;

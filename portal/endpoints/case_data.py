@@ -91,9 +91,26 @@ def set_case_status(request, case, new_status):
 @transaction.atomic
 def get_case_viewable(request, case):
     case_item = get_object_or_404(Case, id=case)
-    if case_item.status in (Case.CaseStatus.READY, Case.CaseStatus.COMPLETE, Case.CaseStatus.VIEWING):
+    if case_item.status in (Case.CaseStatus.READY, Case.CaseStatus.COMPLETE, Case.CaseStatus.VIEWING) or request.user.is_staff:
         return JsonResponse({"ok":True})
     return JsonResponse({"ok":False})
+
+@login_required
+@require_POST
+@transaction.atomic
+def set_case_viewing(request, case):
+    case = get_object_or_404(Case, id=case)
+    if case.status not in (Case.CaseStatus.READY, Case.CaseStatus.COMPLETE, Case.CaseStatus.VIEWING):
+        return JsonResponse({"ok":False})
+
+    if ( case.status == Case.CaseStatus.VIEWING and case.viewed_by != request.user ):
+        return JsonResponse({"ok":False})
+
+    case.viewed_by = request.user
+    case.last_read_by = request.user
+    case.status = Case.CaseStatus.VIEWING
+    case.save()
+    return JsonResponse({"ok":True})
 
 @login_required
 @require_GET
