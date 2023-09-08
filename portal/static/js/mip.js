@@ -349,7 +349,6 @@ class MIPManager extends AuxManager{
         // console.log("mip init", graspVolumeInfo, selected_index)
         // Get MIP metadata info, currently only need slice_locations
         const current_info = graspVolumeInfo[selected_index];
-        console.warn(current_info)
         try {
             this.mip_details = (await doFetch(`/api/case/${this.viewer.case_id}/dicom_set/${this.ori_dicom_set}/mip_metadata?acquisition_number=${current_info.acquisition_number}`,null, "GET")).details;
             // console.log("mip details", this.mip_details)

@@ -156,7 +156,7 @@ class GraspViewer {
                 }
             }
 
-            if (case_data.case_type == "GRASP MRA") {
+            if (this.case_data.case_type.indexOf("MRA") != -1) {
                 this.aux_manager = new MIPManager(this);
             } else {
                 this.aux_manager = new AuxManager(this);
@@ -241,7 +241,16 @@ class GraspViewer {
                 }));
             });
         }
-        
+    async switchCase(studies_data, current_case) {
+        this.studies_data = studies_data;
+        this.case_data = current_case;
+        this.case_id = current_case.id;
+        this.state_manager = new StateManager(this)
+        this.aux_manager.ori_dicom_set = this.studies_data.volumes.find(x=>x.type=="ORI").dicom_set;
+        this.aux_manager.viewport.render();
+        // let event = new CustomEvent("case_change", {});
+        // window.dispatchEvent(event);
+    }
     createViewportGrid(n=4) {
         const viewportGrid = document.createElement('div');
         viewportGrid.className = 'viewer-grid';

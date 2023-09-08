@@ -1,0 +1,20 @@
+{% extends 'portal.html' %}
+
+{% block content %}
+Case {{case}}
+{% for job in jobs %}
+<details open="">
+    <summary>Job {{job.category}} {{job.error_description|default_if_none:""}} ({{job.status}})</summary>
+    {% for set in job.result_sets.all %}
+        <p>DicomSet {{set.type}} ({{set.instances.count}})</p>
+    {% endfor %}
+</details> 
+<style>
+    details p {
+        margin-left:3em;
+        margin-bottom:0;
+    }
+</style>
+{% endfor %}
+
+{% endblock %}

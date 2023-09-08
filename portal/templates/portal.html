@@ -53,22 +53,9 @@
                 </ul>
                 <!-- Patient name for the current case -->
                 {% if request.resolver_match.url_name == "viewer" %}  
-                <ul class="nav navbar-nav mx-auto">
-                    <li class="nav-item menuitems-top" >                                             
-                        <a href="#" onclick="showCaseInformation({{ current_case.case_id }});">
-                            <h5 class="navbar_patient_info nav-link mb-0">{{ current_case.patient_name }} {% if current_case.num_spokes != "" %}({{ current_case.num_spokes}} spokes){% endif %}</h5>                         
-                        </a>
-                    </li>
-                    {% if read_only == "true" %}
-                    <li class="nav-item menuitems-top ps-0">                                             
-                        <h5 class="nav-link mb-0 ps-0"><span class="badge bg-danger rounded-pill" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="Case Assigned to Other User (Read-Only Mode)">Read-Only</span></h5>
-                    </li>
-                    {% if current_case.status != 'Viewing' %}
-                    <li class="nav-item menuitems-top ps-0">                                             
-                        <h5 class="nav-link mb-0 ps-0"><span class="badge bg-danger rounded-pill" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="Case Status">{{current_case.status}}</span></h5>
-                    </li>
-                    {% endif %}
-                    {% endif %} 
+                <ul class="nav navbar-nav mx-auto" id="navtest">
+                    {% block navmenu %}                                      
+                    {% endblock %}
                 </ul>
                 {% endif %}  
                 <!-- User Settings and Configuration -->
@@ -81,7 +68,7 @@
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
                             {% if request.resolver_match.url_name == "viewer" %}
                             <li>
-                                <a class="dropdown-item" data-mdb-toggle="offcanvas" href="#offcanvasShortcuts"><i class="fas fa-keyboard"></i>&nbsp;&nbsp;Keyboard Shortcuts</a>
+                                <a class="dropdown-item" data-mdb-toggle="offcanvas" href="#offcanvasShortcuts"><i class="fas fa-keyboard"></i>&nbsp;&nbsp;Keyboard Controls</a>
                             </li>                              
                             <li><hr class="dropdown-divider" /></li>
                             {% endif %}  

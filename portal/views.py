@@ -148,6 +148,29 @@ def config(request):
     }
     return render(request, "config.html", context)
 
+@login_required
+def case_info(request,case_id):
+    case = get_object_or_404(Case, id=case_id)
+    read_only = False
+    if ( case.status == Case.CaseStatus.VIEWING and case.viewed_by != request.user ):
+        read_only = True
+
+    instances = DICOMInstance.objects.defer("json_metadata").filter(dicom_set__case=case, dicom_set__type__in=("ORI", "SUB")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")    
+    other_instances = DICOMInstance.objects.defer("json_metadata").filter(dicom_set__case=case).exclude(dicom_set__type__in=("ORI", "SUB", "CINE/AX","CINE/COR", "CINE/SAG")).order_by("dicom_set__type").distinct("dicom_set__type")
+    patient_cases = list(map(lambda x:x.to_dict(),Case.objects.filter(mrn=case.mrn).order_by("exam_time","id"))) # ,case_type=case.case_type
+
+    def i_to_dict(k):
+        return dict(uid=k.study_uid,dicom_set=k.dicom_set.id, type=k.dicom_set.type)
+    context = {
+        "studies": {"volumes": [i_to_dict(k) for k in instances],
+                    "others": [i_to_dict(k) for k in other_instances]},
+        "current_case": case.to_dict(request.user.profile.privacy_mode),
+        "original_dicom_set_id": instances[0].dicom_set.id,
+        "patient_cases": patient_cases,
+        "read_only": read_only
+    }
+
+    return JsonResponse(context)
 
 @login_required
 def viewer(request, case_id):
@@ -172,9 +195,9 @@ def viewer(request, case_id):
             case.status = Case.CaseStatus.VIEWING
             case.save()
 
-    instances = DICOMInstance.objects.defer("json_metadata").filter(dicom_set__case=case, dicom_set__type__in=("ORI", "SUB")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")
-    
+    instances = DICOMInstance.objects.defer("json_metadata").filter(dicom_set__case=case, dicom_set__type__in=("ORI", "SUB")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")    
     other_instances = DICOMInstance.objects.defer("json_metadata").filter(dicom_set__case=case).exclude(dicom_set__type__in=("ORI", "SUB", "CINE/AX","CINE/COR", "CINE/SAG")).order_by("dicom_set__type").distinct("dicom_set__type")
+    patient_cases = list(map(lambda x:x.to_dict(),Case.objects.filter(mrn=case.mrn).order_by("exam_time","id"))) # ,case_type=case.case_type
     #.distinct("study_uid","dicom_set")
     def i_to_dict(k):
         return dict(uid=k.study_uid,dicom_set=k.dicom_set.id, type=k.dicom_set.type)
@@ -183,6 +206,7 @@ def viewer(request, case_id):
                     "others": [i_to_dict(k) for k in other_instances]},
         "current_case": case.to_dict(request.user.profile.privacy_mode),
         "original_dicom_set_id": instances[0].dicom_set.id,
+        "patient_cases": patient_cases,
         "read_only": "true" if read_only else "false"
     }
     return render(request, "viewer.html", context)
