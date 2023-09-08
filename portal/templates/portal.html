@@ -63,6 +63,11 @@
                     <li class="nav-item menuitems-top ps-0">                                             
                         <h5 class="nav-link mb-0 ps-0"><span class="badge bg-danger rounded-pill" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="Case Assigned to Other User (Read-Only Mode)">Read-Only</span></h5>
                     </li>
+                    {% if current_case.status != 'Viewing' %}
+                    <li class="nav-item menuitems-top ps-0">                                             
+                        <h5 class="nav-link mb-0 ps-0"><span class="badge bg-danger rounded-pill" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="Case Status">{{current_case.status}}</span></h5>
+                    </li>
+                    {% endif %}
                     {% endif %} 
                 </ul>
                 {% endif %}  
