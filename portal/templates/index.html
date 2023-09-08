@@ -50,13 +50,14 @@
 {% block addedscripts %}
 <script type="text/javascript" src="/static/js/external/datatables.min.js"></script>
 <script src="/static/js/external/select2@4.1.0-rc.0.min.js"></script>
+<script type="text/javascript" src="/static/js/external/order.neutral().js"></script>
 
 {% include "modal_case_tags.html" %}
 
 <script>       
     $(document).ready(function () {               
         var case_data_table = $('#casetable').DataTable({           
-            dom: "<'row browsertoolbar align-items-end'<'col-sm-12 col-md-6 browserbuttons'B><'col-sm-12 col-md-3'><'col-sm-12 col-md-3'f>>" + "<'row'<'col-sm-12'tr>>" + "<'row browserfooterbar'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",
+            dom: "<'row browsertoolbar align-items-end'<'col-sm-12 col-md-7 browserbuttons'B><'col-sm-12 col-md-2'><'col-sm-12 col-md-3'f>>" + "<'row'<'col-sm-12'tr>>" + "<'row browserfooterbar'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",
             ajax: "/api/cases",
             deferRender: true,
             columns: [
@@ -202,14 +203,21 @@
                         const case_id = selected_row.case_id;
                         showTagsDialog(case_id);
                     }
-                },                
+                },
                 {
                     text: '<i class="fa-solid fa-sync"></i>',
                     titleAttr: 'Refresh',
                     action: function (e, dt, node, config) {
                         case_data_table.ajax.reload(null, false);
                     }
-                },                
+                },         
+                {
+                    text: '<i class="fa-solid fa-sort"></i>',
+                    titleAttr: 'Reset sort',
+                    action: function (e, dt, node, config) {
+                        case_data_table.order.neutral().draw();
+                    }
+                },
                 {
                     extend: 'spacer',
                     style: 'empty'
