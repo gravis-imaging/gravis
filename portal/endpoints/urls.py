@@ -20,7 +20,7 @@ urls = [
     path("session", sessions.handle_session),
     path("session/new", sessions.new_session),
     path("session/<int:session_id>", sessions.handle_session),
-
+    path("logs", case_data.logs),
     path("", case_data.get_case),
     path("delete", case_data.delete_case),
     path("reprocess", case_data.reprocess_case),

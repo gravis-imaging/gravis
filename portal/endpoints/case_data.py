@@ -189,3 +189,11 @@ def mip_metadata(request, case, source_set):
     for instance in instances:
         details.append(dict(slice_location=instance.slice_location, id=instance.id))
     return JsonResponse(dict(details=details))
+
+@login_required
+@require_GET
+def logs(request, case):
+    if not (request.user.is_staff):
+        return HttpResponseForbidden()
+    case = get_object_or_404(Case, id=case)
+    return JsonResponse(dict(logs=[(x.stem, str(x.relative_to(settings.DATA_FOLDER))) for x in (Path(case.case_location) / "logs").glob("*.log")]))

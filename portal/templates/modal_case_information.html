@@ -66,8 +66,18 @@
                             <td>Case ID:</td>
                             <td><span class="patient_info" id="case_details_case_id">&nbsp;</span></td>
                         </tr>
+                        {% if user.is_staff %}
+                        <tr>
+                            <td>Logs</td>
+                            <td><div id="case_details_logs"></div></td>
+                        </tr>
+                        {% endif %}
                     </tbody>
                 </table>         
+                <div>
+                <h2 id="case_details_logview_title"></h2>
+                <pre style="width:100%; overflow-x: auto !important; white-space: pre-wrap !important;" id="case_details_logview"></pre>
+            </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-primary" data-mdb-dismiss="modal">Close</button>
@@ -80,10 +90,27 @@
 
 // Retrieves that information for the given case from the server and shows a modal popup window with
 // the information
+async function showLog(title, log) {
+    let result = await doFetch(log, {}, "GET", true)
+    const el = document.getElementById("case_details_logview");
+    if ( result.trim() == "" ) {
+        result = "Log is empty."
+    }
+    el.innerText = result;
+    document.getElementById("case_details_logview_title").innerText = title;
+}
 async function showCaseInformation(case_id) {
     try {
         const result = await doFetch(`/api/case/${case_id}/`, {} , "GET")
         displayReceivedCaseInformation(result);
+
+        const logs = await doFetch(`/api/case/${case_id}/logs`, {} , "GET")
+        const p = (x) => {
+            // return `<button class='badge text-light btn-primary' hx-get="/media/${x[1]}" hx-target="#case_details_logview">${x[0]}</button>`
+            return `<button class='badge text-light btn-primary' onclick="showLog('${x[0]}', '/media/${x[1]}')">${x[0]}</button>`
+        }
+        const el = document.getElementById("case_details_logs");
+        el.innerHTML = logs.logs.map(p).join(" ");
     } catch(e) {
         console.error(e);
         await errorPrompt("Unable to find case information.")
@@ -108,6 +135,12 @@ function displayReceivedCaseInformation(caseData) {
     const myModalEl = document.getElementById('case_details_modal');
     const modal = new mdb.Modal(myModalEl);
     modal.show();
+    onClose =  (e) => {
+        document.getElementById("case_details_logview_title").innerText = ""
+        document.getElementById("case_details_logview").innerText = ""
+        myModalEl.removeEventListener('hidden.mdb.modal', onClose)
+    }
+    myModalEl.addEventListener('hidden.mdb.modal',onClose)
 }
 
 </script>
