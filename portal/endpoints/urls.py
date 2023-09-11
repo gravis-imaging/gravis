@@ -9,7 +9,7 @@ urls = [
     path("dicom_set/<str:set>/volume_stats",volume_stats.volume_data),
     path("dicom_set/<str:source_set>/timeseries",timeseries.timeseries_data),
     path("dicom_set/<str:source_set>/preview/<str:view>/<str:location>", case_data.preview_urls),
-    path("dicom_set/<str:source_set>/processed_results/<path:case_type>", case_data.processed_results_urls),
+    path("dicom_set/<str:source_set>/processed_results/<path:set_type>", case_data.processed_results_urls),
     path("dicom_set/<str:source_set>/mip_metadata", case_data.mip_metadata),
     path("dicom_set/<str:source_set>/processed_json/<str:category>", case_data.processed_results_json),
     path("dicom_set/<str:dicom_set>/metadata", case_data.case_metadata),

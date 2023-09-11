@@ -160,10 +160,10 @@ def preview_urls(request, case, source_set, view, location):
 
 @login_required
 @require_GET
-def processed_results_urls(request, case, case_type, source_set):
+def processed_results_urls(request, case, set_type, source_set):
     fields = ["series_number", "slice_location", "acquisition_number", "acquisition_seconds"]
     slices_lookup = {k: request.GET.get(k) for k in fields if k in request.GET}
-    dicom_set = DICOMSet.processed_success.filter(case_id=int(case),type=case_type, processing_job__dicom_set=source_set).latest('processing_job__created_at')
+    dicom_set = DICOMSet.processed_success.filter(case_id=int(case),type=set_type, processing_job__dicom_set=source_set).latest('processing_job__created_at')
     instances = dicom_set.instances.filter(**slices_lookup).only("instance_location","num_frames","dicom_set_id").order_by("acquisition_seconds", "slice_location","instance_location","series_number") # or "instance_number"
 
     urls = []

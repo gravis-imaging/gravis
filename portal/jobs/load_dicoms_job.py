@@ -177,13 +177,16 @@ def case_from_payload(payload, new_folder, example_dcm):
         return {k:payload.get(k,"") for k in args}
     try:
         new_case = Case(
-            **getvals("patient_name", "mrn", "acc", "case_type", "twix_id", "num_spokes", "settings"),
+            **getvals("patient_name", "mrn", "acc", "twix_id", "num_spokes", "settings"),
             exam_time = payload.get("exam_time", None),
             receive_time = payload.get("receive_time", datetime.now().astimezone()),
             case_location = str(new_folder),
             incoming_payload = payload,
             status = Case.CaseStatus.PROCESSING,
         )
+        for choice in Case.CaseType.choices:
+            if payload.get("case_type") in choice:
+                new_case.case_type = choice[0]
         if not new_case.exam_time:
             ds = pydicom.dcmread(example_dcm, specific_tags=("StudyDate", "StudyTime"), stop_before_pixels=True)
             new_case.exam_time = datetime.combine(
