@@ -21,8 +21,7 @@
 {% endblock %}
 
 {% block extra_nav %}
-<li class="nav-item menuitems-top">
-  <a class="nav-link" aria-current="page" href="#" onclick="closeCurrentCase();"><i class="far fa-window-close"></i>&nbsp;&nbsp;Close</a>
+<li class="nav-item menuitems-top" id="extra_nav">
 </li>
 {% endblock %}
 
@@ -233,6 +232,10 @@
           </optgroup>
         </select>
         </div>
+      </template>
+      <template x-teleport="#extra_nav">
+        <a class="nav-link" aria-current="page" href="#" @click="if (!read_only) {closeCase(case_id)} else { window.open('/', '_self'); }">
+          <i class="far fa-window-close"></i>&nbsp;&nbsp;Close</a>
       </template>
       <template x-teleport="#navtest">
         <div class="me-2" style="min-width: 100px;" x-show="patient_cases.length > 1">
@@ -668,20 +671,7 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
 
 <script>
 
-  async function closeCurrentCase() {
-    function handler(confirmed) {
-        return (async () => {
-        try {
-          targetURL = "/api/case/{{current_case.id}}/status/" + (confirmed? 'ready' : 'complete');
-          await doFetch(targetURL);
-          this.viewer.state_manager.setIgnoreChanged();
-          window.open("/", "_self");        
-        } catch (e) {
-          console.warn(e)
-          Swal.showValidationMessage("Unable to close case. Check logs.")
-        }
-    })}
-    {% if read_only == "false" %}
+  async function closeCase(case_id) {
     await Swal.fire({
       title: 'Close case?',
       text: "Unsaved changes will be lost.",
@@ -698,9 +688,19 @@ data-mdb-backdrop="false" style="background-color: #1266f1;">
       preConfirm: handler(true),
       preDeny: handler(false)
     })
-    {% else %}
-    window.open("/", "_self");        
-    {% endif %}
+
+    function handler(confirmed) {
+        return (async () => {
+        try {
+          targetURL = `/api/case/${case_id}/status/${confirmed? 'ready' : 'complete'}`;
+          await doFetch(targetURL);
+          this.viewer.state_manager.setIgnoreChanged();
+          window.open("/", "_self");        
+        } catch (e) {
+          console.warn(e)
+          Swal.showValidationMessage("Unable to close case. Check logs.")
+        }
+    })}
   }
 </script>
 

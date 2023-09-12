@@ -72,6 +72,8 @@ def set_case_status(request, case, new_status):
     if not (user_opened_case(request, case) or request.user.is_staff):
         return HttpResponseForbidden()
 
+    if case_item.status not in [Case.CaseStatus.VIEWING, Case.CaseStatus.READY, Case.CaseStatus.COMPLETE]:
+        return HttpResponseForbidden()
     case_item.viewed_by = None
 
     if new_status == "ready":

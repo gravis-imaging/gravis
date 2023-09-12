@@ -55,6 +55,7 @@
 {% include "modal_case_tags.html" %}
 
 <script>       
+    const user_is_staff = {{user.is_staff|lower}};
     $(document).ready(function () {               
         var case_data_table = $('#casetable').DataTable({           
             dom: "<'row browsertoolbar align-items-end'<'col-sm-12 col-md-7 browserbuttons'B><'col-sm-12 col-md-2'><'col-sm-12 col-md-3'f>>" + "<'row'<'col-sm-12'tr>>" + "<'row browserfooterbar'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",
@@ -121,7 +122,7 @@
                 },                                    
             ], 
             select: {
-                style: 'single'
+                style: 'os'
             },
             language: {
                 "emptyTable": "No cases available on server."
@@ -135,16 +136,18 @@
                     key: "\r",
                     action: function (e, dt, node, config) {
                         const selected_row = case_data_table.row({selected: true}).data();
-                        openCase(selected_row.case_id, selected_row.status, selected_row.last_read_by_id); 
+                        openCase(selected_row.case_id, selected_row.status, selected_row.last_read_by_id);
                     }
                 },
-                {% if user.is_staff %}
+                ...(user_is_staff? [
                 {
-                    extend: "selectedSingle",
+                    extend: "selected",
                     text: '<i class="fas fa-lock-open"></i>',
-                    titleAttr: 'Unlock case',
-                    action: function (e, dt, node, config) {
-                        infoPrompt("Feature coming soon!");
+                    titleAttr: 'Close case',
+                    action: async function (e, dt, node, config) {
+                        const selected_rows = case_data_table.rows({selected: true}).data();
+                        await closeCases(selected_rows);
+                        case_data_table.ajax.reload(null, false);
                     }
                 },
                 {
@@ -169,7 +172,7 @@
                     action: async function (e, dt, node, config) {
                         const case_id = case_data_table.row({selected: true}).data().case_id;
                         const selected_row = case_data_table.row({selected: true}).data();
-                        if (!canModifyCaseStatus(selected_row.status, selected_row.last_read_by_id, "delete")) {
+                        if (!canDeleteCase(selected_row.status, selected_row.last_read_by_id)) {
                             await infoPrompt("Case is locked and cannot be deleted now.", "Locked");
                             return;
                         }
@@ -183,8 +186,7 @@
                             }
                         })
                     }
-                },
-                {% endif %}
+                }]:[]),
                 {
                     extend: "selectedSingle",
                     text: '<i class="fas fa-list-alt"></i>',
@@ -251,41 +253,74 @@
     } );
 
     function openCase(case_id, status, last_read_by_id) {
-        if (status=="Ready" || status=="Complete" || status=="Viewing" || {{user.is_staff|lower}}) {
-            const link = '/viewer/'+case_id;
-            window.open(link, "_self");
+        if (["Viewing","Ready","Complete"].includes(status) || user_is_staff) {
+            window.open(`/viewer/${case_id}`, "_self");
         } else {
             infoPrompt("Case is not ready for viewing.", "Locked");
         }  
     }
 
-    function canModifyCaseStatus(status, last_read_by_id, operation) {
-        if ((status=="Ready") || (status=="Complete")) {
+    async function closeCases(cases) {
+        for (let i=0; i<cases.length; i++) {
+            if (!["Viewing","Ready","Complete"].includes(cases[i].status)) {
+                errorPrompt("One of these cases is not currently opened.");
+                return;
+            }
+        }
+        await Swal.fire({
+            title: "Close case?",
+            // text: ".",
+            icon: "question",
+            showDenyButton: true,
+            showCancelButton: true,
+            confirmButtonText: "Set to Ready",
+            denyButtonText: "Set to Complete",
+            cancelButtonText: "Cancel",      
+            confirmButtonColor: "#1266f1",
+            denyButtonColor: "#198754",
+            cancelButtonColor: "#d33",
+            showLoaderOnConfirm: true,
+            preConfirm: handler(true),
+            preDeny: handler(false)
+        })
+
+        function handler(confirmed) {
+            return (async () => {
+            try {
+                for (let i=0; i<cases.length; i++) {
+                    targetURL = `/api/case/${cases[i].id}/close/${confirmed? 'ready' : 'complete'}`;
+                    await doFetch(targetURL);
+                }
+            } catch (e) {
+                console.warn(e)
+                Swal.showValidationMessage("Unable to close case. Check logs.")
+            }
+        })}
+
+    }
+
+    function canDeleteCase(status, last_read_by_id) {
+        if (["Ready","Complete"].includes(status)) {
             return true;
         }
-
-        {% if user.is_staff %}
-        if (status=="Processing") {
-            return true
-        }
-        {% endif %}
-        if ((status=="Received") || (status=="Queued") || (status=="Processing")) {
+        if (user_is_staff) {
+            if (["Processing", "Error"].includes(status)) {
+                return true;
+            }
             return false;
         }
-        if ((status=="Viewing")) {
-            if (last_read_by_id=="{{user.username}}") {
+        if (status == "Viewing") {
+            if (last_read_by_id == "{{user.username}}") {
                 return true;
             } else {
                 return false;
             }                
         }
 
-        {% if user.is_staff %}
-        if (status=="Error") {
-            return true;
+        if (["Received", "Queued", "Processing"].includes(status)) {
+            return false;
         }
-        {% endif %}
-
+        
         // In other states, changing case status currently not supported        
         return false;
     }    
