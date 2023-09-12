@@ -47,6 +47,8 @@ def reprocess_case(request, case):
     with open(directory / "study.json","r") as f:
         study_json = json.load(f)
 
+    study_json["tags"] = [tag.name for tag in case.tags.all()]
+
     CopyDicomsJob.enqueue_work(case=None,parameters=dict(incoming_folder=str(directory), study_json=study_json))
 
     return HttpResponse() 
