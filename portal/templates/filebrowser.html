@@ -137,7 +137,9 @@
                     </template>
                     </div>
                 </div>
-                <button class="btn-primary btn btn-viewer mt-4" @click="select_case" :disabled=""><i class="fa-solid fa-upload"></i>&nbsp;&nbsp;Import Folder</button>
+                <button class="btn-primary btn btn-viewer mt-4" 
+                    click="select_case" 
+                    :disabled="(()=>{for (l of listings){ if (l.is_dir) return true; return false}})()"><i class="fa-solid fa-upload"></i>&nbsp;&nbsp;Import Folder</button>
             </template>
         </div>
     </div>
