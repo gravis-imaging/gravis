@@ -187,6 +187,8 @@ def viewer(request, case_id):
                 read_only = True
             else:
                 return HttpResponseForbidden()
+        if case.status == Case.CaseStatus.COMPLETE:
+            read_only = True
 
         # If the case is currently being viewed, but not by this user
         if ( case.status == Case.CaseStatus.VIEWING and case.viewed_by != request.user ):

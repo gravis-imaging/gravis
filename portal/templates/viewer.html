@@ -272,12 +272,12 @@
         </template>
         <template x-teleport="#navtest">
           <li class="nav-item menuitems-top ps-0" x-show="read_only"> 
-            <h5 class="nav-link mb-0 ps-0"><span class="badge bg-danger rounded-pill" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="Case Assigned to Other User (Read-Only Mode)">Read-Only</span></h5>
+            <h5 class="nav-link mb-0 ps-0"><span class="badge bg-danger rounded-pill" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="Case Assigned to Other User (Read Only Mode)">Read Only</span></h5>
           </li>
         </template>
         <template x-teleport="#navtest">
           <li class="nav-item menuitems-top ps-0" x-show="case_data.status != 'Viewing'">
-          <h5 class="nav-link mb-0 ps-0"><span class="badge bg-danger rounded-pill" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="Case Status" x-text="case_data.status"></span></h5>
+          <h5 class="nav-link mb-0 ps-0"><span class="badge rounded-pill" :class="case_data.status == 'Error'? 'bg-danger' : 'bg-success'" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="Case Status" x-text="case_data.status"></span></h5>
         </template>
         <template x-if="studies_data.others.length > 1">
       <select id="aux_select" name="studies" autocomplete="off" class="selectpicker show-tick all-pointer-events" value="" data-style="btn btn-lg text-light btn-viewer-toolbar" data-width="200px"
