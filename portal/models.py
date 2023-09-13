@@ -129,8 +129,9 @@ class Case(models.Model):
             private = lambda x: getattr(self,x)
 
         return { 
-            **{x: getattr(self,x) for x in ["id","num_spokes","case_type","twix_id","case_location","settings"]},
+            **{x: getattr(self,x) for x in ["id","num_spokes","twix_id","case_location","settings"]},
             **{x: private(x) for x in ["patient_name", "mrn", "acc"]},
+            "case_type": self.get_case_type_display(),
             "case_id": str(self.id), # Not sure why necessary to convert to string here!?
             "exam_time": self.exam_time.strftime("%Y-%m-%d %H:%M"),
             "receive_time": self.receive_time.strftime("%Y-%m-%d %H:%M"),
