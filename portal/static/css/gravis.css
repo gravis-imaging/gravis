@@ -402,7 +402,9 @@ input::selection, .selectable::selection {
     min-height: 40px;
 }
 
-.btn-toolbar-timeline-leftright {
+.btn-toolbar-timeline-leftright,
+.btn-toolbar-timeline-leftright:active,
+.btn-toolbar-timeline-leftright:focus {
     padding-left: 1.10rem !important;
     padding-right: 1.10rem !important;
 }
