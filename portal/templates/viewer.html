@@ -247,7 +247,7 @@
       <template x-teleport="#navtest">
         <div class="" style="min-width: 100px;" x-show="patient_cases.length > 1">
           <div class="btn-group shadow-0" role="group" aria-label="Basic example">
-            <button type="button" class="btn btn-lg text-light btn-viewer-toolbar btn-toolbar-timeline" data-mdb-color="dark"
+            <button type="button" class="btn btn-lg text-light btn-viewer-toolbar btn-toolbar-timeline btn-toolbar-timeline-leftright" data-mdb-color="dark"
             :disabled="should_disable() || (case_select_idx == 0)" disabled="disabled" 
             @click="let id=patient_cases[case_select_idx-1].id; document.getElementById('patient_case_select').value = id; do_case_switch(id);">
             <i class="fa-solid fa-chevron-left"></i></button>
@@ -256,14 +256,14 @@
             x-bind="case_select"
             x-ref="case_select"
             >
-              <optgroup label="Exam date">
+              <optgroup label="Exam Date">
                 <template x-for="c in patient_cases">
                   <option :value="c.id" x-text="c.exam_time" :selected="c.id === case_data.id">
                 </option>
                 </template>    
               </optgroup>
             </select>
-            <button type="button" class="btn btn-lg text-light btn-viewer-toolbar btn-toolbar-timeline" data-mdb-color="dark"
+            <button type="button" class="btn btn-lg text-light btn-viewer-toolbar btn-toolbar-timeline btn-toolbar-timeline-leftright" data-mdb-color="dark"
             :disabled="should_disable() || (case_select_idx == patient_cases.length-1)"
             @click="let id=patient_cases[case_select_idx+1].id; document.getElementById('patient_case_select').value = id; do_case_switch(id);"
             disabled="disabled" ><i class="fa-solid fa-chevron-right"></i></button>

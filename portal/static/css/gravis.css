@@ -345,15 +345,6 @@ input::selection, .selectable::selection {
     min-height: 32px;
 }
 
-.btn-toolbar-active {
-    color: #fff;
-    background-color: rgb(0, 220, 0);
-}
-
-.btn-toolbar-timeline {
-    min-height: 40px;
-}
-
 ::-webkit-scrollbar-track,
 ::-webkit-scrollbar-corner {
   /* background-color: #0a0a0a; */
@@ -395,12 +386,27 @@ input::selection, .selectable::selection {
   transition-duration: 0s!important;
   -webkit-animation-duration:0s!important;
   animation-duration:0s!important
-
 }
 
 .btn-viewer-toolbar:hover {
     background-color: #1266f1!important;
     border-color: #fff !important;
+}
+
+.btn-toolbar-active {
+    color: #fff;
+    background-color: rgb(0, 220, 0);
+}
+
+.btn-toolbar-timeline {
+    min-height: 40px;
+    background-color: #424242;
+    border: 1px solid #888 !important;
+}
+
+.btn-toolbar-timeline-leftright {
+    padding-left: 1.10rem;
+    padding-right: 1.10rem;
 }
 
 .ripple-wave {
