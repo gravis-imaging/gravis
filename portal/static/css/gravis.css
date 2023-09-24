@@ -402,7 +402,6 @@ input::selection, .selectable::selection {
 .btn-toolbar-timeline:active,
 .btn-toolbar-timeline:focus {
     min-height: 40px;
-    border-width: 1.5px !important;
 }
 
 .btn-toolbar-timeline-leftright,
