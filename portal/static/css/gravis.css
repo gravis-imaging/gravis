@@ -398,8 +398,11 @@ input::selection, .selectable::selection {
     background-color: rgb(0, 220, 0);
 }
 
-.btn-toolbar-timeline {
+.btn-toolbar-timeline,
+.btn-toolbar-timeline:active,
+.btn-toolbar-timeline:focus {
     min-height: 40px;
+    border-width: 1.5px !important;
 }
 
 .btn-toolbar-timeline-leftright,
