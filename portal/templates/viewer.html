@@ -238,13 +238,20 @@
           <i class="far fa-window-close"></i>&nbsp;&nbsp;Close</a>
       </template>
       <template x-teleport="#navtest">
-        <div class="me-2" style="min-width: 100px;" x-show="patient_cases.length > 1">
+        <li class="nav-item menuitems-top me-2" >
+          <a href="#" @click="showCaseInformation(case_id);">
+              <h5 class="navbar_patient_info nav-link mb-0" x-text="case_data.patient_name + (case_data.num_spokes? ` (${case_data.num_spokes} spokes)`:'')"></h5>
+          </a>
+        </li></span>
+      </template>
+      <template x-teleport="#navtest">
+        <div class="" style="min-width: 100px;" x-show="patient_cases.length > 1">
           <div class="btn-group shadow-0" role="group" aria-label="Basic example">
-            <button type="button" class="btn btn-lg text-light btn-viewer-toolbar" data-mdb-color="dark"
+            <button type="button" class="btn btn-lg text-light btn-viewer-toolbar btn-toolbar-timeline" data-mdb-color="dark"
             :disabled="should_disable() || (case_select_idx == 0)" disabled="disabled" 
             @click="let id=patient_cases[case_select_idx-1].id; document.getElementById('patient_case_select').value = id; do_case_switch(id);">
             <i class="fa-solid fa-chevron-left"></i></button>
-            <select id="patient_case_select" name="patient_case_select" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-lg text-light btn-viewer-toolbar" data-width="200px"
+            <select id="patient_case_select" name="patient_case_select" autocomplete="off" class="selectpicker show-tick" value="" data-style="btn btn-lg text-light btn-viewer-toolbar btn-toolbar-timeline" data-width="200px"
             :disabled="should_disable" disabled="disabled" 
             x-bind="case_select"
             x-ref="case_select"
@@ -256,19 +263,12 @@
                 </template>    
               </optgroup>
             </select>
-            <button type="button" class="btn btn-lg text-light btn-viewer-toolbar" data-mdb-color="dark"
+            <button type="button" class="btn btn-lg text-light btn-viewer-toolbar btn-toolbar-timeline" data-mdb-color="dark"
             :disabled="should_disable() || (case_select_idx == patient_cases.length-1)"
             @click="let id=patient_cases[case_select_idx+1].id; document.getElementById('patient_case_select').value = id; do_case_switch(id);"
             disabled="disabled" ><i class="fa-solid fa-chevron-right"></i></button>
           </div>
         </div>
-        </template>
-        <template x-teleport="#navtest">
-        <li class="nav-item menuitems-top" >
-          <a href="#" @click="showCaseInformation(case_id);">
-              <h5 class="navbar_patient_info nav-link mb-0" x-text="case_data.patient_name + (case_data.num_spokes? ` (${case_data.num_spokes} spokes)`:'')"></h5>
-          </a>
-        </li></span>
         </template>
         <template x-teleport="#navtest">
           <li class="nav-item menuitems-top ps-0" x-show="read_only"> 
@@ -330,12 +330,12 @@
 
     <button title="Add ROI annotation" class="all-pointer-events btn-large btn-viewer ms-2 my-2" 
     :disabled="should_disable() || read_only || viewer.rotate_mode" disabled="disabled" style="color:white"
-    :class="!should_disable() && viewer.annotation_manager.current_annotation_tool=='EllipticalROI'? 'btn-success' : 'btn-primary'"
+    :class="!should_disable() && viewer.annotation_manager.current_annotation_tool=='EllipticalROI'? 'btn-toolbar-active' : 'btn-primary'"
     @click="viewer.annotation_manager.setAnnotationTool('EllipticalROI');"><i class="fa-regular fa-circle"></i>
 </button><button
  title="Add probe annotation" class="all-pointer-events btn-large btn-viewer ms-2 my-2" 
     :disabled="should_disable() || read_only || viewer.rotate_mode" disabled="disabled"  style="color:white"
-    :class="!should_disable() && viewer.annotation_manager.current_annotation_tool=='Probe'? 'btn-success' : 'btn-primary'"
+    :class="!should_disable() && viewer.annotation_manager.current_annotation_tool=='Probe'? 'btn-toolbar-active' : 'btn-primary'"
     @click="viewer.annotation_manager.setAnnotationTool('Probe');"><i class="fa-solid fa-plus"></i>
 </button>    
     <div class="dropdown ms-2">

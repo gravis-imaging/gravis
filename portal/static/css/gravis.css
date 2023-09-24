@@ -325,10 +325,13 @@ input::selection, .selectable::selection {
     background-color: #1266f1;
 }
 
+.navbar_patient_info {
+    border-radius: 3px;
+}
+
 .navbar_patient_info:hover {
     color: #FFF!important;
     background-color: #1266f1!important;
-    border-radius: 3px;
 }
 
 .navbar_case_list.active {
@@ -340,6 +343,15 @@ input::selection, .selectable::selection {
     border-radius: 3px;
     min-width: 32px;
     min-height: 32px;
+}
+
+.btn-toolbar-active {
+    color: #fff;
+    background-color: rgb(0, 220, 0);
+}
+
+.btn-toolbar-timeline {
+    min-height: 40px;
 }
 
 ::-webkit-scrollbar-track,
