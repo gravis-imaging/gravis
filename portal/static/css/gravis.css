@@ -327,6 +327,7 @@ input::selection, .selectable::selection {
 
 .navbar_patient_info {
     border-radius: 3px;
+    color: #FFF!important;
 }
 
 .navbar_patient_info:hover {
