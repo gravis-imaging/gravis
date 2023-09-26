@@ -1,5 +1,6 @@
 
 import json
+import logging
 import numpy as np
 from pathlib import Path
 
@@ -13,6 +14,9 @@ from portal.models import *
 from common.calculations import get_im_orientation_mat
 from .common import user_opened_case, debug_sql
 from django.db import transaction
+
+logger = logging.getLogger(__name__)
+
 
 @login_required
 @require_GET
@@ -71,7 +75,7 @@ def set_case_status(request, case, new_status):
     case_item = get_object_or_404(Case, id=case)
 
     # Don't set the case status unless this user opened it or is staff
-    if not (user_opened_case(request, case) or request.user.is_staff):
+    if not (case_item.last_read_by.id == request.user.id or request.user.is_staff):
         return HttpResponseForbidden()
 
     if case_item.status not in [Case.CaseStatus.VIEWING, Case.CaseStatus.READY, Case.CaseStatus.COMPLETE]:

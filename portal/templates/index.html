@@ -56,6 +56,7 @@
 
 <script>       
     const user_is_staff = {{user.is_staff|lower}};
+    const username = "{{user.username}}";
     $(document).ready(function () {               
         var case_data_table = $('#casetable').DataTable({           
             dom: "<'row browsertoolbar align-items-end'<'col-sm-12 col-md-7 browserbuttons'B><'col-sm-12 col-md-2'><'col-sm-12 col-md-3'f>>" + "<'row'<'col-sm-12'tr>>" + "<'row browserfooterbar'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",
@@ -139,17 +140,24 @@
                         openCase(selected_row.case_id, selected_row.status, selected_row.last_read_by_id);
                     }
                 },
-                ...(user_is_staff? [
                 {
                     extend: "selected",
                     text: '<i class="fas fa-lock-open"></i>',
-                    titleAttr: 'Close case',
+                    titleAttr: 'Set case status',
                     action: async function (e, dt, node, config) {
                         const selected_rows = case_data_table.rows({selected: true}).data();
+                        for (let i=0; i<selected_rows.length; i++)  {
+                            if ( selected_rows[i].last_read_by_id != username ) {
+                                console.warn(selected_rows[i],username)
+                                await errorPrompt("You must be the current reader of a case to edit it.");
+                                return
+                            } 
+                        }
                         await closeCases(selected_rows);
                         case_data_table.ajax.reload(null, false);
                     }
                 },
+                ...(user_is_staff? [
                 {
                     extend: "selectedSingle",
                     text: '<i class="fa-solid fa-cogs"></i>',
@@ -263,12 +271,12 @@
     async function closeCases(cases) {
         for (let i=0; i<cases.length; i++) {
             if (!["Viewing","Ready","Complete"].includes(cases[i].status)) {
-                errorPrompt("One of these cases is not currently opened.");
+                await errorPrompt("One of these cases is not currently opened.");
                 return;
             }
         }
         await Swal.fire({
-            title: "Close case?",
+            title: `Set case${cases.length>1? 's' : ''} status?`,
             // text: ".",
             icon: "question",
             showDenyButton: true,
@@ -288,7 +296,7 @@
             return (async () => {
             try {
                 for (let i=0; i<cases.length; i++) {
-                    targetURL = `/api/case/${cases[i].id}/close/${confirmed? 'ready' : 'complete'}`;
+                    targetURL = `/api/case/${cases[i].id}/status/${confirmed? 'ready' : 'complete'}`;
                     await doFetch(targetURL);
                 }
             } catch (e) {
