@@ -325,10 +325,14 @@ input::selection, .selectable::selection {
     background-color: #1266f1;
 }
 
+.navbar_patient_info {
+    border-radius: 3px;
+    color: #FFF!important;
+}
+
 .navbar_patient_info:hover {
     color: #FFF!important;
     background-color: #1266f1!important;
-    border-radius: 3px;
 }
 
 .navbar_case_list.active {
@@ -383,12 +387,29 @@ input::selection, .selectable::selection {
   transition-duration: 0s!important;
   -webkit-animation-duration:0s!important;
   animation-duration:0s!important
-
 }
 
 .btn-viewer-toolbar:hover {
     background-color: #1266f1!important;
     border-color: #fff !important;
+}
+
+.btn-toolbar-active {
+    color: #fff;
+    background-color: rgb(0, 220, 0);
+}
+
+.btn-toolbar-timeline,
+.btn-toolbar-timeline:active,
+.btn-toolbar-timeline:focus {
+    min-height: 40px;
+}
+
+.btn-toolbar-timeline-leftright,
+.btn-toolbar-timeline-leftright:active,
+.btn-toolbar-timeline-leftright:focus {
+    padding-left: 1.10rem !important;
+    padding-right: 1.10rem !important;
 }
 
 .ripple-wave {
