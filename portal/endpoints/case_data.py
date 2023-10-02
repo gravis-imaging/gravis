@@ -49,9 +49,9 @@ def reprocess_case(request, case):
         return HttpResponseForbidden()
     case = get_object_or_404(Case, id=case)
 
-    jobs = case.processing_jobs.filter(status__in=("CREATED",)).count()
-    if jobs > 0:
-        return JsonResponse(dict(error="a job is already running"), status=503)
+    # jobs = case.processing_jobs.filter(status__in=("CREATED",)).count()
+    # if jobs > 0:
+    #     return JsonResponse(dict(error="a job is already running"), status=503)
 
     directory = Path(case.case_location) / "input"
     with open(directory / "study.json","r") as f:
@@ -70,9 +70,9 @@ def rotate_case(request, case, n):
         return HttpResponseForbidden()
     case = get_object_or_404(Case, id=case)
 
-    jobs = case.processing_jobs.filter(status__in=("CREATED",)).count()
-    if jobs > 0:
-        return JsonResponse(dict(error="a job is already running"), status=503)
+    # jobs = case.processing_jobs.filter(status__in=("CREATED",)).count()
+    # if jobs > 0:
+    #     return JsonResponse(dict(error="a job is already running"), status=503)
 
     FixRotationJob.enqueue_work(case=case,parameters=dict(n=n), error_case_ok=True)
 
@@ -83,8 +83,8 @@ def rotate_case(request, case, n):
 def jobs_running(request, case):
     case = get_object_or_404(Case, id=case)
     jobs = case.processing_jobs.filter(status__in=("CREATED",)).count()
-    if jobs > 0:
-        return JsonResponse(dict(result=True))
+    # if jobs > 0:
+    #     return JsonResponse(dict(result=True))
     return JsonResponse(dict(result=False))
     
 
