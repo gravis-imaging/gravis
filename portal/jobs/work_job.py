@@ -95,7 +95,7 @@ class WorkJobView(View):
         if job.case:
             log_id = logger.add(Path(job.case.case_location) / "logs" / f"{job.id}_{cls.type}.log")
         try:
-            if job.case and job.case.status == Case.CaseStatus.ERROR:
+            if job.case and job.case.status == Case.CaseStatus.ERROR and not job.error_case_ok:
                 raise JobAlreadyInErrorState("Job already in an error state, aborting.")
             if job.dicom_set is None and "source_type" in job.parameters:
                 job.dicom_set = DICOMSet.objects.get(type=job.parameters["source_type"], processing_job__id = job.parameters["source_job"])
@@ -128,7 +128,7 @@ class WorkJobView(View):
                 logger.remove(log_id)
 
     @classmethod
-    def enqueue_work(cls, case, dicom_set=None, *, docker_image=None, depends_on=None, parameters={}):
+    def enqueue_work(cls, case, dicom_set=None, *, docker_image=None, depends_on=None, parameters={}, error_case_ok=False):
         try:
             job = ProcessingJob(
                 status = "CREATED",
@@ -136,7 +136,8 @@ class WorkJobView(View):
                 category = cls.type, 
                 dicom_set = dicom_set,
                 case = case,
-                parameters = parameters)
+                parameters = parameters,
+                error_case_ok = error_case_ok)
             job.save()
             rq_result = django_rq.get_queue(cls.queue).enqueue(
                 do_job,

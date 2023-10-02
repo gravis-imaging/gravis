@@ -83,7 +83,23 @@ async function doFetch(url, body={}, method="POST", raw_text=false) {
         ...( method=="GET"? {} : {body: JSON.stringify(body)})
     })
     if (!response.ok) {
-        throw new Error(response.statusText)
+        let text = null
+        try {
+            text = await response.text();
+        } catch {
+            throw new Error(response.statusText)
+        }
+        let json = ""
+        try {
+            json = JSON.parse(text)
+        } catch (e) {
+            throw new Error(text)
+        }
+        if (json.error) {
+            throw new Error(json.error);
+        } else {
+            throw new Error(text)
+        }
     }
 
     const text = await response.text();

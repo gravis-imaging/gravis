@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST, require_GET
 from django.shortcuts import get_object_or_404
 from portal.jobs.load_dicoms_job import CopyDicomsJob
+from portal.jobs.fix_rotation_job import FixRotationJob
 from portal.models import *
 from common.calculations import get_im_orientation_mat
 from .common import user_opened_case, debug_sql
@@ -47,6 +48,11 @@ def reprocess_case(request, case):
     if not (request.user.is_staff):
         return HttpResponseForbidden()
     case = get_object_or_404(Case, id=case)
+
+    jobs = case.processing_jobs.filter(status__in=("CREATED",)).count()
+    if jobs > 0:
+        return JsonResponse(dict(error="a job is already running"), status=503)
+
     directory = Path(case.case_location) / "input"
     with open(directory / "study.json","r") as f:
         study_json = json.load(f)
@@ -56,6 +62,31 @@ def reprocess_case(request, case):
     CopyDicomsJob.enqueue_work(case=None,parameters=dict(incoming_folder=str(directory), study_json=study_json))
 
     return HttpResponse() 
+
+@login_required
+@require_POST
+def rotate_case(request, case, n):
+    if not (request.user.is_staff):
+        return HttpResponseForbidden()
+    case = get_object_or_404(Case, id=case)
+
+    jobs = case.processing_jobs.filter(status__in=("CREATED",)).count()
+    if jobs > 0:
+        return JsonResponse(dict(error="a job is already running"), status=503)
+
+    FixRotationJob.enqueue_work(case=case,parameters=dict(n=n), error_case_ok=True)
+
+    return HttpResponse() 
+
+@login_required
+@require_GET
+def jobs_running(request, case):
+    case = get_object_or_404(Case, id=case)
+    jobs = case.processing_jobs.filter(status__in=("CREATED",)).count()
+    if jobs > 0:
+        return JsonResponse(dict(result=True))
+    return JsonResponse(dict(result=False))
+    
 
 @login_required
 @require_GET

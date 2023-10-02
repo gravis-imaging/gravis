@@ -181,6 +181,7 @@ class ProcessingJob(models.Model):
     docker_image = models.CharField(max_length=100, blank=True, null=True)
     rq_id = models.CharField(max_length=100, blank=True, null=True)
 
+    error_case_ok = models.BooleanField(null=True)
     objects = models.Manager() 
     successful = SuccessfulProcessingJobManager() # Only successful processing jobs.
     def __str__(self):
@@ -190,6 +191,8 @@ class ProcessingJob(models.Model):
             list.insert(1, f"parameters: {filtered_params}")
         return f"{self.id} ({'; '.join(list)})"
 
+    def to_dict(self):
+        return {x: getattr(self,x) for x in "category docker_image status error_description".split() if getattr(self,x) is not None}
     class Meta:
         db_table = "gravis_processing_job"
         # constraints = [

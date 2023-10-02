@@ -168,7 +168,12 @@
                         if (!isConfirmed) {
                             return;
                         }
-                        await doFetch(`/api/case/${case_id}/reprocess`);
+                        try {
+                            await doFetch(`/api/case/${case_id}/reprocess`);
+                        } catch (e) {
+                            await errorPrompt(`Unable to reprocess case: ${e}`);
+                            return;
+                        }
                         setTimeout(()=> case_data_table.ajax.reload(null, false), 1500);
                         await successToast("The case will be reprocessed.");
                     }

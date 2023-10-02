@@ -24,6 +24,8 @@ urls = [
     path("", case_data.get_case),
     path("delete", case_data.delete_case),
     path("reprocess", case_data.reprocess_case),
+    path("rotate/<int:n>", case_data.rotate_case),
+    path("jobs_running", case_data.jobs_running),
     path("status/<str:new_status>", case_data.set_case_status),
     path("viewable", case_data.get_case_viewable),
     path("set_viewing", case_data.set_case_viewing),
