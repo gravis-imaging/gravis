@@ -47,6 +47,8 @@
         job_loading: null, 
         previews_loading: 0,
         aux_loading: false,
+        jobs_running: false,
+        user_is_staff: {{user.is_staff|lower}},
         studies_data: parse_json_element("studies_data"),
         case_data: parse_json_element("case_data"),
         patient_cases: parse_json_element("patient_cases"),
@@ -72,7 +74,7 @@
             this.read_only = info.read_only;
             this.case_id = info.current_case.id;
             this.case_select_idx = this.patient_cases.findIndex((c)=>c.id == this.case_id)
-
+            await this.show_jobs_running();
             await this.viewer.switchCase(this.studies_data, this.case_data)
 
             let volume = this.studies_data.volumes.find((v)=> v.type==this.study_type)
@@ -90,6 +92,7 @@
           this.loading = true; 
           this.case_select_idx = this.patient_cases.findIndex((c)=>c.id == this.case_id)
           await this.$nextTick();
+          await this.show_jobs_running();
           viewer = await new GraspViewer(this.$refs.viewer_main, this.$refs.viewer_preview, this.studies_data, this.case_data); 
           window.viewer = viewer; 
           await viewer.switchStudy(this.studies_data.volumes[0].uid, this.studies_data.volumes[0].dicom_set, this.case_id);
@@ -99,12 +102,15 @@
           }
           this.viewer = viewer;
           this.loading = false;
-          // Prompt the user if there are unsaved changes.
 
+          // Prompt the user if there are unsaved changes.
           addEventListener('beforeunload', (event) => { if (viewer.state_manager.getChanged()) { event.returnValue = "ask"; return "ask"; } });
         },
         should_disable: function() {
           return !this.viewer || !this.viewer.current_study || this.loading || this.switching;
+        },
+        show_jobs_running: async function() {
+          this.jobs_running = (await doFetch(`/api/case/${this.case_id}/jobs_running`,{},"GET")).result;
         },
         case_select: {
           [':init']() { 
@@ -144,6 +150,16 @@
             let case_id = this.$event.target.value;
             await this.do_case_switch(case_id);
           }
+        },
+        do_rotate_job: async function(n){
+          try { 
+            await doFetch(`/api/case/${this.case_id}/rotate/${n}`); 
+          } catch (e) {
+            errorToast(`Failed to start job: ${e}`)
+            return;
+          }
+          this.show_jobs_running();
+          successToast('Rotation initiated.');
         },
         volume_picker: {
           async ['@mouseup']() {
@@ -275,9 +291,11 @@
             <h5 class="nav-link mb-0 ps-0">
               <span x-show="read_only" class="badge bg-danger rounded-pill" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="Case Assigned to Other User (Read Only Mode)">Read Only</span>
               <span x-show="case_data.status != 'Viewing'" class="badge rounded-pill" :class="case_data.status == 'Error'? 'bg-danger' : 'bg-success'" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="Case Status" x-text="case_data.status"></span>
+              <span x-show="jobs_running" class="badge rounded-pill badge-light"  data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="Case Status">Job running</span>
             </h5>
           </li>
         </template>
+
         <template x-if="studies_data.others.length > 1">
       <select id="aux_select" name="studies" autocomplete="off" class="selectpicker show-tick all-pointer-events" value="" data-style="btn btn-lg text-light btn-viewer-toolbar" data-width="200px"
       @change="job_loading=true; aux_loading= true; await $nextTick(); await viewer.aux_manager.selectStack($event.target.value); job_loading=false; aux_loading=false; " title="Displayed series">
@@ -311,10 +329,29 @@
         x-bind="volume_picker" disabled="disabled">
     </input>
     <label for='volume-picker' x-text="viewer && viewer.selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>
-  
+    <div class="ms-5"></div>
+
+    <div class="dropdown" x-show="case_data.status == 'Error' || user_is_staff" x-cloak>
+      <button
+        class="btn-primary btn-large btn-viewer"
+        type="button"
+        data-mdb-toggle="dropdown"
+        aria-expanded="false"
+        :disabled="should_disable" disabled="disabled" 
+      >
+        <i class="fa-solid fa-ellipsis-vertical"></i>
+      </button>
+      <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+        <li><button class="dropdown-item" href="#" 
+          :disabled="false && jobs_running"
+           @click="do_rotate_job(1)"><i class="fa-solid fa-rotate-left"></i>&nbsp;Left Rotate</a></li>
+        <li><button class="dropdown-item" href="#" 
+          :disabled="false && jobs_running" 
+          @click="do_rotate_job(3)"><i class="fa-solid fa-rotate-right"></i>&nbsp;Right Rotate</a></li>
+      </ul>
+    </div>
     <!-- Image manipulation buttons -->
-    
-    <button title="Reset viewers" class="btn-primary btn-large btn-viewer ms-5"
+    <button title="Reset viewers" class="btn-primary btn-large btn-viewer ms-2"
     :disabled="should_disable" disabled="disabled" 
     @click="viewer.resetCameras()"><i class="fa-solid fa-location-crosshairs"></i>
     </button>
