@@ -12,6 +12,7 @@ from .work_job import WorkJobView
 
 class FixRotationJob(WorkJobView):
     type = "FixRotationJob"
+    queue = "cheap"
     
     @classmethod
     def do_job(cls, job):
