@@ -40,8 +40,8 @@ def delete_case(request, case):
     case = get_object_or_404(Case, id=case)
 
     # If someone else is viewing this case, don't mark for deletion.
-    if not user_opened_case(request,case) and case.status == Case.CaseStatus.VIEWING:
-        return HttpResponseForbidden()
+    if not (case.last_read_by == request.user or (case.last_read_by is None and case.status==Case.CaseStatus.ERROR) or request.user.is_staff):
+        return HttpResponseForbidden("You do not have permissions to delete this case.")
 
     case.status = Case.CaseStatus.DELETE
     case.save()
@@ -50,14 +50,18 @@ def delete_case(request, case):
 @login_required
 @require_POST
 def reprocess_case(request, case):
-    if not (request.user.is_staff):
-        return HttpResponseForbidden()
     case = get_object_or_404(Case, id=case)
+
+    if not (case.last_read_by == request.user or (case.last_read_by is None and case.status==Case.CaseStatus.ERROR) or request.user.is_staff):
+        return HttpResponseForbidden("Cannot reprocess a case that you haven't opened.")
+
+    if not request.user.has_perm("portal.reprocess"):
+        return HttpResponseForbidden("Insufficient permissions.")
 
     for job in case.processing_jobs.all():
         if job.rq_id in started_registry or job.rq_id in scheduled_registry:
             return JsonResponse(dict(error="a job is already queued or running"), status=503)
-            
+
     directory = Path(case.case_location) / "input"
     with open(directory / "study.json","r") as f:
         study_json = json.load(f)
@@ -71,9 +75,12 @@ def reprocess_case(request, case):
 @login_required
 @require_POST
 def rotate_case(request, case, n):
-    if not (request.user.is_staff):
-        return HttpResponseForbidden()
     case = get_object_or_404(Case, id=case)
+    if not request.user.has_perm("portal.rotate"):
+        return HttpResponseForbidden("Insufficient permissions.")
+
+    if not (case.last_read_by == request.user or (case.last_read_by is None and case.status==Case.CaseStatus.ERROR) or request.user.is_staff):
+        return HttpResponseForbidden("Cannot rotate a case that you haven't opened.")
 
     for job in case.processing_jobs.all():
         if job.rq_id in started_registry or job.rq_id in scheduled_registry:

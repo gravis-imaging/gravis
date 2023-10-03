@@ -183,10 +183,10 @@ def viewer(request, case_id):
         
         # If the case is not ready for viewing
         if case.status not in ( Case.CaseStatus.READY, Case.CaseStatus.VIEWING,  Case.CaseStatus.COMPLETE):
-            if request.user.is_staff:
-                read_only = True
-            else:
-                return HttpResponseForbidden()
+            # if request.user.is_staff:
+            read_only = True
+            # else:
+                # return HttpResponseForbidden()
         if case.status == Case.CaseStatus.COMPLETE:
             read_only = True
 

@@ -149,7 +149,10 @@ class Case(models.Model):
         return [x.to_dict(user.profile.privacy_mode) for x in Case.objects.filter(status = Case.CaseStatus.VIEWING, viewed_by=user)]
     class Meta:
         db_table = "gravis_case"
-
+        permissions = [
+            ("reprocess", "Can reprocess cases"),
+            ("rotate", "Can rotate cases")
+        ]
 
 class SuccessfulProcessingJobManager(models.Manager):
     """

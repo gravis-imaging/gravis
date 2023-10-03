@@ -330,8 +330,7 @@
     </input>
     <label for='volume-picker' x-text="viewer && viewer.selected_time.toFixed(2) + 's'" style="min-width: 4em; text-align: right;"></label>
     <div class="ms-5"></div>
-
-    <div class="dropdown" x-show="case_data.status == 'Error' || user_is_staff" x-cloak>
+    <div class="dropdown" x-show="{% if 'portal.rotate' in perms %}true{% else %}false{%endif%}" x-cloak>
       <button
         class="btn-primary btn-large btn-viewer"
         type="button"

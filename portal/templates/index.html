@@ -157,7 +157,7 @@
                         case_data_table.ajax.reload(null, false);
                     }
                 },
-                ...(user_is_staff? [
+                {% if 'portal.reprocess' in perms %}
                 {
                     extend: "selectedSingle",
                     text: '<i class="fa-solid fa-cogs"></i>',
@@ -177,7 +177,8 @@
                         setTimeout(()=> case_data_table.ajax.reload(null, false), 1500);
                         await successToast("The case will be reprocessed.");
                     }
-                },
+                },{% endif %}
+                {% if 'portal.delete_case' in perms %}
                 {
                     extend: "selectedSingle",
                     text: '<i class="fas fa-trash"></i>',
@@ -185,21 +186,21 @@
                     action: async function (e, dt, node, config) {
                         const case_id = case_data_table.row({selected: true}).data().case_id;
                         const selected_row = case_data_table.row({selected: true}).data();
-                        if (!canDeleteCase(selected_row.status, selected_row.last_read_by_id)) {
-                            await infoPrompt("Case is locked and cannot be deleted now.", "Locked");
-                            return;
-                        }
+                        // if (!canDeleteCase(selected_row.status, selected_row.last_read_by_id)) {
+                            // await infoPrompt("Case is locked and cannot be deleted now.", "Locked");
+                            // return;
+                        // }
                         const result = await confirmPrompt("Do you really want to delete the case?", "Are you sure?", async () => {
                             try {
                                 await doFetch(`/api/case/${case_id}/delete`);
                                 await successToast("The case has been deleted.");
                                 setTimeout(()=> case_data_table.ajax.reload(null,false), 1500);
                             } catch (e) {
-                                Swal.showValidationMessage("A problem occurred while deleting the case. Please try again.")
+                                Swal.showValidationMessage(`A problem occurred while deleting the case: ${e}`)
                             }
                         })
                     }
-                }]:[]),
+                },{% endif %}
                 {
                     extend: "selectedSingle",
                     text: '<i class="fas fa-list-alt"></i>',
@@ -266,7 +267,7 @@
     } );
 
     function openCase(case_id, status, last_read_by_id) {
-        if (["Viewing","Ready","Complete"].includes(status) || user_is_staff) {
+        if (["Viewing","Ready","Complete", "Error"].includes(status) || user_is_staff) {
             window.open(`/viewer/${case_id}`, "_self");
         } else {
             infoPrompt("Case is not ready for viewing.", "Locked");
