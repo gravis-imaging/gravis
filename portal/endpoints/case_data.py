@@ -77,8 +77,12 @@ def rotate_case(request, case, n):
 
     if ( case.status == Case.CaseStatus.COMPLETE ):
         return HttpResponseBadRequest("Cannot modify a case that is already Complete.")
-        
-    if not (case.last_read_by == request.user or (case.last_read_by is None and case.status==Case.CaseStatus.ERROR) or request.user.is_staff):
+
+    if (not (
+            case.last_read_by == request.user # user opened this case
+            or (case.last_read_by is None and case.status==Case.CaseStatus.ERROR) # Nobody opened this case, it's in an error state
+            or request.user.is_staff # User is staff, assume knows what they're doing
+        )):
         return HttpResponseForbidden("Cannot rotate a case that you haven't opened.")
     
     if case.get_running_jobs():

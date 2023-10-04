@@ -58,7 +58,7 @@
     const user_is_staff = {{user.is_staff|lower}};
     const username = "{{user.username}}";
     $(document).ready(function () {               
-        var case_data_table = $('#casetable').DataTable({           
+        window.case_data_table = $('#casetable').DataTable({           
             dom: "<'row browsertoolbar align-items-end'<'col-sm-12 col-md-7 browserbuttons'B><'col-sm-12 col-md-2'><'col-sm-12 col-md-3'f>>" + "<'row'<'col-sm-12'tr>>" + "<'row browserfooterbar'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",
             ajax: "/api/cases",
             deferRender: true,
@@ -265,10 +265,12 @@
                 case_data_table.$('tr.selected').removeClass('selected');
                 $(this).addClass('selected');
             }
-        } );        
+        } );
+        case_data_table.search(localStorage.getItem("browser_search")||"");        
     } );
 
     function openCase(case_id, status, last_read_by_id) {
+        localStorage.setItem("browser_search", case_data_table.search());
         if (["Viewing","Ready","Complete", "Error"].includes(status) || user_is_staff) {
             window.open(`/viewer/${case_id}`, "_self");
         } else {
