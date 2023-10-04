@@ -57,19 +57,21 @@ function HSLToRGB (h, s, l) {
 async function doJob(type, case_, params, force=false) {
     let start_result = await startJob(type, case_, params, force);
     console.log(`Do Job`,start_result.id);
-    for (let i=0;i<100;i++) {
-        let result = await getJob(type,start_result.id)
+    return await awaitJobDone(type, start_result.id)
+}
+
+async function awaitJobDone(type, id, interval=500, limit=100) {
+    for (let i=0;i<limit;i++) {
+        let result = await getJob(type,id)
         if ( result["status"] == "SUCCESS" ) {
             return result;
         }
         if ( result["status"] == "FAILED" ) {
             throw Error("Failed")
         }
-        await sleep(100);
+        await sleep(interval);
     }
-    return;
 }
-
 
 async function doFetch(url, body={}, method="POST", raw_text=false) {
     const response = await fetch(url, {
@@ -540,4 +542,4 @@ async function successToast(title) {
         title: title,
     });
 }
-export { debounce, setCookie, download, getCookie, HSLToRGB, doJob, doFetch, viewportInVolume, loadVolumeWithRetry, startJob, getJob, getJobInstances, viewportToImage, scrollViewportToPoint, fixUpCrosshairs, Vector, chartToImage, decacheVolumes, confirmPrompt, inputPrompt, errorPrompt, errorToast, successPrompt,infoPrompt, successToast };
+export { debounce, setCookie, download, getCookie, HSLToRGB, doJob, doFetch, viewportInVolume, loadVolumeWithRetry, startJob, getJob, awaitJobDone, getJobInstances, viewportToImage, scrollViewportToPoint, fixUpCrosshairs, Vector, chartToImage, decacheVolumes, confirmPrompt, inputPrompt, errorPrompt, errorToast, successPrompt,infoPrompt, successToast };

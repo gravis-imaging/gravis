@@ -153,13 +153,40 @@
         },
         do_rotate_job: async function(n){
           try { 
-            await doFetch(`/api/case/${this.case_id}/rotate/${n}`); 
+            this.loading = true;
+            let result = await doFetch(`/api/case/${this.case_id}/rotate/${n}`); 
+            successToast('Rotation initiated.');
+            this.show_jobs_running();
+            try {
+              this.loading = true;
+              await awaitJobDone("rotate", result.id);
+              successToast('Rotation complete.');
+              this.show_jobs_running();
+              // cornerstone.cache.purgeVolumeCache();
+              // await this.viewer.switchCase(this.studies_data, this.case_data)
+              window.location.reload();
+            } catch (e) {
+              errorToast(`Rotation failed: ${e}`);
+              this.show_jobs_running();
+            } 
           } catch (e) {
-            errorToast(`Failed to start job: ${e}`)
+            errorToast(`Rotation failed: ${e}`)
             return;
+          } finally {
+            this.loading = false;
           }
-          this.show_jobs_running();
-          successToast('Rotation initiated.');
+        },
+        do_reprocess: async function() {
+          const { isConfirmed } = await confirmPrompt("Reprocess selected case?")
+          if (!isConfirmed) {
+              return;
+          }
+          try {
+              await doFetch(`/api/case/${this.case_id}/reprocess`);
+              await successToast("Processing initiated.");
+          } catch (e) {
+              await errorPrompt(`Unable to reprocess case: ${e}`);
+          }
         },
         volume_picker: {
           async ['@mouseup']() {
@@ -342,11 +369,14 @@
       </button>
       <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
         <li><button class="dropdown-item" href="#" 
-          :disabled="false && jobs_running"
+          :disabled="jobs_running"
            @click="do_rotate_job(1)"><i class="fa-solid fa-rotate-left"></i>&nbsp;Left Rotate</a></li>
         <li><button class="dropdown-item" href="#" 
-          :disabled="false && jobs_running" 
+          :disabled="jobs_running" 
           @click="do_rotate_job(3)"><i class="fa-solid fa-rotate-right"></i>&nbsp;Right Rotate</a></li>
+        <button class="dropdown-item" href="#" 
+          :disabled="jobs_running" 
+          @click="do_reprocess()"><i class="fa-solid fa-gear"></i>&nbsp;Reprocess</a></li>
       </ul>
     </div>
     <!-- Image manipulation buttons -->

@@ -20,9 +20,6 @@ import django_rq
 
 logger = logging.getLogger(__name__)
 
-started_registry = StartedJobRegistry(connection=django_rq.get_connection())
-scheduled_registry = ScheduledJobRegistry(connection=django_rq.get_connection())
-
 
 @login_required
 @require_GET
@@ -58,9 +55,8 @@ def reprocess_case(request, case):
     if not request.user.has_perm("portal.reprocess"):
         return HttpResponseForbidden("Insufficient permissions.")
 
-    for job in case.processing_jobs.all():
-        if job.rq_id in started_registry or job.rq_id in scheduled_registry:
-            return JsonResponse(dict(error="a job is already queued or running"), status=503)
+    if case.get_running_jobs():
+        return JsonResponse(dict(error="a job is already queued or running"), status=503)
 
     directory = Path(case.case_location) / "input"
     with open(directory / "study.json","r") as f:
@@ -81,28 +77,22 @@ def rotate_case(request, case, n):
 
     if not (case.last_read_by == request.user or (case.last_read_by is None and case.status==Case.CaseStatus.ERROR) or request.user.is_staff):
         return HttpResponseForbidden("Cannot rotate a case that you haven't opened.")
+    
+    if case.get_running_jobs():
+        return JsonResponse(dict(error="a job is already queued or running"), status=503)
 
-    for job in case.processing_jobs.all():
-        if job.rq_id in started_registry or job.rq_id in scheduled_registry:
-            return JsonResponse(dict(error="a job is already queued or running"), status=503)
+    job,_ = FixRotationJob.enqueue_work(case=case,parameters=dict(n=n), error_case_ok=True)
 
-    FixRotationJob.enqueue_work(case=case,parameters=dict(n=n), error_case_ok=True)
-
-    return HttpResponse() 
+    return JsonResponse(dict(id=job.id)) 
 
 @login_required
 @require_GET
 def jobs_running(request, case):
     case = get_object_or_404(Case, id=case)
 
-    for job in case.processing_jobs.all():
-        if job.rq_id in started_registry or job.rq_id in scheduled_registry:
-            return JsonResponse(dict(result=True))
+    if case.get_running_jobs():
+        return JsonResponse(dict(result=True))
     return JsonResponse(dict(result=False))
-    # jobs = case.processing_jobs.filter(status__in=("CREATED",)).count()
-    # if jobs > 0:
-    #     return JsonResponse(dict(result=True))
-    # return JsonResponse(dict(result=False))
     
 
 @login_required

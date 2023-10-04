@@ -12,6 +12,10 @@ from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 import string
 import random
+import django_rq
+from rq.job import Job
+from rq.exceptions import NoSuchJobError
+
 
 from common.calculations import get_im_orientation_mat
 
@@ -153,6 +157,17 @@ class Case(models.Model):
             ("reprocess", "Can reprocess cases"),
             ("rotate", "Can rotate cases")
         ]
+
+    def get_running_jobs(self):
+        jobs = []
+        for job in self.processing_jobs.all():
+            try:
+                job = Job.fetch(job.rq_id, connection=django_rq.get_connection())
+                if job.get_status(refresh=True) in ("queued", "scheduled", "started"):
+                    jobs.append(job)
+            except NoSuchJobError:
+                pass
+        return jobs
 
 class SuccessfulProcessingJobManager(models.Manager):
     """

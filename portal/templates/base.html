@@ -44,7 +44,7 @@
     <script defer src="/static/js/external/alpinejs@3.12.0.cdn.min.js"></script>
     <script src="/static/js/external/sweetalert2@11.min.js"></script>
     <script type="module">
-        import { confirmPrompt, errorPrompt, errorToast, successPrompt, successToast, infoPrompt, doFetch } from "/static/js/utils.js"
+        import { confirmPrompt, errorPrompt, errorToast, successPrompt, successToast, infoPrompt, doFetch, awaitJobDone } from "/static/js/utils.js"
         window.confirmPrompt = confirmPrompt;
         window.errorPrompt = errorPrompt;
         window.infoPrompt = infoPrompt;
@@ -52,6 +52,7 @@
         window.errorToast = errorToast;
         window.successToast = successToast;
         window.doFetch = doFetch;
+        window.awaitJobDone = awaitJobDone
     </script>
 </body>
 
