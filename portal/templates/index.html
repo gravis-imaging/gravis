@@ -146,12 +146,14 @@
                     titleAttr: 'Set case status',
                     action: async function (e, dt, node, config) {
                         const selected_rows = case_data_table.rows({selected: true}).data();
-                        for (let i=0; i<selected_rows.length; i++)  {
-                            if ( selected_rows[i].last_read_by_id != username ) {
-                                console.warn(selected_rows[i],username)
-                                await errorPrompt("You must be the current reader of a case to edit it.");
-                                return
-                            } 
+                        if (!user_is_staff) {
+                            for (let i=0; i<selected_rows.length; i++)  {
+                                if ( selected_rows[i].last_read_by_id != username ) {
+                                    console.warn(selected_rows[i],username)
+                                    await errorPrompt("You must be the current reader of a case to edit it.");
+                                    return
+                                } 
+                            }
                         }
                         await closeCases(selected_rows);
                         case_data_table.ajax.reload(null, false);

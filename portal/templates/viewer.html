@@ -153,13 +153,19 @@
         },
         do_rotate_job: async function(n){
           try { 
+            if (this.case_data.status != 'Error') {
+              const { isConfirmed } = await confirmPrompt("Really rotate this case? It is not in an error state.")
+              if ( !isConfirmed )
+                return;
+            }
+
             this.loading = true;
             let result = await doFetch(`/api/case/${this.case_id}/rotate/${n}`); 
             successToast('Rotation initiated.');
             this.show_jobs_running();
             try {
               this.loading = true;
-              await awaitJobDone("rotate", result.id);
+              await awaitJobDone("rotate", result.id, 1000, 10000);
               successToast('Rotation complete.');
               this.show_jobs_running();
               // cornerstone.cache.purgeVolumeCache();
@@ -369,10 +375,10 @@
       </button>
       <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
         <li><button class="dropdown-item" href="#" 
-          :disabled="jobs_running"
+          :disabled="jobs_running || case_data.status == 'Complete'"
            @click="do_rotate_job(1)"><i class="fa-solid fa-rotate-left"></i>&nbsp;Left Rotate</a></li>
         <li><button class="dropdown-item" href="#" 
-          :disabled="jobs_running" 
+          :disabled="jobs_running || case_data.status == 'Complete'" 
           @click="do_rotate_job(3)"><i class="fa-solid fa-rotate-right"></i>&nbsp;Right Rotate</a></li>
         <button class="dropdown-item" href="#" 
           :disabled="jobs_running" 

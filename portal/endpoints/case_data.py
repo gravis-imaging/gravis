@@ -75,6 +75,9 @@ def rotate_case(request, case, n):
     if not request.user.has_perm("portal.rotate"):
         return HttpResponseForbidden("Insufficient permissions.")
 
+    if ( case.status == Case.CaseStatus.COMPLETE ):
+        return HttpResponseBadRequest("Cannot modify a case that is already Complete.")
+        
     if not (case.last_read_by == request.user or (case.last_read_by is None and case.status==Case.CaseStatus.ERROR) or request.user.is_staff):
         return HttpResponseForbidden("Cannot rotate a case that you haven't opened.")
     
