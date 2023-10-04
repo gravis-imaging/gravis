@@ -62,6 +62,11 @@
               errorPrompt("This case is not ready for viewing.")
               return;
             }
+            // TODO: temporary fix until I get onco aux viewer switching properly
+            if ( this.case_data.case_type.indexOf('Onco') != -1 ) {
+              window.location = `/viewer/${case_id}`;
+              return;
+            }
             result = await doFetch(`/api/case/${case_id}/set_viewing`,{},"POST");
             if (! result.ok ) {
               // todo

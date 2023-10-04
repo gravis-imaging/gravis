@@ -201,7 +201,10 @@ def viewer(request, case_id):
 
     instances = DICOMInstance.objects.defer("json_metadata").filter(dicom_set__case=case, dicom_set__type__in=("ORI", "SUB")).order_by("study_uid","dicom_set").distinct("study_uid","dicom_set")    
     other_instances = DICOMInstance.objects.defer("json_metadata").filter(dicom_set__case=case).exclude(dicom_set__type__in=("ORI", "SUB", "CINE/AX","CINE/COR", "CINE/SAG")).order_by("dicom_set__type").distinct("dicom_set__type")
-    patient_cases = list(map(lambda x:x.to_dict(),Case.objects.filter(mrn=case.mrn).order_by("exam_time","id"))) # ,case_type=case.case_type
+    
+    patient_cases = list(map(lambda x:x.to_dict(),
+            Case.objects.filter(mrn=case.mrn,status__in=(Case.CaseStatus.READY, Case.CaseStatus.VIEWING, Case.CaseStatus.COMPLETE, Case.CaseStatus.ERROR)).order_by("exam_time","id")
+            )) # ,case_type=case.case_type
     #.distinct("study_uid","dicom_set")
     def i_to_dict(k):
         return dict(uid=k.study_uid,dicom_set=k.dicom_set.id, type=k.dicom_set.type)

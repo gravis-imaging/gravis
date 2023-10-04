@@ -144,7 +144,7 @@ def set_case_status(request, case, new_status):
 @transaction.atomic
 def get_case_viewable(request, case):
     case_item = get_object_or_404(Case, id=case)
-    if case_item.status in (Case.CaseStatus.READY, Case.CaseStatus.COMPLETE, Case.CaseStatus.VIEWING) or request.user.is_staff:
+    if case_item.status in (Case.CaseStatus.READY, Case.CaseStatus.COMPLETE, Case.CaseStatus.VIEWING, Case.CaseStatus.ERROR) or request.user.is_staff:
         return JsonResponse({"ok":True})
     return JsonResponse({"ok":False})
 
