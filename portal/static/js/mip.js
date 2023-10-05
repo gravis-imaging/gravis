@@ -32,6 +32,9 @@ class AuxManager {
     }
 
     async init(graspVolumeInfo, selected_index) {
+        if (this.current_set_type) {
+            await this.selectStack(this.current_set_type);
+        }
     }
     async switch(index, preview, targetImageIdIndex=null) {}
     async startPreview(idx) {}
@@ -235,9 +238,9 @@ class AuxManager {
             }
         }
     }
-    async loadVolume(type, urls) {
+    async loadVolume(type, set_id, urls) {
         // Load a volume into the aux viewer.
-        const volumeId = `cornerstoneStreamingImageVolume:${type}_AUXVOLUME`;
+        const volumeId = `cornerstoneStreamingImageVolume:${set_id}_${type}_AUXVOLUME`;
         const volume = await cornerstone.volumeLoader.createAndCacheVolume(volumeId, { imageIds:urls });
         volume.imageData.setDirection(volume.direction.map(Math.round))
         
@@ -280,12 +283,12 @@ class AuxManager {
         cornerstone.tools.utilities.stackPrefetch.enable(this.viewport.element);
         
     }
-    async showImages(type, urls) {
+    async showImages(type, set_id, urls) {
         try { // Try to treat this as a volume. If it throws, try it as a stack.
             if (this.viewport.type == "stack") {
                 this.switchViewportType("volume");
             }
-            return await this.loadVolume(type, urls);
+            return await this.loadVolume(type, set_id, urls);
         } catch (e) {
             console.warn(e);
             if (this.viewport.type != "stack") {
@@ -304,7 +307,7 @@ class AuxManager {
 
         this._no_sync = true;
         try {
-            await this.showImages(type,urls)
+            await this.showImages(type,set_id, urls)
             this.viewport.setZoom(zoom);
             this.viewport.setPan(pan);    
         } finally {
@@ -493,5 +496,4 @@ class MIPManager extends AuxManager{
         }
     }
 }
-
 export { MIPManager, AuxManager }
