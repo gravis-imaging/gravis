@@ -3,7 +3,6 @@ from pathlib import Path
 from subprocess import Popen
 from django.core.management.base import BaseCommand
 from app import settings
-from portal.endpoints.common import debug_sql
 from portal.models import Case, DICOMInstance, DICOMSet, ProcessingJob
 from django.db.models import Q
 import pydicom
@@ -13,7 +12,7 @@ from .work_job import WorkJobView
 class FixRotationJob(WorkJobView):
     type = "FixRotationJob"
     queue = "cheap"
-    
+
     @classmethod
     def do_job(cls, job):
         case = job.case
