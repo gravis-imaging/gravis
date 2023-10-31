@@ -14,7 +14,7 @@
     
     <div class="form-outline mb-4">
       <input type="text" id="id_username" class="form-control form-control-lg {% if form.username.errors %}is-invalid{%endif%}" autofocus required
-        id="id_username" name="username" autocomplete="username" maxlength="150" value="{{form.username.value}}">
+        id="id_username" name="username" autocomplete="username" maxlength="150" value="{{form.username.value|default_if_none:''}}">
     </input>
       <label class="form-label" for="id_username">Username</label>
       <div class="invalid-feedback">{{ form.username.errors}}</div>
@@ -22,7 +22,7 @@
 
     <div class="form-outline mb-4">
       <input type="text" id="id_email" class="form-control form-control-lg {% if form.email.errors %}is-invalid{%endif%}" autofocus required
-        id="id_email" name="email" autocomplete="email" maxlength="254" value="{{form.email.value}}">
+        id="id_email" name="email" autocomplete="email" maxlength="254" value="{{form.username.value|default_if_none:''}}">
         </input>
       <label class="form-label" for="id_username">Email</label>
       <div class="invalid-feedback">{{ form.email.errors}}</div>
