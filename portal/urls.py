@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 # from .jobs import cine_generation
 from . import views, endpoints, jobs
 
@@ -8,6 +8,7 @@ from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 urlpatterns = [
     path("", views.index, name="index"),
+    path('accounts/', include('registration.backends.admin_approval.urls')),
     path("login/", views.login_request, name="login"),
     path("logout/", views.logout_request, name="logout"),
     path("user/", views.user, name="user"),

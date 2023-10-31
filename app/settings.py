@@ -69,6 +69,13 @@ STATIC_ROOT = "/opt/gravis/staticfiles"
 ALLOWED_HOSTS = ["gravis", "127.0.0.1", "localhost"]
 USE_X_FORWARDED_HOST = True
 
+ACCOUNT_ACTIVATION_DAYS = 30
+
+def get_admins():
+    from django.contrib.auth.models import User
+    return [(a.username, a.email) for a in User.objects.filter(is_staff=True, is_active=True)]
+REGISTRATION_ADMINS = "app.settings.get_admins"
+
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:9090",
     "http://localhost:8001",
@@ -80,12 +87,13 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 INSTALLED_APPS = [
+    "portal",
+    "registration",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    "portal",
     "django.contrib.staticfiles",
     "django_rq",
 ]

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="vh-100 form-signin">
+    <div class="container py-5 h-100">
+      <div class="row d-flex justify-content-center align-items-center h-100">
+        <div class="col col-xl-10">
+          <div class="card" style="border-radius: 1rem; border: 1px solid #888;">
+            <div class="row g-0">
+              <div class="col-md-6 col-lg-5 d-none d-md-block">
+                <img src="/static/login_background.jpg" alt="login form" class="img-fluid"
+                  style="border-radius: 1rem 0 0 1rem; border-right: 1px solid #888;" />
+              </div>
+              <div class="col-md-6 col-lg-7 d-flex align-items-center">
+                <div class="card-body p-4 p-lg-5 text-black">  
+                {% block content %}
+                {% endblock %}
+                <p class="mb-5 pb-lg-2"></p>
+                <p class="small text-muted" style="text-align: center; position: absolute; bottom: 0px;">©{% now 'Y' %} Center for
+                  Biomedical Imaging</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+</main>
+
+{% endblock %}

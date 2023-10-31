@@ -1,0 +1,8 @@
+{% extends 'registration/registration_base.html' %}
+
+{% block content %}
+<h2 class="text-light">Registration email sent</h2>
+<p class="text-light">
+    Please check your email, {{ request.session.registration_email }}, to complete the registration process.
+</p>
+{% endblock %}
