@@ -32,6 +32,7 @@ env = environ.Env(
     DISPATCH_AET_SOURCE=(str, None),
     DISPATCH_AET_TARGET=(str, None),
     COMPRESS_DICOMS=(bool, True),
+    PROD_HOST=(str,"localhost")
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -66,7 +67,7 @@ MEDIA_ROOT = DATA_FOLDER
 STATIC_URL = "static/"
 STATIC_ROOT = "/opt/gravis/staticfiles"
 
-ALLOWED_HOSTS = ["gravis", "127.0.0.1", "localhost"]
+ALLOWED_HOSTS = ["gravis", "127.0.0.1", "localhost", env("PROD_HOST")]
 USE_X_FORWARDED_HOST = True
 
 ACCOUNT_ACTIVATION_DAYS = 30
