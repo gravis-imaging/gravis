@@ -718,3 +718,13 @@ summary.selectable.metsresult:hover {
     margin-left: 1ch;
     margin-right:1ch;
 }
+
+.signup-link {
+    color: hsla(0,0%,100%,.7) !important;
+    font-weight: 300;
+    font-size: 0.95rem;
+}
+
+.signup-link:hover {
+    color: hsla(0,0%,100%,1) !important;
+}
