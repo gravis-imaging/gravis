@@ -1,5 +1,5 @@
 [Unit]
-Description=GRAVIS worker default
+Description=GRAVIS worker cheap
 Requires=redis.service
 After=network.target
 PartOf=gravis.service
@@ -8,7 +8,7 @@ PartOf=gravis.service
 User=gravis
 Group=gravis
 WorkingDirectory=/opt/gravis/app
-ExecStart=/opt/gravis/venv/bin/python /opt/gravis/app/manage.py rqworker default
+ExecStart=/opt/gravis/venv/bin/python /opt/gravis/app/manage.py rqworker cheap
 
 [Install]
 WantedBy=multi-user.target

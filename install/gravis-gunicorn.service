@@ -2,6 +2,7 @@
 Description=gunicorn daemon
 Requires=gravis-gunicorn.socket
 After=network.target
+PartOf=gravis.service
 
 [Service]
 User=gravis

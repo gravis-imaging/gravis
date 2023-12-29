@@ -13,3 +13,4 @@ fakeredis
 pyfakefs
 django-cprofile-middleware
 django-registration-redux ~= 2.13
+gunicorn

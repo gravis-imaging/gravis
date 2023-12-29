@@ -2,6 +2,7 @@
 Description=worker
 Requires=gravis-gunicorn.socket redis.service
 After=network.target
+PartOf=gravis.service
 
 [Service]
 User=gravis

@@ -1,0 +1,9 @@
+[Unit]
+Wants=gravis-gunicorn.service
+Wants=gravis-watcher.service
+Wants=gravis-worker.service
+Wants=gravis-worker-cheap.service
+
+[Service]
+ExecStart=/bin/true
+RemainAfterExit=yes

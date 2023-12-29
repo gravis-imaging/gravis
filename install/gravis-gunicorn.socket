@@ -1,5 +1,6 @@
 [Unit]
 Description=GRAVIS gunicorn socket
+PartOf=gravis.service
 
 [Socket]
 ListenStream=/run/gravis-gunicorn.sock
