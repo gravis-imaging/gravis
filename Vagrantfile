@@ -80,9 +80,9 @@ Vagrant.configure("2") do |config|
     sudo systemctl restart gravis-gunicorn
     sudo -u gravis -s <<- EOK
        DJANGO_SUPERUSER_PASSWORD=gravis /opt/gravis/venv/bin/python /opt/gravis/app/manage.py createsuperuser --noinput --username admin --email=admin@localhost
-    EOK
+EOK
     echo "Default user/password: admin / gravis"
   
-  SHELL
-  end
+SHELL
+end
   
