@@ -28,8 +28,7 @@ Vagrant.configure("2") do |config|
     # Create a forwarded port mapping which allows access to a specific port
     # within the machine from a port on the host machine and only allow access
     # via 127.0.0.1 to disable public access
-    config.vm.network "forwarded_port", guest: 80, host: 80, host_ip: "127.0.0.1"
-    config.vm.network "forwarded_port", guest: 4443, host: 443, host_ip: "127.0.0.1"
+    config.vm.network "forwarded_port", guest: 443, host: 3333, host_ip: "127.0.0.1", auto_correct: false
     config.vm.network "forwarded_port", guest: 22, host: 2545, auto_correct: false, host_ip: "127.0.0.1", id: "ssh"
   
     # config.vm.hostname = "gravis.local"
@@ -41,6 +40,7 @@ Vagrant.configure("2") do |config|
     # Create a public network, which generally matched to bridged network.
     # Bridged networks make the machine appear as another physical device on
     # your network.
+    
     # config.vm.network "public_network"
   
     # Share an additional folder to the guest VM. The first argument is
@@ -61,7 +61,7 @@ Vagrant.configure("2") do |config|
        vb.customize [ "modifyvm", :id, "--uart1", "0x3F8", "4" ]
       # Create a NULL serial port to skip console logging by default
        vb.customize [ "modifyvm", :id, "--uartmode1", "file", File::NULL ]
-       config.vm.network "private_network", ip: "192.168.50.4", virtualbox__intnet: "mynetwork"
+       # config.vm.network "private_network", ip: "192.168.50.4", virtualbox__intnet: "mynetwork"
       # Customize the amount of memory on the VM:
        vb.memory = "5120"
        vb.cpus = 2
@@ -74,8 +74,15 @@ Vagrant.configure("2") do |config|
     # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
     # documentation for more information about their specific syntax and use.
     config.vm.provision "shell", inline: <<-SHELL
-    cp -r /vagrant /home/vagrant/gravis && cd gravis
+    cp -r /vagrant/gravis /home/vagrant/ && cd gravis
     sudo ./install.sh
-     SHELL
+    echo "\nPROD_HOST=localhost:3333" >> /opt/gravis/app/local.env
+    sudo systemctl restart gravis-gunicorn
+    sudo -u gravis -s <<- EOK
+       DJANGO_SUPERUSER_PASSWORD=gravis /opt/gravis/venv/bin/python /opt/gravis/app/manage.py createsuperuser --noinput --username admin --email=admin@localhost
+    EOK
+    echo "Default user/password: admin / gravis"
+  
+  SHELL
   end
   

@@ -84,8 +84,9 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8001",
     "http://127.0.0.1:9090",
     "https://127.0.0.1:4443",
-    "https://rmrlpdcdap001.nyumc.org"
+    "https://"+env("PROD_HOST")
 ]
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 INSTALLED_APPS = [
     "portal",

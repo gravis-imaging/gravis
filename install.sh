@@ -9,9 +9,11 @@ then
 fi
 
 GRAVIS_BASE=/opt/gravis
+GRAVIS_APP=$GRAVIS_BASE/app
 DATA_PATH=$GRAVIS_BASE/data
 DB_PATH=$GRAVIS_BASE/db
 GRAVIS_SRC=.
+VENV=$GRAVIS_BASE/venv
 
 echo "gravis installation folder: $GRAVIS_BASE"
 echo "Data folder: $DATA_PATH"
@@ -37,10 +39,6 @@ create_folder () {
 
 create_folders () {
   create_folder $GRAVIS_BASE
-#   if [ $INSTALL_TYPE != "systemd" ]; then
-#     create_folder $DB_PATH
-#   fi
-
   if [[ ! -e $DATA_PATH ]]; then
       echo "## Creating $DATA_PATH..."
       sudo mkdir "$DATA_PATH"
@@ -53,11 +51,12 @@ create_folders () {
 }
 
 install_app_files() {
-  if [ ! -e "$GRAVIS_BASE"/app ]; then
+  if [ ! -e "$GRAVIS_APP" ]; then
     echo "## Installing app files..."
-    sudo mkdir "$GRAVIS_BASE"/app
-    sudo cp -R "$GRAVIS_SRC" "$GRAVIS_BASE"/app
-    sudo chown -R $OWNER:$OWNER "$GRAVIS_BASE/app"
+    sudo mkdir "$GRAVIS_APP"
+    sudo cp -R "$GRAVIS_SRC" "$GRAVIS_APP"
+    sudo chown -R $OWNER:$OWNER "$GRAVIS_APP"
+    sudo cp "$GRAVIS_SRC"/install/local.install-env "$GRAVIS_APP/local.env"
   fi
 }
 
@@ -70,22 +69,34 @@ install_packages() {
 
 install_dependencies() {
   echo "## Installing Python runtime environment..."
-  if [ ! -e "$GRAVIS_BASE/venv" ]; then
-    sudo mkdir "$GRAVIS_BASE/venv" && sudo chown $USER "$GRAVIS_BASE/venv"
-    python3.10 -m venv "$GRAVIS_BASE/venv"
+  if [ ! -e "$VENV" ]; then
+    sudo mkdir "$VENV" && sudo chown $USER "$VENV"
+    python3.10 -m venv "$VENV"
   fi
 
   echo "## Installing required Python packages..."
   sudo chown -R $OWNER:$OWNER "$GRAVIS_BASE/venv"
-  sudo su $OWNER -c "$GRAVIS_BASE/venv/bin/pip install --isolated wheel~=0.37.1"
-  sudo su $OWNER -c "$GRAVIS_BASE/venv/bin/pip install --isolated -r \"$GRAVIS_BASE/app/requirements.txt\""
+  sudo -u $OWNER -s <<- EOL
+   set -e
+   $VENV/bin/pip install --isolated wheel~=0.37.1
+   $VENV/bin/pip install --isolated -r "$GRAVIS_APP/requirements.txt"
+   if [[ ! -e $GRAVIS_BASE/staticfiles ]]; then
+     $VENV/bin/python $GRAVIS_APP/manage.py collectstatic
+   fi
+EOL
 }
 
 install_services() {
-   echo "## Installing services..."
-  sudo cp "$GRAVIS_SRC"/install/*.{service,socket} /etc/systemd/system
-  sudo systemctl enable gravis-gunicorn.service gravis-gunicorn.socket gravis-watcher.service gravis-worker.service gravis-worker-cheap.service gravis.service
+  echo "## Installing GRAVIS service..."
+  cd "$GRAVIS_SRC"/install
+  SYSTEMD_UNITS=(*.{service,socket})
+  echo "Units to install: ${SYSTEMD_UNITS[@]}"
+  sudo cp "${SYSTEMD_UNITS[@]}" /etc/systemd/system
+  # gravis-gunicorn.service gravis-gunicorn.socket gravis-watcher.service gravis-worker.service gravis-worker-cheap.service gravis.service
+  sudo systemctl enable "${SYSTEMD_UNITS[@]}"
+  sudo systemctl daemon-reload
   sudo systemctl start gravis
+  cd -
 }
 
 install_postgres() {
@@ -96,22 +107,29 @@ install_postgres() {
     createdb gravis -O gravis || true
 EOM
   echo "## Running initial migrations..."
-  sudo -u gravis -s <<- EOK
-  cd $GRAVIS_BASE/app
-  ../venv/bin/python manage.py migrate
+  sudo -u $OWNER -s <<- EOK
+  $VENV/bin/python $GRAVIS_APP/manage.py migrate
 EOK
 }
 
 install_nginx() {
-  echo "## Nginx"
+  echo "## Installing nginx..."
   sudo cp $GRAVIS_SRC/install/gravis_nginx.conf /etc/nginx/sites-available
-  sudo ln -s /etc/nginx/sites-available/gravis_nginx.conf /etc/nginx/sites-enabled
-  sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -subj "/C=US/ST=NY/L=NYC/O=GRAVIS/CN=gravis.local" -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt
+  if [[ ! -e /etc/nginx/sites-enabled/gravis_nginx.conf ]]; then
+    sudo ln -s /etc/nginx/sites-available/gravis_nginx.conf /etc/nginx/sites-enabled
+  fi
+  if ! sudo test -f /etc/ssl/certs/nginx-gravis-selfsigned.crt; then
+    echo "Generating self-signed certificate."
+    sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -subj "/C=US/ST=NY/L=NYC/O=GRAVIS/CN=gravis.local" -keyout /etc/ssl/private/nginx-gravis-selfsigned.key -out /etc/ssl/certs/nginx-gravis-selfsigned.crt
+  else
+    echo "Skipping self-signed certificate generation."
+  fi
+
   sudo service nginx reload
 }
 
 systemd_install () {
-  echo "## Performing systemd-type gravis installation..."
+  echo "## Performing GRAVIS installation..."
   create_user
   create_folders
   install_packages
@@ -119,12 +137,12 @@ systemd_install () {
   install_dependencies
   install_postgres
   install_nginx
-  sudo chown -R $OWNER:$OWNER "$GRAVIS_BASE"
+  install_services
 }
 
 systemd_install
 
-# sudo chown -R vagrant .
+
 # python_l="/usr/bin/python"
 # if [ -L ${python_l} ] ; then
 #    if [ ! -e ${python_l} ] ; then
