@@ -83,6 +83,7 @@ install_dependencies() {
    if [[ ! -e $GRAVIS_BASE/staticfiles ]]; then
      $VENV/bin/python $GRAVIS_APP/manage.py collectstatic
    fi
+   echo -e "\nSECRET_KEY=$($VENV/bin/python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')" >> local.env
 EOL
 }
 

@@ -26,7 +26,6 @@ env = environ.Env(
     DB_BACKEND=(str, "postgres"),
     DB_USER=(str, "gravis"),
     TEST_FOLDER_PATH=(str, "/tmp"),
-    SECRET_KEY=(str, "django-insecure-r$afdbw+6xgz#af8-e2z=#@kjs2r#$th^m=60v1&almulq5fuh"),
     DISPATCH_HOST=(str, None),
     DISPATCH_PORT=(int, 104),
     DISPATCH_AET_SOURCE=(str, None),
