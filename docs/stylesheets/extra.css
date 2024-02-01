@@ -1,0 +1,17 @@
+.menu-btns span.twemoji, h3 span.twemoji {
+    color: white;
+    background-color: #1266f1;
+    padding: 5px;
+    border-radius: 3px;
+    min-width: 32px;
+    min-height:32px;
+}
+.menu-btns span.twemoji svg {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.bordergrid{ display: flex; flex-wrap: wrap; position: relative; grid-gap: 0px; grid-gap: 0px !important;}
+.bordergrid:before{ border-right: 1px solid #fff; content: ''; display: block; right: 0; top: 0; bottom: 0; position: absolute; }
+.bordergrid:after{ border-bottom: 1px solid #fff; content: ''; display: block; left: 0; right: 0; bottom: 0; position: absolute;  }
+.bordergrid > *{ border: 1px solid #000; border-width: 0 1px 1px 0; padding: 0.4em ; margin: 0px;}

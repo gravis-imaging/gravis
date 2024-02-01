@@ -12,7 +12,8 @@ Create the new virtual machine and start gravis by running `vagrant up` in the r
 
 Once running, Gravis will be made available at `https://localhost:3333` on the host machine. You will likely have to click through a security warning, because the installation generates a self-signed certificate to serve Gravis. 
 
-(Cornerstone3D requires "[Cross Origin Isolation](https://web.dev/articles/why-coop-coep)" as it relies on `SharedArrayBuffers`; this is all much easier to set up if Gravis always runs under HTTPS)
+!!! note
+    Cornerstone3D requires "[Cross Origin Isolation](https://web.dev/articles/why-coop-coep)" as it relies on `SharedArrayBuffers`; this is all much easier to set up if Gravis always runs under HTTPS
 
 ## Loading a test case
 
