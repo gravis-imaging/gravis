@@ -1,6 +1,15 @@
-site_name: Gravis
+site_name: GRAVIS Documentation
+copyright: Copyright &copy; 2022 - 2024 Center for Advanced Imaging Innovation and Research (CAI<sup>2</sup>R)
 theme:
   name: material
+  palette:
+    scheme: slate  
+    primary: custom    
+  favicon: images/favicon.png
+  logo: images/favicon.png
+  features:
+    - search.suggest
+    
 markdown_extensions:
   - admonition
   - pymdownx.details
@@ -17,5 +26,8 @@ markdown_extensions:
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
 plugins:
   - site-urls
+  - search  
 extra_css:
   - stylesheets/extra.css
+repo_url: https://github.com/gravis-imaging/gravis
+repo_name: gravis-imaging/gravis

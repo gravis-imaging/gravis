@@ -14,3 +14,6 @@ pyfakefs
 django-cprofile-middleware
 django-registration-redux ~= 2.13
 gunicorn
+mkdocs
+mkdocs-material
+mkdocs-site-urls
