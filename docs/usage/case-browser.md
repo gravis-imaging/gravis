@@ -1,28 +1,32 @@
 # Case browser
 
+Browse, search, and monitor GRAVIS cases. 
+
 ![image](site:images/case_browser.png)
 
-<div class="grid" markdown>
+<div class="grid menu-btns menu-btns-inv" markdown>
 
-| Tool        | Description                          |
-| ----------- | ------------------------------------ |
-| ![open](site:images/toolbar/open.png)       | Open case |
-| ![unlock](site:images/toolbar/unlock.png)   | Set case status |
-| ![process](site:images/toolbar/process.png) | Reprocess case |
-| ![delete](site:images/toolbar/delete.png)   | Delete case |
+| Tool                               | Description      |
+| ----------------------------------:|:---------------- |
+| :fontawesome-solid-folder-open:    | Open case        |
+| :fontawesome-solid-lock-open:      | Set case status  |
+| :fontawesome-solid-gears:          | Reprocess case   |
+| :fontawesome-solid-trash:          | Delete case      |
+| :fontawesome-solid-rectangle-list: | Show info pane   |
 
-| Tool        | Description                          |
-| ----------- | ------------------------------------ |
-| ![info](site:images/toolbar/info.png)       | Show info pane |
-| ![tag](site:images/toolbar/tag.png)         | Update case tags |
-| ![refresh](site:images/toolbar/refresh.png)   | Refresh |
-| ![sort](site:images/toolbar/sort.png)       | Clear sort |
+| Tool                               | Description      |
+| ----------------------------------:|:---------------- |
+| :fontawesome-solid-tags:           | Update case tags |
+| :fontawesome-solid-arrows-rotate:  | Refresh table    |
+| :fontawesome-solid-sort:           | Clear sort       |
+| :fontawesome-solid-upload:         | Add case         |
 </div>
 
 ## Managing cases
 Cases can have several statuses. 
 
 <div class="grid" markdown>
+
 | Status | Description |
 | ------ | ----------- |
 | Processing | Case is still processing |

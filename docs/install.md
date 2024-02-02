@@ -1,3 +1,6 @@
+---
+title: Installation
+---
 # Quick start
 
 For demo and testing purposes, Gravis is easy to run under a virtual machine using [Vagrant](). 

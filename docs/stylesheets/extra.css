@@ -1,4 +1,4 @@
-.menu-btns span.twemoji, h3 span.twemoji {
+.menu-btns span.twemoji, h3 span.twemoji, span.menu-btns {
     color: white;
     background-color: #1266f1;
     padding: 5px;
@@ -6,10 +6,45 @@
     min-width: 32px;
     min-height:32px;
 }
+
+.menu-btns-inv span.twemoji {
+    color: #1266f1;
+    background-color: rgb(30, 30, 30);
+    border-radius: 0px;
+    min-width:  32px;
+    min-height: 38px;
+}
+
+.menu-btns-inv span.twemoji svg {
+    margin-left: auto;
+    margin-right: auto;
+    min-width: 32px;
+    min-height: 24px;
+}
+
 .menu-btns span.twemoji svg {
     margin-left: auto;
     margin-right: auto;
 }
+
+.badge-primary {
+    background-color: #002869;
+    color: #0a47a9;
+  }
+  .badge {
+    border-radius: .27rem;
+  }
+  .badge {
+    display: inline-block;
+    padding: .35em .65em;
+    font-size: .75em;
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+  }
 
 .bordergrid{ display: flex; flex-wrap: wrap; position: relative; grid-gap: 0px; grid-gap: 0px !important;}
 .bordergrid:before{ border-right: 1px solid #fff; content: ''; display: block; right: 0; top: 0; bottom: 0; position: absolute; }

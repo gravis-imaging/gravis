@@ -6,6 +6,29 @@
 | ![recall](site:images/viewer_tools/time-scroll.png){ width=200px}     | Time scroll       |
 | ![recall](site:images/viewer_tools/aux-switch.png){ width=200px}     | Aux switch       |
 
+<h2>Keyboard controls</h2>
+<div class="grid" markdown>
+<div markdown>
+##### Viewports
+| Action       | Shortcut                         |
+|--------------|----------------------------------|
+| Scrolling    | Mouse wheel                      |
+| Windowing    | <span class="badge badge-primary">CTRL</span> + left click/drag  |
+| Panning      | <span class="badge badge-primary">ALT</span> + left click/drag   |
+| Zooming      | <span class="badge badge-primary">ALT</span> + right click/drag  |
+| Centering    | <span class="badge badge-primary">SHIFT</span> + left click/drag |
+| Move ROI     | <span class="badge badge-primary">SHIFT</span> + left click/drag |
+| Fullscreen   | Double click                     |
+
+</div>
+<div markdown>
+##### Other
+| Action        | Shortcut                                          |
+| ------------- | ------------------------------------------------- |
+| Time          | <span class="badge badge-primary">left</span> / <span class="badge badge-primary">right</span> keys |
+| Switch case   | <span class="badge badge-primary">CTRL</span> + <span class="badge badge-primary">left</span> / <span class="badge badge-primary">right</span> keys |
+</div>
+</div>
 ### Exam switcher
 
 <div markdown style="overflow: auto;">
@@ -122,8 +145,9 @@ Resets the pan and zoom on the viewport
 ### :fontawesome-solid-camera: Create Finding 
 Take a screenshot of the viewport and store as a finding
 </div>
-# Findings
 
+<div markdown style="overflow: auto;">
+# Findings
 ![findings](site:images/viewer_tools/findings.png){ align=right }
 
 Findings are displayed along the right hand side. Click on a finding to open a full-page viewer. 
@@ -137,4 +161,13 @@ Delete the finding permanently.
 #### :fontawesome-solid-paper-plane: Send
 Send the finding as a DICOM Secondary Capture to the configured destination server
 
+</div>
 # Charts
+![findings](site:images/viewer_tools/chart.png)
+The chart graphs intensity or average intensity over time. The vertical line indicates the current time point displayed in the volume viewports. Using the upper-right dropdown box, you can switch between displaying the median, mean, or ptp (the difference between the brightest and darkest pixel) for ROIs. The other dropdown allows "zeroed" or "normalized" display: 
+
+- **zeroed**: For each annotation, subtract the value at the first timepoint from the rest of the values. This shifts all of the traces up or down to start at 0.
+- **normalized**: Rescale each trace vertically so its lowest value is 0 and highest value is 1.
+
+#### :fontawesome-solid-download:{ class="menu-btns twemoji"} Download CSV: Downloads a CSV file containing the data displayed.
+#### :fontawesome-solid-camera:{ class="menu-btns twemoji"} Create Finding: Create a finding from this chart.
