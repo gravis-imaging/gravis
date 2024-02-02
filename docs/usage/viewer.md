@@ -146,6 +146,7 @@ Resets the pan and zoom on the viewport
 Take a screenshot of the viewport and store as a finding
 </div>
 
+---
 <div markdown style="overflow: auto;">
 # Findings
 ![findings](site:images/viewer_tools/findings.png){ align=right }
@@ -162,6 +163,7 @@ Delete the finding permanently.
 Send the finding as a DICOM Secondary Capture to the configured destination server
 
 </div>
+---
 # Charts
 ![findings](site:images/viewer_tools/chart.png)
 The chart graphs intensity or average intensity over time. The vertical line indicates the current time point displayed in the volume viewports. Using the upper-right dropdown box, you can switch between displaying the median, mean, or ptp (the difference between the brightest and darkest pixel) for ROIs. The other dropdown allows "zeroed" or "normalized" display: 
