@@ -262,7 +262,7 @@ class AnnotationManager {
             groups = [toolGroupMain, toolGroupAux];
         }
         reset();
-        if (tool_name == this.current_annotation_tool) {
+        if (tool_name == this.current_annotation_tool || tool_name == null) {
             groups.map(x=>x._setCursorForViewports(x._getCursor()))
             this.current_annotation_tool = null;
             return;

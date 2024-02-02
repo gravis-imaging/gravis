@@ -684,6 +684,7 @@ class GraspViewer {
     toggleRotateMode() {
         this.rotate_mode = !this.rotate_mode;
         if (this.rotate_mode) { 
+            this.annotation_manager.setAnnotationTool(null);
             return;
         }
         const ORIENTATION = cornerstone.CONSTANTS.MPR_CAMERA_VALUES;        
