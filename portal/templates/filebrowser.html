@@ -14,23 +14,29 @@
         navigating: false,
         mode: "navigator",
         init: async function() {
-            this.navigate("/");
+            let result = await this.navigate("/{{ path }}");
+            if (!result) {
+                this.navigate("/");
+            }
         },
         navigate: async function(location="") {
             if (this.navigating) return;
             this.navigating = true;
             try {
-                this.path = location;
                 const result = (await doFetch(`/api/filebrowser/list${encodeURIComponent(location)}`))
+                this.path = location;
                 this.listings = result.listing;
                 this.up_path = result.up_path;
                 this.num_dicoms = result.num_dicoms;
+                history.replaceState(null, "","/filebrowser"+encodeURIComponent(location).replaceAll("%2F","/"));
             } catch (e) {
                 await errorPrompt("Failed to list directory.");
                 console.error(e);
+                return false;
             } finally {
                 this.navigating = false;
             }
+            return true;
         },
         nav_up: async function() {
             this.navigate(this.up_path);
@@ -138,7 +144,7 @@
                     </div>
                 </div>
                 <button class="btn-primary btn btn-viewer mt-4" 
-                    click="select_case" 
+                    @click="select_case" 
                     :disabled="(()=>{for (l of listings){ if (l.is_dir) return true; return false}})()"><i class="fa-solid fa-upload"></i>&nbsp;&nbsp;Import Folder</button>
             </template>
         </div>

@@ -220,10 +220,11 @@ def viewer(request, case_id):
 
 
 @login_required
-def file_browser(request):
+def file_browser(request, path=""):
     form = SubmitForm()
     context = {"form": form,
-               "disk_usage":calc_disk_usage()}
+               "disk_usage":calc_disk_usage(),
+               "path": path}
     return render(request, "filebrowser.html", context)
 
 @login_required
