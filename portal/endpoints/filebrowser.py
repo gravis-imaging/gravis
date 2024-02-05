@@ -1,6 +1,6 @@
 import json
 import shutil
-
+import os
 from django.http import HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotAllowed, HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -124,18 +124,26 @@ def list_directory(request, name=None, path=None):
     response = []
     dicoms = []
     skipped_dicoms = False
-    for p in full_path.iterdir():
-        if not (p.is_dir() or p.suffix == '.dcm') or p.name.startswith('.'):
+    relative_path = str(full_path.relative_to(top_dir))
+    for dir_entry in os.scandir(full_path):
+        # Path.iterdir() is noticably slow on very large directories.
+        is_dir = dir_entry.is_dir()
+        is_dcm = dir_entry.name.endswith(".dcm")
+        if not (is_dir or is_dcm or dir_entry.name.startswith('.')):
             continue
-        location = str( top_dir_name / p.relative_to(top_dir))
-        info = dict(is_dir=p.is_dir(), location=location, name=p.name)
-        if p.suffix == ".dcm":
+        # location = str( top_dir_name / Path(dir_entry.path).relative_to(top_dir))
+        if relative_path==".":
+            location = f"{top_dir_name}/{dir_entry.name}"
+        else:
+            location = f"{top_dir_name}/{relative_path}/{dir_entry.name}"
+            
+        info = dict(is_dir=is_dir, location=location, name=dir_entry.name)
+        if is_dcm:
             dicoms.append(info)
-            if len(dicoms) >= 500:
-                skipped_dicoms = True
-                break
         else:
             response.append(info)
+    response = sorted(response, key= lambda x:x.get('location'))
+    dicoms = sorted(dicoms, key= lambda x:x.get('location'))
     if len(dicoms) < 50:
         response.extend(dicoms)
     else:
