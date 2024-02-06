@@ -9,7 +9,6 @@ theme:
   logo: images/favicon.png
   features:
     - search.suggest
-    
 markdown_extensions:
   - admonition
   - pymdownx.details

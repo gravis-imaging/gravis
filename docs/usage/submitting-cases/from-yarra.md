@@ -1,4 +1,6 @@
-To transfer cases from Yarra, configure a mode to use the `SFTPTransfer` module. 
+# From YarraServer
+
+To transfer cases from a YarraServer, configure a mode to use the `SFTPTransfer` module. 
 
 The value of `case_type` in `gravis_settings` will determine how the case will be processed.
 
