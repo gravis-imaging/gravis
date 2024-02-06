@@ -520,7 +520,7 @@ class GraspViewer {
                 this.previewViewports.slice(0,3).map(async (v, n) => {
                 // Get closest preview image if only fraction of preview images were generated.
                 try {
-                    await v.setImageIdIndex(Math.floor(idx * v.getImageIds().length / this.current_study.length));
+                    await v.setImageIdIndex(1+Math.floor(idx * v.getImageIds().length / this.current_study.length));
                     v.setVOI({lower, upper});    
                 } catch (e) {
                     console.error(e);
@@ -565,6 +565,7 @@ class GraspViewer {
     }    
 
     async switchToIndex(index) {
+        console.info("volume idx",index);
         // window.history.replaceState(null, null, `#selected_index=${index}`);
         const current_info = this.current_study[index];
         await viewer.switchSeries(current_info.series_uid); 

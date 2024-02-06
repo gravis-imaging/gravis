@@ -10,13 +10,13 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST, require_GET
 from django.shortcuts import get_object_or_404
 from portal.jobs.load_dicoms_job import CopyDicomsJob
-from portal.jobs.fix_rotation_job import FixRotationJob
 from portal.models import *
 from common.calculations import get_im_orientation_mat
 from .common import user_opened_case, debug_sql
 from django.db import transaction
 from rq.registry import StartedJobRegistry, ScheduledJobRegistry 
 import django_rq
+from portal.jobs.fix_rotation_job import FixRotationJob
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +208,7 @@ def preview_urls(request, case, source_set, view, location):
 
     location = (Path(dicom_set.set_location) / instance.instance_location).relative_to(settings.DATA_FOLDER)
     wado_uri = "wadouri:"+str(Path(settings.MEDIA_URL) / location)
-    return JsonResponse(dict(urls=[ wado_uri +f"?frame={n}" for n in range(instance.num_frames)]))
+    return JsonResponse(dict(urls=[ wado_uri +f"?frame={n}" for n in range(instance.num_frames+1)]))
 
 
 @login_required
