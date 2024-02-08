@@ -55,8 +55,8 @@ install_app_files() {
     echo "## Installing app files..."
     sudo mkdir "$GRAVIS_APP"
     sudo cp -R "$GRAVIS_SRC" "$GRAVIS_APP"
-    sudo chown -R $OWNER:$OWNER "$GRAVIS_APP"
     sudo cp "$GRAVIS_SRC"/install/local.install-env "$GRAVIS_APP/local.env"
+    sudo chown -R $OWNER:$OWNER "$GRAVIS_APP"
   fi
 }
 
@@ -80,10 +80,10 @@ install_dependencies() {
    set -e
    $VENV/bin/pip install --isolated wheel~=0.37.1
    $VENV/bin/pip install --isolated -r "$GRAVIS_APP/requirements.txt"
+   echo -e "\nSECRET_KEY=$($VENV/bin/python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')" >> "$GRAVIS_APP/local.env"
    if [[ ! -e $GRAVIS_BASE/staticfiles ]]; then
      $VENV/bin/python $GRAVIS_APP/manage.py collectstatic
    fi
-   echo -e "\nSECRET_KEY=$($VENV/bin/python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')" >> local.env
 EOL
 }
 
