@@ -1,12 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-OWNER=$USER
-if [ $OWNER = "root" ]
-then
-  OWNER=$(logname)
-  echo "Running as root, but setting $OWNER as owner."
-fi
+#if [ $OWNER = "root" ]
+#then
+#  OWNER=$(logname)
+#  echo "Running as root, but setting $OWNER as owner."
+#fi
 
 GRAVIS_BASE=/opt/gravis
 GRAVIS_APP=$GRAVIS_BASE/app
@@ -14,6 +13,7 @@ DATA_PATH=$GRAVIS_BASE/data
 DB_PATH=$GRAVIS_BASE/db
 GRAVIS_SRC=.
 VENV=$GRAVIS_BASE/venv
+OWNER=gravis
 
 echo "gravis installation folder: $GRAVIS_BASE"
 echo "Data folder: $DATA_PATH"
@@ -23,7 +23,6 @@ echo ""
 
 create_user () {
   id -u gravis &>/dev/null || sudo useradd -ms /bin/bash gravis
-  OWNER=gravis
 }
 
 create_folder () {
@@ -56,8 +55,8 @@ install_app_files() {
     sudo mkdir "$GRAVIS_APP"
     sudo cp -R "$GRAVIS_SRC" "$GRAVIS_APP"
     sudo cp "$GRAVIS_SRC"/install/local.install-env "$GRAVIS_APP/local.env"
-    sudo chown -R $OWNER:$OWNER "$GRAVIS_APP"
   fi
+  sudo chown -R $OWNER:$OWNER "$GRAVIS_APP"
 }
 
 install_packages() {
@@ -77,14 +76,23 @@ install_dependencies() {
   echo "## Installing required Python packages..."
   sudo chown -R $OWNER:$OWNER "$GRAVIS_BASE/venv"
   sudo -u $OWNER -s <<- EOL
-   set -e
+   echo "### Installing..."
    $VENV/bin/pip install --isolated wheel~=0.37.1
    $VENV/bin/pip install --isolated -r "$GRAVIS_APP/requirements.txt"
-   echo -e "\nSECRET_KEY=$($VENV/bin/python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')" >> "$GRAVIS_APP/local.env"
+EOL
+
+  echo "Generating secret keys..."
+  sudo -u $OWNER -s <<- EOL2
+    echo -e "\nSECRET_KEY=$($VENV/bin/python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')" >> "$GRAVIS_APP/local.env"
+EOL2
+
+  sudo -u $OWNER -s <<- EOL3
+   echo "Collecting static files..."
    if [[ ! -e $GRAVIS_BASE/staticfiles ]]; then
      $VENV/bin/python $GRAVIS_APP/manage.py collectstatic
    fi
-EOL
+EOL3
+
 }
 
 install_services() {
@@ -152,7 +160,7 @@ install_docker () {
   fi
 }
 
-systemd_install () {
+do_install () {
   echo "## Performing GRAVIS installation..."
   create_user
   create_folders
@@ -165,7 +173,7 @@ systemd_install () {
   install_services
 }
 
-systemd_install
+do_install
 
 
 # python_l="/usr/bin/python"
