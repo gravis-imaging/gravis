@@ -78,3 +78,7 @@
   .md-header {
     background-color: rgb(38,38,38);    
   }
+
+  .md-footer {
+    margin-top: 3rem;
+  }

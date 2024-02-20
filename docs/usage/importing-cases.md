@@ -1,4 +1,4 @@
-The web filebrowser allows you to import cases that are already available on the server. It supports cases that are stored in individual folders, eg: 
+The web filebrowser allows you to import cases that are already available on the server. It supports cases that are stored in individual folders, e.g.: 
 
 ```
 .
@@ -24,6 +24,6 @@ The "import folder" button will become available on folders that have no subfold
 
 </div>
 
-Gravis will fill in the patient name, mrn, and accession from the dicoms if it can find them. You must select which processing type to use for the case. 
+GRAVIS will fill in the patient name, mrn, and accession number from the DICOMs if it can find them. You must select which processing type to use for the case. 
 
 ![screenshot](site:images/import_case/import_case_4.png)

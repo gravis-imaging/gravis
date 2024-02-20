@@ -1,7 +1,7 @@
-Gravis supports two case types currently. They each have different processing pipelines and slightly different viewer UIs. 
+GRAVIS supports two case types currently. They each have different processing pipelines and slightly different viewer UIs. 
 
 ## GRASP MRA
-GRASP MRA cases have a Maximum Intensity projection (displayed in the lower left), and a 4D subtraction volume (accessible by switching the dropdown from ORI to SUB). 
+GRASP MRA cases have a Maximum Intensity Projection (displayed in the lower left), and a 4D subtraction volume (accessible by switching the dropdown from ORI to SUB). 
 
 ![mra viewer](site:images/viewer_tools/viewer-mra.png)
 

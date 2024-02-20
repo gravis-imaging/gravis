@@ -6,7 +6,7 @@
 | ![recall](site:images/viewer_tools/time-scroll.png){ width=200px}     | Time scroll       |
 | ![recall](site:images/viewer_tools/aux-switch.png){ width=200px}     | Aux switch       |
 
-<h2>Keyboard controls</h2>
+## Keyboard controls
 <div class="grid" markdown>
 <div markdown>
 ##### Viewports
@@ -29,7 +29,7 @@
 | Switch case   | <span class="badge badge-primary">CTRL</span> + <span class="badge badge-primary">left</span> / <span class="badge badge-primary">right</span> keys |
 </div>
 </div>
-### Exam switcher
+## Exam switcher
 
 <div markdown style="overflow: auto;">
 
@@ -38,7 +38,7 @@
 This allows switching between exams of the same patient. The :fontawesome-solid-chevron-left: and :fontawesome-solid-chevron-right: buttons switch to the previous and next exam, sorted by time. The center button lets you jump to a particular exam.
 </div>
 
-## Time Scroll
+## Time scroll
 
 ![Time scroll animation](site:images/viewer_tools/time-scroll-anim.gif){ align=right width=200px }
 
@@ -48,7 +48,7 @@ Select the timepoint to display. While scrolling, a preview of the current viewp
 
 This dropdown behavior depends on the type of case you're viewing. It can either switch to an alternate volume to display in the main three viewports (eg, a subtraction volume), or it can pick a volume to display in the auxiliary viewport on the bottom left (eg a heatmap). 
 
-# Toolbar
+## Toolbar
 
 <div class="grid menu-btns" markdown>
 
@@ -148,7 +148,7 @@ Take a screenshot of the viewport and store as a finding
 
 ---
 <div markdown style="overflow: auto;">
-# Findings
+## Findings
 ![findings](site:images/viewer_tools/findings.png){ align=right }
 
 Findings are displayed along the right hand side. Click on a finding to open a full-page viewer. 
@@ -164,7 +164,7 @@ Send the finding as a DICOM Secondary Capture to the configured destination serv
 
 </div>
 ---
-# Charts
+## Charts
 ![findings](site:images/viewer_tools/chart.png)
 The chart graphs intensity or average intensity over time. The vertical line indicates the current time point displayed in the volume viewports. Using the upper-right dropdown box, you can switch between displaying the median, mean, or ptp (the difference between the brightest and darkest pixel) for ROIs. The other dropdown allows "zeroed" or "normalized" display: 
 
