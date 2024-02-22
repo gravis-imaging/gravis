@@ -1,8 +1,8 @@
 # GRAVIS Viewing Software for GRASP MRI Studies
 
-### Installation
+## Installation
 
-#### Test installation using Vagrant
+### Test Installation (using Vagrant)
 
 A quick test installtion of GRAVIS can be done using Vagrant, which will provision a VM and install the software automatically into the VM.
 
@@ -21,7 +21,7 @@ vagrant up
 ```
 This will create a new VM and install all required dependencies. Once the installation has finished, the GRAVIS Software can be accessed by opening the URL https://localhost in a modern browser (Firefox or Chrome).
 
-#### Server installation
+### Server Installation
 
 Automatic installation on a production server can be done using a provided installation script. GRAVIS currently requires **Ubuntu 22.04 LTS** as operation system
 
