@@ -1,4 +1,4 @@
-# Case Browser
+# Case browser
 
 Browse, search, and monitor GRAVIS cases. 
 

@@ -26,7 +26,7 @@ You can load a test case from the host machine. Create a folder in the same dire
 
 Navigate to `https://localhost:3333/filebrowser/` and navigate through `vagrant/` -> `cases/` to list the cases available. Select your case and then `Import Folder` to begin the import process.
 
-## Server install
+## Server installation
 
 ### Requirements
 The installer is tested on Ubuntu 22.04. We expect it should mostly work on similar Linux distributions, though some manual intervention will likely be required. Requirements include python 3.10, postgresql, nginx, and redis. It is developed and tested on postgresql 12, nginx 1.18, and redis 5.0.

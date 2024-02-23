@@ -1,4 +1,4 @@
-# Case Types
+# Case types
 
 GRAVIS supports two case types currently. They each have different processing pipelines and slightly different viewer UIs. 
 

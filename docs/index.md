@@ -20,7 +20,7 @@ Alternatively, GRAVIS users can load datasets in on an ad-hoc basis if the files
 - Web-based viewer
   
 
-## Current Limitations
+## Current limitations
 - No support for standard DICOM transfers
 - No fine-grained permissions or assigning studies to projects. Designed with small groups in mind.
 - Not a fully-featured web imaging platform; you probably want OHIF for that.

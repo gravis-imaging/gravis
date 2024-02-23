@@ -1,4 +1,4 @@
-# Importing Cases
+# Importing cases
 
 The web filebrowser allows you to import cases that are already available on the server. It supports cases that are stored in individual folders, e.g.: 
 
