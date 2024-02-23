@@ -9,17 +9,17 @@ Browse, search, and monitor GRAVIS cases.
 | Tool                               | Description      |
 | ----------------------------------:|:---------------- |
 | :fontawesome-solid-folder-open:    | Open case        |
-| :fontawesome-solid-lock-open:      | Set case status  |
+| :fontawesome-solid-lock-open:      | Unlock case      |
 | :fontawesome-solid-gears:          | Reprocess case   |
 | :fontawesome-solid-trash:          | Delete case      |
-| :fontawesome-solid-rectangle-list: | Show info pane   |
+| :fontawesome-solid-rectangle-list: | Show case details|
 
 | Tool                               | Description      |
 | ----------------------------------:|:---------------- |
-| :fontawesome-solid-tags:           | Update case tags |
+| :fontawesome-solid-tags:           | Tag case         |
 | :fontawesome-solid-arrows-rotate:  | Refresh table    |
-| :fontawesome-solid-sort:           | Clear sort       |
-| :fontawesome-solid-upload:         | Add case         |
+| :fontawesome-solid-sort:           | Clear sorting    |
+| :fontawesome-solid-upload:         | Upload case      |
 </div>
 
 ## Managing cases
