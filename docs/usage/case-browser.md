@@ -1,10 +1,10 @@
-# Case browser
+# Case Browser
 
 Browse, search, and monitor GRAVIS cases. 
 
 ![image](site:images/case_browser.png)
 
-<div class="grid menu-btns menu-btns-inv" markdown>
+<div class="grid menu-btns" markdown>
 
 | Tool                               | Description      |
 | ----------------------------------:|:---------------- |
