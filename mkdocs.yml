@@ -1,4 +1,5 @@
 site_name: GRAVIS Documentation
+site_url: https://gravis-imaging.org/gravis
 copyright: Copyright &copy; 2022 - 2024 Center for Advanced Imaging Innovation and Research (CAI<sup>2</sup>R)
 theme:
   name: material
