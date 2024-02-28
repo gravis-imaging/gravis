@@ -1,6 +1,6 @@
 # Overview 
 
-![header_image](site:images/gravis_header.jpg){ align=center width=100% }
+![header_image](site:images/gravis_header.jpg){ align=center width=90% style="padding-bottom:20px"}
 
 GRAVIS is a web-based open-source visualization and annotation tool designed for use with large, four-dimensional DICOM volumes. It was designed to display GRASP datasets reconstructed at high time resolutions without undue latency or processing delays. 
 
