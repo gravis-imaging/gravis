@@ -91,7 +91,8 @@ def delete_cases():
 
 def watch():
     logger.info("Incoming watcher booted.")
-    while True:
+    failed_count = 0
+    while failed_count < 5:
         try:
             sleep(settings.INCOMING_SCAN_INTERVAL)
         except KeyboardInterrupt:
@@ -101,15 +102,17 @@ def watch():
             scan_incoming_folder()
         except:
             logger.exception("Failure in incoming")
-
+            failed_count = failed_count + 1
         try:
             trigger_queued_cases()
         except:
             logger.exception("Error in queuing.")
-
+            failed_count = failed_count + 1
         try:
             delete_cases()
         except:
             logger.error("Error in deleting.")
+            failed_count = failed_count + 1
 
+    raise Exception("Too many failures.")
     # get_queue("default").enqueue_in(timedelta(seconds=2), watch)

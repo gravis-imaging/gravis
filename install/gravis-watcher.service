@@ -9,6 +9,8 @@ User=gravis
 Group=gravis
 WorkingDirectory=/opt/gravis/app
 ExecStart=/opt/gravis/venv/bin/python /opt/gravis/app/manage.py watcher
+Restart=on-failure
+RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target
