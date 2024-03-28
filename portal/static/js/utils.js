@@ -175,20 +175,28 @@ function sleep(ms) {
 }
 
 async function loadVolumeWithRetry(volume) {
-    for ( let i=0;i<2;i++) {
-        const load_result = await new Promise( resolve => {
-            volume.load( e => resolve(e) );
-        });
-        if ( load_result.framesLoaded == load_result.numFrames ) {
-            return true;
+    async function retry(n=3){
+        for ( let i=0; i<n; i++ ) {
+            console.info(`Try ${i}`)
+            volume.framesProcessed = 0;
+            await new Promise( resolve => {
+                volume.load( e => resolve(e) );
+            });
+            if ( volume.framesLoaded == volume.numFrames ) {
+                return true;
+            }
         }
+        return false;
+    }
+    let retry_with_timeout = await Promise.race([retry(), sleep(1000*15)])
+    console.log(volume);
+    if (! retry_with_timeout) {
         console.error("Detected error during volume loading.");
         volume.loadStatus.loaded = false;
+        errorToast('Error while loading volume, some slices may be missing.');
+        return false;
     }
-
-    errorToast('Error while loading volume, some slices may be missing.');
-
-    return false;
+    return true;
 }
 
 
