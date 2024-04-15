@@ -38,7 +38,7 @@ env = environ.Env(
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 environ.Env.read_env(BASE_DIR / "gravis.env")
-environ.Env.read_env(BASE_DIR / "local.env")
+environ.Env.read_env(BASE_DIR / "local.env", overwrite=True)
 
 SECRET_KEY = env("SECRET_KEY")
 WEBEX_TOKEN = env("WEBEX_TOKEN",default=None)
