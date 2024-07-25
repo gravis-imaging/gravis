@@ -375,6 +375,13 @@ input::selection, .selectable::selection {
     scrollbar-color: hsla(0,0%,100%,.15);
 }
 
+@supports selector(::-webkit-scrollbar) {
+    * {
+        scrollbar-width: unset;
+        scrollbar-color: unset; 
+    }
+}
+
 .btn-viewer-toolbar, .btn-viewer-toolbar:active, .btn-viewer-toolbar:visited, .btn-viewer-toolbar:focus {
   font-size: 1rem;
   line-height: 1.0!important;
