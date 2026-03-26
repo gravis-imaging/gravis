@@ -20,6 +20,9 @@ urls = [
     path("session", sessions.handle_session),
     path("session/new", sessions.new_session),
     path("session/<int:session_id>", sessions.handle_session),
+    path("annotation_group", sessions.create_annotation_group),
+    path("annotation_group/<int:group_id>/join", sessions.join_annotation_group),
+    path("annotation_group/leave", sessions.leave_annotation_group),
     path("logs", case_data.logs),
     path("", case_data.get_case),
     path("delete", case_data.delete_case),
@@ -32,6 +35,7 @@ urls = [
     path("tags", tags.case_tags),
     path("tags/update", tags.update_case_tags),
 
+    url_path("api/annotation_groups", sessions.list_annotation_groups),
     url_path("api/cases", case_data.all_cases),
     url_path("api/tags", tags.all_tags),
     url_path("api/tags/update", tags.update_tags),

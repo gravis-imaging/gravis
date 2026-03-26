@@ -41,13 +41,15 @@
     Alpine.data("gravis_viewer", () => ({
         viewer: null,
         previewing: false,
-        previewingMIP: false, 
-        switching: false, 
-        loading: false, 
-        job_loading: null, 
+        previewingMIP: false,
+        switching: false,
+        loading: false,
+        job_loading: null,
         previews_loading: 0,
         aux_loading: false,
         jobs_running: false,
+        show_share_roi_modal: false,
+        share_roi_candidate_groups: [],
         user_is_staff: {{user.is_staff|lower}},
         studies_data: parse_json_element("studies_data"),
         case_data: parse_json_element("case_data"),
@@ -505,10 +507,68 @@
             <template x-if="!read_only">
               <li><a class="dropdown-item" @click="viewer.state_manager.newSession()" href="#">New session</a></li>
             </template>
+            <li><hr class="dropdown-divider" /></li>
+            <template x-if="!read_only && !viewer.state_manager.annotation_group_id">
+              <li>
+                <a class="dropdown-item" href="#" @click="share_roi_candidate_groups = (await (await fetch('/api/annotation_groups')).json()).annotation_groups; show_share_roi_modal = true;">
+                  <i class="fa-solid fa-link me-1"></i>Share ROIs with other cases&hellip;
+                </a>
+              </li>
+            </template>
+            <template x-if="viewer.state_manager.annotation_group_id">
+              <li>
+                <a class="dropdown-item text-warning" href="#" @click="await viewer.state_manager.leaveAnnotationGroup()">
+                  <i class="fa-solid fa-link-slash me-1"></i>Unshare ROIs (keep local copy)
+                </a>
+              </li>
+            </template>
           </ul>
-        </div>    
+        </div>
+        <!-- Chain-link indicator shown when session is part of an annotation group -->
+        <template x-if="viewer && viewer.state_manager.annotation_group_id">
+          <span title="ROIs are shared with other cases" style="color: #aaa; font-size: 0.75rem; align-self: center; margin-left: 0.25rem;">
+            <i class="fa-solid fa-link"></i>
+          </span>
+        </template>
       </div>
-    </div> 
+    </div>
+  </div>
+
+  <!-- Share ROIs modal -->
+  <div x-show="show_share_roi_modal" x-cloak
+       style="position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;"
+       @keydown.escape.window="show_share_roi_modal = false">
+    <div style="background:#2b2b2b; border-radius:8px; padding:1.5rem; min-width:340px; max-width:480px; color:#fff;">
+      <h5 style="margin-bottom:1rem;">Share ROIs with other cases</h5>
+
+      <!-- Cases with same acc that already have a group the user can join -->
+      <template x-if="share_roi_candidate_groups.length > 0">
+        <div>
+          <p style="font-size:0.9rem; color:#ccc;">Join an existing shared ROI group from a related case:</p>
+          <template x-for="g in share_roi_candidate_groups.filter(g => g.case_ids.some(id => patient_cases.find(c => c.id == id && c.acc == case_data.acc && c.id != case_id)))" :key="g.id">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+              <span style="font-size:0.85rem;" x-text="'Group ' + g.id + ' — ' + g.case_ids.length + ' case(s)'"></span>
+              <button class="btn-primary btn-large btn-viewer ms-2"
+                @click="show_share_roi_modal = false; await viewer.state_manager.joinAnnotationGroup(g.id);">
+                Join
+              </button>
+            </div>
+          </template>
+          <hr style="border-color:#555; margin: 0.75rem 0;">
+        </div>
+      </template>
+
+      <!-- Create a new group -->
+      <p style="font-size:0.9rem; color:#ccc;">Or create a new shared ROI group for this case:</p>
+      <button class="btn-primary btn-large btn-viewer"
+        @click="show_share_roi_modal = false; await viewer.state_manager.createAnnotationGroup();">
+        <i class="fa-solid fa-link me-1"></i>Create shared ROI group
+      </button>
+
+      <div style="margin-top:1rem; text-align:right;">
+        <button class="btn-primary btn-large btn-viewer" @click="show_share_roi_modal = false;">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <div id="grasp-view-outer" class="grid-container h-100" style="width: 100%; grid-area: e; background-color: black;" >
