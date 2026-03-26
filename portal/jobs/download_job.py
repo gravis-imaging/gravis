@@ -1,6 +1,8 @@
 import gzip
+import shutil
 import zipfile
 from pathlib import Path
+from zipfile import ZipInfo
 from django.conf import settings
 from .work_job import WorkJobView
 from portal.models import ProcessingJob
@@ -8,6 +10,7 @@ from portal.models import ProcessingJob
 
 class CaseDownloadJob(WorkJobView):
     type = "DOWNLOAD"
+    job_timeout = 60 * 60 * 12  # 12 hours — large cases can contain thousands of files
 
     @classmethod
     def do_job(cls, job: ProcessingJob):
@@ -42,8 +45,9 @@ class CaseDownloadJob(WorkJobView):
                         arcname = abs_path.relative_to(case_path)
                         if abs_path.suffix == ".gz":
                             arcname = arcname.with_suffix("")  # strip .gz from archive name
-                            with gzip.open(abs_path, "rb") as gz_in:
-                                zf.writestr(str(arcname), gz_in.read())
+                            info = ZipInfo(str(arcname))
+                            with gzip.open(abs_path, "rb") as gz_in, zf.open(info, "w", force_zip64=True) as zip_out:
+                                shutil.copyfileobj(gz_in, zip_out, length=1024 * 1024)
                         else:
                             zf.write(abs_path, arcname)
 
