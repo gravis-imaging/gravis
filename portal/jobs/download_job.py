@@ -1,3 +1,4 @@
+import gzip
 import zipfile
 from pathlib import Path
 from django.conf import settings
@@ -39,7 +40,12 @@ class CaseDownloadJob(WorkJobView):
                     if abs_path.exists() and abs_path not in seen_paths:
                         seen_paths.add(abs_path)
                         arcname = abs_path.relative_to(case_path)
-                        zf.write(abs_path, arcname)
+                        if abs_path.suffix == ".gz":
+                            arcname = arcname.with_suffix("")  # strip .gz from archive name
+                            with gzip.open(abs_path, "rb") as gz_in:
+                                zf.writestr(str(arcname), gz_in.read())
+                        else:
+                            zf.write(abs_path, arcname)
 
             # Include findings
             for finding in case.findings.all():
