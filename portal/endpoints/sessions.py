@@ -128,11 +128,14 @@ def leave_annotation_group(request, case):
     """Detach the current session from its AnnotationGroup, keeping a local snapshot."""
     session = _get_or_create_session(request.user, int(case))
     if session.annotation_group:
-        session.annotations = list(session.annotation_group.annotations)
-        session.annotation_group.cases.remove(session.case)
+        group = session.annotation_group
+        session.annotations = list(group.annotations)
+        group.cases.remove(session.case)
         session.annotation_group = None
         session.updated_at = timezone.now()
         session.save()
+        if group.cases.count() == 0:
+            group.delete()
     return JsonResponse(session.to_dict())
 
 
@@ -140,5 +143,6 @@ def leave_annotation_group(request, case):
 @require_GET
 def list_annotation_groups(request):
     """Return all AnnotationGroups owned by the current user."""
-    groups = AnnotationGroup.objects.filter(user=request.user).prefetch_related('cases')
-    return JsonResponse(dict(annotation_groups=[g.to_dict() for g in groups]))
+    groups = AnnotationGroup.objects.filter(user=request.user).prefetch_related('cases', 'cases__shadow')
+    privacy_mode = request.user.profile.privacy_mode
+    return JsonResponse(dict(annotation_groups=[g.to_dict(privacy_mode) for g in groups]))

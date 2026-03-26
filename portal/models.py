@@ -318,11 +318,20 @@ class AnnotationGroup(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)
 
-    def to_dict(self):
+    def to_dict(self, privacy_mode=True):
+        def case_to_info(c):
+            acc = (c.shadow.acc if c.shadow else "UNKNOWN") if privacy_mode else c.acc
+            return {
+                "id": c.id,
+                "acc": acc,
+                "exam_time": c.exam_time.strftime("%Y-%m-%d %H:%M") if c.exam_time else None,
+            }
+        cases_data = [case_to_info(c) for c in self.cases.all()]
         return dict(
             id=self.id,
             name=self.name,
-            case_ids=[c.id for c in self.cases.all()],
+            case_ids=[c["id"] for c in cases_data],
+            cases=cases_data,
             updated_at=self.updated_at.timestamp(),
         )
 
