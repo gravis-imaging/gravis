@@ -1,9 +1,11 @@
 import gzip
 import shutil
+import time
 import zipfile
 from pathlib import Path
 from zipfile import ZipInfo
 from django.conf import settings
+from loguru import logger
 from .work_job import WorkJobView
 from portal.models import ProcessingJob
 
@@ -31,6 +33,12 @@ class CaseDownloadJob(WorkJobView):
         if not include_cine:
             dicom_sets = dicom_sets.exclude(type__startswith="CINE")
 
+        logger.info(f"Case {case.id}: starting zip archive at {zip_path}")
+        files_done = 0
+        bytes_written = 0
+        last_log = time.monotonic()
+        LOG_INTERVAL = 30  # seconds
+
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_STORED, allowZip64=True) as zf:
             seen_paths = set()
             for dicom_set in dicom_sets:
@@ -50,6 +58,15 @@ class CaseDownloadJob(WorkJobView):
                                 shutil.copyfileobj(gz_in, zip_out, length=1024 * 1024)
                         else:
                             zf.write(abs_path, arcname)
+                        files_done += 1
+                        bytes_written += abs_path.stat().st_size
+                        now = time.monotonic()
+                        if now - last_log >= LOG_INTERVAL:
+                            logger.info(
+                                f"Case {case.id}: {files_done} files added, "
+                                f"{bytes_written / 1_048_576:.1f} MB read so far"
+                            )
+                            last_log = now
 
             # Include findings
             for finding in case.findings.all():
@@ -60,6 +77,12 @@ class CaseDownloadJob(WorkJobView):
                     if abs_path.exists() and abs_path not in seen_paths:
                         seen_paths.add(abs_path)
                         zf.write(abs_path, Path(loc))
+                        files_done += 1
+
+        logger.info(
+            f"Case {case.id}: zip complete — {files_done} files, "
+            f"{bytes_written / 1_048_576:.1f} MB read, zip at {zip_path}"
+        )
 
         relative_path = str(zip_path.relative_to(Path(settings.DATA_FOLDER)))
         return ({"zip_path": relative_path, "include_cine": include_cine}, [])
