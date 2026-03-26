@@ -169,6 +169,7 @@ class StateManager {
 
     async createAnnotationGroup() {
         try {
+            await this.save();
             const group = await doFetch(`/api/case/${this.viewer.case_id}/annotation_group`, {}, "POST")
             this.annotation_group_id = group.id;
             return group;
