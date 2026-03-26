@@ -17,6 +17,7 @@
     outline: none;
     outline-offset: 0;
 }
+.roi-modal-overlay { display: flex; align-items: center; justify-content: center; }
 </style>
 {% endblock %}
 
@@ -536,7 +537,8 @@
 
   <!-- Share ROIs modal -->
   <div x-show="show_share_roi_modal" x-cloak
-       style="position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;"
+       class="roi-modal-overlay"
+       style="position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.6);"
        @keydown.escape.window="show_share_roi_modal = false">
     <div style="background:#2b2b2b; border-radius:8px; padding:1.5rem; min-width:340px; max-width:480px; color:#fff;">
       <h5 style="margin-bottom:1rem;">Share ROIs with other cases</h5>
@@ -558,11 +560,13 @@
             </div>
           </template>
           <hr style="border-color:#555; margin: 0.75rem 0;">
+          <p style="font-size:0.9rem; color:#ccc;">Or create a new shared ROI group for this case:</p>
         </div>
       </template>
+      <template x-if="share_roi_candidate_groups.filter(g => g.cases.some(c => c.acc == case_data.acc && c.id != parseInt(case_id))).length == 0">
+        <p style="font-size:0.9rem; color:#ccc;">No existing shared groups found for this accession. Create one and share it with other cases.</p>
+      </template>
 
-      <!-- Create a new group -->
-      <p style="font-size:0.9rem; color:#ccc;">Or create a new shared ROI group for this case:</p>
       <button class="btn-primary btn-large btn-viewer"
         @click="show_share_roi_modal = false; await viewer.state_manager.createAnnotationGroup();">
         <i class="fa-solid fa-link me-1"></i>Create shared ROI group
