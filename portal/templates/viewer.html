@@ -508,14 +508,14 @@
               <li><a class="dropdown-item" @click="viewer.state_manager.newSession()" href="#">New session</a></li>
             </template>
             <li><hr class="dropdown-divider" /></li>
-            <template x-if="!read_only && !viewer.state_manager.annotation_group_id">
+            <template x-if="!read_only && viewer && !viewer.state_manager.annotation_group_id">
               <li>
                 <a class="dropdown-item" href="#" @click="share_roi_candidate_groups = (await (await fetch('/api/annotation_groups')).json()).annotation_groups; show_share_roi_modal = true;">
                   <i class="fa-solid fa-link me-1"></i>Share ROIs with other cases&hellip;
                 </a>
               </li>
             </template>
-            <template x-if="viewer.state_manager.annotation_group_id">
+            <template x-if="viewer && viewer.state_manager.annotation_group_id">
               <li>
                 <a class="dropdown-item text-warning" href="#" @click="await viewer.state_manager.leaveAnnotationGroup()">
                   <i class="fa-solid fa-link-slash me-1"></i>Unshare ROIs (keep local copy)
