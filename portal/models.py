@@ -155,7 +155,8 @@ class Case(models.Model):
         db_table = "gravis_case"
         permissions = [
             ("reprocess", "Can reprocess cases"),
-            ("rotate", "Can rotate cases")
+            ("rotate", "Can rotate cases"),
+            ("download", "Can download cases"),
         ]
 
     def get_running_jobs(self):

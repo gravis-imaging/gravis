@@ -102,7 +102,7 @@ def calc_disk_usage():
 
 @login_required
 def index(request):
-    context = {"disk_usage":calc_disk_usage()}
+    context = {"disk_usage":calc_disk_usage(), "can_download_case": request.user.has_perm("portal.download")}
     return render(request, "index.html", context)
 
 
@@ -214,7 +214,8 @@ def viewer(request, case_id):
         "current_case": case.to_dict(request.user.profile.privacy_mode),
         "original_dicom_set_id": instances[0].dicom_set.id,
         "patient_cases": patient_cases,
-        "read_only": "true" if read_only else "false"
+        "read_only": "true" if read_only else "false",
+        "can_download_case": request.user.has_perm("portal.download"),
     }
     return render(request, "viewer.html", context)
 

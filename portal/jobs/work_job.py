@@ -34,6 +34,7 @@ def report_failure(job, connection, type, value, traceback):
 class WorkJobView(View):
     type = "GENERIC"
     queue = "default"
+    job_timeout = 60 * 60 * 4  # 4 hours default
     def get(self, request, *args, **kwargs):
         try:
             job = ProcessingJob.objects.get(id=request.GET["id"])
@@ -144,7 +145,7 @@ class WorkJobView(View):
                 args = (cls,job.id),
                 depends_on = depends_on,
                 on_failure = report_failure,
-                job_timeout = 60*60*4,
+                job_timeout = cls.job_timeout,
                 # on_success=report_success,
                 ) 
             job.rq_id = rq_result.id
