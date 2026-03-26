@@ -4,7 +4,7 @@ import logging
 import numpy as np
 from pathlib import Path
 
-from django.http import HttpResponseBadRequest, HttpResponseForbidden, JsonResponse, HttpResponse
+from django.http import HttpResponseBadRequest, HttpResponseForbidden, JsonResponse, HttpResponse, FileResponse
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST, require_GET
@@ -271,7 +271,7 @@ def request_case_download(request, case):
         if existing and existing.json_result:
             zip_path = Path(settings.DATA_FOLDER) / existing.json_result["zip_path"]
             if zip_path.exists():
-                url = str(Path(settings.MEDIA_URL) / existing.json_result["zip_path"])
+                url = f"/api/case/{case}/download/file?job_id={existing.id}"
                 return JsonResponse({"job_id": existing.id, "status": "SUCCESS", "url": url})
 
     job, _ = CaseDownloadJob.enqueue_work(case=case_obj, parameters=params, error_case_ok=True)
@@ -285,8 +285,31 @@ def case_download_status(request, case):
         return HttpResponseForbidden("Insufficient permissions.")
     job = get_object_or_404(ProcessingJob, id=request.GET.get("job_id"), case_id=case, category="DOWNLOAD")
     if job.status == "SUCCESS" and job.json_result:
-        url = str(Path(settings.MEDIA_URL) / job.json_result["zip_path"])
+        url = f"/api/case/{case}/download/file?job_id={job.id}"
         return JsonResponse({"status": "SUCCESS", "url": url})
     if job.status == "FAILED":
         return JsonResponse({"status": "FAILED", "error": job.error_description})
     return JsonResponse({"status": "PENDING"})
+
+
+@login_required
+@require_GET
+def case_download_file(request, case):
+    if not request.user.has_perm("portal.download"):
+        return HttpResponseForbidden("Insufficient permissions.")
+    job = get_object_or_404(ProcessingJob, id=request.GET.get("job_id"), case_id=case, category="DOWNLOAD", status="SUCCESS")
+    zip_path = Path(settings.DATA_FOLDER) / job.json_result["zip_path"]
+    if not zip_path.exists():
+        return HttpResponse("Archive not found. Please re-request the download.", status=404)
+    # In production behind nginx, use X-Accel-Redirect for efficient file serving.
+    # Under bare gunicorn (dev), stream directly via FileResponse.
+    host = request.headers.get("Host", "")
+    if not settings.DEBUG and "localhost" not in host and "127.0.0.1" not in host:
+        relative = zip_path.relative_to(settings.DATA_FOLDER)
+        response = HttpResponse(headers={
+            "X-Accel-Redirect": str(Path("/secret") / relative),
+            "Content-Type": "application/zip",
+            "Content-Disposition": f'attachment; filename="{zip_path.name}"',
+        })
+        return response
+    return FileResponse(open(zip_path, "rb"), as_attachment=True, filename=zip_path.name)

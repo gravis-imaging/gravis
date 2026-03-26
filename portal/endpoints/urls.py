@@ -33,6 +33,7 @@ urls = [
     path("tags/update", tags.update_case_tags),
     path("download/request", case_data.request_case_download),
     path("download/status",  case_data.case_download_status),
+    path("download/file",    case_data.case_download_file),
 
     url_path("api/cases", case_data.all_cases),
     url_path("api/tags", tags.all_tags),
