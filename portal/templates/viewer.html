@@ -483,51 +483,52 @@
     @click="let r = await viewer.state_manager.save(); if (r) {$($refs.saved).fadeIn(50); $($refs.saved).fadeOut(800);}"><i class="fa-solid fa-floppy-disk"></i>
     </button>
 
-    <div class="flex ms-2" style="display: flex;">
-      <div class="">
-        <div class="dropdown">
-          <button
-            title="Select session"
-            :title="viewer && viewer.state_manager.annotation_group_id ? 'Select session (ROIs shared with other cases)' : 'Select session'"
-            class="btn-primary btn-large btn-viewer"
-            :class="viewer && viewer.state_manager.annotation_group_id ? 'btn-viewer-linked' : ''"
-            :disabled="should_disable" disabled="disabled"
-            href="#"
-            id="dropdownMenuLink"
-            data-mdb-toggle="dropdown"
-            aria-expanded="false",
-          >
-          <i class="fas fa-history"></i><template x-if="viewer && viewer.state_manager.annotation_group_id"><i class="fa-solid fa-link" style="font-size:0.6em; vertical-align:super; margin-left:1px;"></i></template>
-          </button>
-          <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-            <template x-show="!!viewer" x-for="session of (viewer? viewer.state_manager.session_list : [])" :key="session.id">
-              <li><a href="#" class="dropdown-item" 
-                     :class="viewer.state_manager.session_id == session.id ? { 'active': true, 'disabled': true} : {}" 
-                     @click="viewer.state_manager.switchSession(session.id)" 
-                     x-text="new Date(session.updated_at*1000).toLocaleString()"></a></li>
-            </template>
-            <li><hr class="dropdown-divider" /></li>
-            <template x-if="!read_only">
-              <li><a class="dropdown-item" @click="viewer.state_manager.newSession()" href="#">New session</a></li>
-            </template>
-            <li><hr class="dropdown-divider" /></li>
-            <template x-if="!read_only && viewer && !viewer.state_manager.annotation_group_id">
-              <li>
-                <a class="dropdown-item" href="#" @click="share_roi_candidate_groups = (await (await fetch('/api/annotation_groups')).json()).annotation_groups; show_share_roi_modal = true;">
-                  <i class="fa-solid fa-link me-1"></i>Share ROIs with other cases&hellip;
-                </a>
-              </li>
-            </template>
-            <template x-if="viewer && viewer.state_manager.annotation_group_id">
-              <li>
-                <a class="dropdown-item text-warning" href="#" @click="await viewer.state_manager.leaveAnnotationGroup()">
-                  <i class="fa-solid fa-link-slash me-1"></i>Unshare ROIs (keep local copy)
-                </a>
-              </li>
-            </template>
-          </ul>
-        </div>
+    <div class="flex ms-2" style="display: flex; align-items: center;">
+      <div class="dropdown">
+        <button
+          title="Select session"
+          class="btn-primary btn-large btn-viewer"
+          :disabled="should_disable" disabled="disabled"
+          href="#"
+          id="dropdownMenuLink"
+          data-mdb-toggle="dropdown"
+          aria-expanded="false",
+        >
+        <i class="fas fa-history"></i>
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+          <template x-show="!!viewer" x-for="session of (viewer? viewer.state_manager.session_list : [])" :key="session.id">
+            <li><a href="#" class="dropdown-item"
+                   :class="viewer.state_manager.session_id == session.id ? { 'active': true, 'disabled': true} : {}"
+                   @click="viewer.state_manager.switchSession(session.id)"
+                   x-text="new Date(session.updated_at*1000).toLocaleString()"></a></li>
+          </template>
+          <li><hr class="dropdown-divider" /></li>
+          <template x-if="!read_only">
+            <li><a class="dropdown-item" @click="viewer.state_manager.newSession()" href="#">New session</a></li>
+          </template>
+          <li><hr class="dropdown-divider" /></li>
+          <template x-if="!read_only && viewer && !viewer.state_manager.annotation_group_id">
+            <li>
+              <a class="dropdown-item" href="#" @click="share_roi_candidate_groups = (await (await fetch('/api/annotation_groups')).json()).annotation_groups; show_share_roi_modal = true;">
+                <i class="fa-solid fa-link me-1"></i>Share ROIs with other cases&hellip;
+              </a>
+            </li>
+          </template>
+          <template x-if="viewer && viewer.state_manager.annotation_group_id">
+            <li>
+              <a class="dropdown-item text-warning" href="#" @click="await viewer.state_manager.leaveAnnotationGroup()">
+                <i class="fa-solid fa-link-slash me-1"></i>Unshare ROIs (keep local copy)
+              </a>
+            </li>
+          </template>
+        </ul>
       </div>
+      <template x-if="viewer && viewer.state_manager.annotation_group_id">
+        <span title="ROIs are shared with other cases" style="color: #aaa; font-size: 0.75rem; margin-left: 0.25rem;">
+          <i class="fa-solid fa-link"></i>
+        </span>
+      </template>
     </div>
   </div>
 
