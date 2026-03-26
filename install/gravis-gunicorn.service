@@ -11,6 +11,7 @@ WorkingDirectory=/opt/gravis/app
 ExecStart=/opt/gravis/venv/bin/gunicorn \
           --access-logfile - \
           --workers 6 \
+          --timeout 0 \
 	      --reload \
           --bind unix:/run/gunicorn.sock \
           app.wsgi
