@@ -17,6 +17,7 @@ from django.db import transaction
 from rq.registry import StartedJobRegistry, ScheduledJobRegistry 
 import django_rq
 from portal.jobs.fix_rotation_job import FixRotationJob
+from portal.jobs.download_job import CaseDownloadJob
 
 logger = logging.getLogger(__name__)
 
@@ -250,3 +251,42 @@ def logs(request, case):
         return HttpResponseForbidden()
     case = get_object_or_404(Case, id=case)
     return JsonResponse(dict(logs=[(x.stem, str(x.relative_to(settings.DATA_FOLDER))) for x in (Path(case.case_location) / "logs").glob("*.log")]))
+
+
+@login_required
+@require_POST
+def request_case_download(request, case):
+    if not request.user.has_perm("portal.download"):
+        return HttpResponseForbidden("Insufficient permissions.")
+    case_obj = get_object_or_404(Case, id=case)
+    body = json.loads(request.body) if request.body else {}
+    include_cine = bool(body.get("include_cine", False))
+    force = bool(body.get("force", False))
+    params = {"include_cine": include_cine}
+
+    if not force:
+        existing = ProcessingJob.objects.filter(
+            case=case_obj, category="DOWNLOAD", status="SUCCESS", parameters=params
+        ).order_by("-created_at").first()
+        if existing and existing.json_result:
+            zip_path = Path(settings.DATA_FOLDER) / existing.json_result["zip_path"]
+            if zip_path.exists():
+                url = str(Path(settings.MEDIA_URL) / existing.json_result["zip_path"])
+                return JsonResponse({"job_id": existing.id, "status": "SUCCESS", "url": url})
+
+    job, _ = CaseDownloadJob.enqueue_work(case=case_obj, parameters=params, error_case_ok=True)
+    return JsonResponse({"job_id": job.id, "status": "PENDING"})
+
+
+@login_required
+@require_GET
+def case_download_status(request, case):
+    if not request.user.has_perm("portal.download"):
+        return HttpResponseForbidden("Insufficient permissions.")
+    job = get_object_or_404(ProcessingJob, id=request.GET.get("job_id"), case_id=case, category="DOWNLOAD")
+    if job.status == "SUCCESS" and job.json_result:
+        url = str(Path(settings.MEDIA_URL) / job.json_result["zip_path"])
+        return JsonResponse({"status": "SUCCESS", "url": url})
+    if job.status == "FAILED":
+        return JsonResponse({"status": "FAILED", "error": job.error_description})
+    return JsonResponse({"status": "PENDING"})

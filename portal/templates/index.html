@@ -57,6 +57,7 @@
 <script>       
     const user_is_staff = {{user.is_staff|lower}};
     const username = "{{user.username}}";
+    const can_download_case = {{ can_download_case|lower }};
     $(document).ready(function () {               
         window.case_data_table = $('#casetable').DataTable({           
             dom: "<'row browsertoolbar align-items-end'<'col-sm-12 col-md-7 browserbuttons'B><'col-sm-12 col-md-2'><'col-sm-12 col-md-3'f>>" + "<'row'<'col-sm-12'tr>>" + "<'row browserfooterbar'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",
@@ -222,6 +223,15 @@
                         showTagsDialog(case_id);
                     }
                 },
+                ...(can_download_case ? [{
+                    extend: "selectedSingle",
+                    text: '<i class="fas fa-download"></i>',
+                    titleAttr: 'Download case',
+                    action: async function (e, dt, node, config) {
+                        const case_id = case_data_table.row({selected: true}).data().case_id;
+                        await downloadCase(case_id);
+                    }
+                }] : []),
                 {
                     text: '<i class="fa-solid fa-sync"></i>',
                     titleAttr: 'Refresh',
@@ -332,16 +342,61 @@
                 return true;
             } else {
                 return false;
-            }                
+            }
         }
 
         if (["Received", "Queued", "Processing"].includes(status)) {
             return false;
         }
-        
-        // In other states, changing case status currently not supported        
+
+        // In other states, changing case status currently not supported
         return false;
-    }    
+    }
+
+    async function downloadCase(case_id) {
+        let pollInterval = null;
+        await Swal.fire({
+            title: "Download case",
+            text: "Preparing archive\u2026",
+            allowOutsideClick: false,
+            didOpen: async () => {
+                Swal.showLoading();
+                try {
+                    const result = await doFetch(`/api/case/${case_id}/download/request`, {});
+                    if (result.status === "SUCCESS") {
+                        Swal.close();
+                        window.open(result.url, "_blank");
+                        return;
+                    }
+                    const job_id = result.job_id;
+                    pollInterval = setInterval(async () => {
+                        try {
+                            const status = await doFetch(`/api/case/${case_id}/download/status?job_id=${job_id}`, {}, "GET");
+                            if (status.status === "SUCCESS") {
+                                clearInterval(pollInterval);
+                                Swal.close();
+                                window.open(status.url, "_blank");
+                            } else if (status.status === "FAILED") {
+                                clearInterval(pollInterval);
+                                Swal.close();
+                                await errorPrompt("Download failed: " + (status.error || "unknown error"));
+                            }
+                        } catch(e) {
+                            clearInterval(pollInterval);
+                            Swal.close();
+                            await errorPrompt("Error checking download status: " + e);
+                        }
+                    }, 3000);
+                } catch(e) {
+                    Swal.close();
+                    await errorPrompt("Could not start download: " + e);
+                }
+            },
+            willClose: () => {
+                if (pollInterval) clearInterval(pollInterval);
+            }
+        });
+    }
 </script>
 
 {% endblock %}
