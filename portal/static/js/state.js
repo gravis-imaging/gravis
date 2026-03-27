@@ -9,6 +9,7 @@ class StateManager {
     just_loaded;
     session_id;
     session_list = [];
+    annotation_group_id = null;
 
     constructor( viewer ) {
         this.viewer = viewer;
@@ -141,6 +142,7 @@ class StateManager {
         this.changed = false;
         this.just_loaded = true;
         this.session_id = state.session_id;
+        this.annotation_group_id = state.annotation_group_id ?? null;
     }
 
     async switchSession(id) {
@@ -162,6 +164,49 @@ class StateManager {
         } catch (e) {
             console.error(e);
             await errorPrompt("Failed to switch session.");
+        }
+    }
+
+    async createAnnotationGroup() {
+        try {
+            await this.save();
+            const group = await doFetch(`/api/case/${this.viewer.case_id}/annotation_group`, {}, "POST")
+            this.annotation_group_id = group.id;
+            return group;
+        } catch (e) {
+            console.error(e);
+            await errorPrompt("Failed to create annotation group.");
+            return null;
+        }
+    }
+
+    async joinAnnotationGroup(group_id) {
+        try {
+            const state = await doFetch(`/api/case/${this.viewer.case_id}/annotation_group/${group_id}/join`, {}, "POST")
+            this.annotation_group_id = state.annotation_group_id;
+            this._applyState(state);
+            this.viewer.renderingEngine.renderViewports(this.viewer.viewportIds);
+            this.changed = false;
+            this.just_loaded = true;
+            this.session_id = state.session_id;
+        } catch (e) {
+            console.error(e);
+            await errorPrompt("Failed to join annotation group.");
+        }
+    }
+
+    async leaveAnnotationGroup() {
+        try {
+            const state = await doFetch(`/api/case/${this.viewer.case_id}/annotation_group/leave`, {}, "POST")
+            this.annotation_group_id = null;
+            this._applyState(state);
+            this.viewer.renderingEngine.renderViewports(this.viewer.viewportIds);
+            this.changed = false;
+            this.just_loaded = true;
+            this.session_id = state.session_id;
+        } catch (e) {
+            console.error(e);
+            await errorPrompt("Failed to leave annotation group.");
         }
     }
 

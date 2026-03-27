@@ -311,6 +311,35 @@ class Finding(models.Model):
         db_table = "gravis_finding"
 
 
+class AnnotationGroup(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=200, blank=True)
+    annotations = models.JSONField(default=list)
+    cases = models.ManyToManyField(Case, related_name='annotation_groups', blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    def to_dict(self, privacy_mode=True):
+        def case_to_info(c):
+            acc = (c.shadow.acc if c.shadow else "UNKNOWN") if privacy_mode else c.acc
+            return {
+                "id": c.id,
+                "acc": acc,
+                "exam_time": c.exam_time.strftime("%Y-%m-%d %H:%M") if c.exam_time else None,
+            }
+        cases_data = [case_to_info(c) for c in self.cases.all()]
+        return dict(
+            id=self.id,
+            name=self.name,
+            case_ids=[c["id"] for c in cases_data],
+            cases=cases_data,
+            updated_at=self.updated_at.timestamp(),
+        )
+
+    class Meta:
+        db_table = "gravis_annotation_group"
+
+
 class SessionInfo(models.Model):
     case = models.ForeignKey(
         Case,
@@ -323,13 +352,28 @@ class SessionInfo(models.Model):
     )
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)
-    
+
     cameras = models.JSONField(null=False)
     voi = models.JSONField(null=False)
     annotations = models.JSONField(null=False)
+    annotation_group = models.ForeignKey(
+        AnnotationGroup,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='sessions',
+    )
 
     def to_dict(self):
-        return dict(cameras=self.cameras, annotations=self.annotations, voi=self.voi, session_id=self.id)
+        effective_annotations = self.annotation_group.annotations if self.annotation_group else self.annotations
+        return dict(
+            cameras=self.cameras,
+            annotations=effective_annotations,
+            voi=self.voi,
+            session_id=self.id,
+            annotation_group_id=self.annotation_group_id,
+        )
+
     class Meta:
         db_table = "gravis_session"
 
